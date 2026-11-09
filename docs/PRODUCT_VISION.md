@@ -54,7 +54,7 @@ You said the spring timeline was close visually; the rebuild brings that look in
 - **Liquid glass.** Frosted, translucent cards with backdrop blur over full-bleed photography.
 - **Luxury travel photography.** A destination photo behind every trip, a golden-hour beach behind the landing page.
 - **Editorial type and a warm palette.** Serif italic headlines ("Plan it. Split it. Live it."), small uppercase labels, sand and brown tones, brown pill buttons.
-- **The itinerary as a timeline.** Sticky day chips across the top showing the actual days (Thu 2/5, not just Day 1). Within a day, morning, day, evening and night run down the left of the activity chips, so the day reads at a glance without timestamps, with where you're staying. A toggle switches to a week view like an Outlook calendar: seven days side by side, morning to night.
+- **The itinerary as a timeline.** Sticky day chips across the top showing the actual day (Thu 2/5) rather than Day 1. Within a day, morning, day, evening and night run down the left of the activity chips, so the day reads at a glance without timestamps, with where you're staying. A toggle switches to a week view like an Outlook calendar: seven days side by side, morning to night.
 - **State you can see.** Suggested plans are faint with "\~$25 est."; confirmed plans are solid with the exact price and a green "$ ✓" badge. Activities you've opted out of fade, so your own day stands out.
 - **Money beside the plan.** A glass sidebar with your spending, your share, what you owe or are owed, the group's balances and Settle up.
 
@@ -68,7 +68,7 @@ What we're building for Demo Day (12/8) versus the wider product.
 | Add people directly by name, email or phone, or one group link where people pick their name | Date polls and bedroom assignments |
 | Owner and Viewer roles, picked from an Add as menu | Privacy controls, like keeping your flights to yourself |
 | Itinerary timeline with stays and morning, day, evening, night, plus a week view | Receipt scanning |
-| Statuses: Suggested, Planned, Confirmed (paid); opt in and out | Entering costs in other currencies at the day's exchange rate |
+| Statuses: Suggested, Planned, Confirmed (paid); opt in and out | Entering costs in other currencies at the day's exchange rate (a stretch goal for the course) |
 | Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings from forwarded emails |
 | General expenses not tied to a plan, like a grocery run | Full AI-built itineraries and an in-trip AI concierge |
 | Settle-up in the fewest payments | Post-trip recap |
@@ -211,11 +211,12 @@ You see a real gap in the market and would keep TripTab running after the course
 **Answered in your 11/9 review**
 
 - The ski group: still forming, about 7 to 10 people. Different people book the cars, the Airbnb and reservations, and several will pay; you don't expect trouble getting them on.
-- Currency: US dollars, since cards bill in dollars even when the price is in euros. Entering another currency at that day's rate could come later; it would miss card fees.
+- Currency: US dollars, since cards bill in dollars even when the price is in euros. Entering another currency at that day's rate is a stretch goal, details TBD; it would miss card fees.
 - Roles: start with two, Owner and Viewer, picked from an Add as menu when you add someone; you chose two to keep it simple. Owners add activities, costs and people, so a friend can bring a friend; most trips make everyone an owner, and a corporate trip leader keeps the rest as viewers. People who come in through the group link get a default role the owner sets, and a claimed name locks to that person's sign-in.
 - Viewers: see the trip and opt in or out of activities, nothing else.
 - Statuses: three, Suggested → Planned → Confirmed, and Confirmed means paid; what matters is whether it's paid for, not whether it happened. Free things confirm at $0, and the date shows what's past.
 - Week view: in the course, not a stretch.
+- Day chips: the actual day, like Thu 2/5.
 - The Sponsor Memo call: investing hinges on finding a way to make money, since TripTab doesn't handle payments (see How it could make money).
 - Beyond the course: a side project you'd keep running if it works; you see a real gap in the market.
 - Name: keep TripTab and sunset the spring app.
@@ -234,6 +235,4 @@ You see a real gap in the market and would keep TripTab running after the course
 
 **Still open**
 
-1. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
-2. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
-3. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
+1. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
