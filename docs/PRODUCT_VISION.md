@@ -1,6 +1,6 @@
 # Product Vision
 
-Draft v3, Nov 9, 2026. Your 11/9 review is applied on top of the 11/8 voice note; what's still open is at the bottom.
+Draft v3, Nov 9, 2026. Your 11/9 review is applied on top of the 11/8 voice note; one question is parked at the bottom.
 
 **TripTab is an AI-powered group trip and expense manager: one place to plan a trip, run it, and settle it, before, during and after.** Anyone can start a trip and pull the group in. Plans, bookings and who paid what live together, and the tab settles itself. It must never become a chore for whoever organizes it or for anyone else on the trip.
 
@@ -233,6 +233,6 @@ You see a real gap in the market and would keep TripTab running after the course
 - Spring pieces you want back: packing list, local tips, action items, alternatives, PDF, calendar.
 - Look: keep the spring design; get the timeline right.
 
-**Still open**
+**Parked until December (nothing before then depends on it)**
 
 1. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
