@@ -66,7 +66,7 @@ What we're building for Demo Day (12/8) versus the wider product.
 | --- | --- |
 | Start a trip with dates and stops | TripTab texting invites itself |
 | Add people directly by name, email or phone, or one group link where people pick their name | Date polls and bedroom assignments |
-| Owner, Editor and Viewer roles | Privacy controls, like keeping your flights to yourself |
+| Owner, Editor and Participant roles, picked from an Add as menu | Privacy controls, like keeping your flights to yourself |
 | Itinerary timeline with stays and morning, day, evening, night, plus a week view | Receipt scanning |
 | Statuses from Suggested to Complete; opt in and out | Entering costs in other currencies at the day's exchange rate |
 | Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings from forwarded emails |
@@ -112,10 +112,10 @@ Yes, with conditions. No rule caps scope, and the syllabus says size and difficu
 ## Inviting people
 
 - **Two ways in, and people are on the trip right away.** Add someone directly by name plus email or phone and send them a one-off text, or drop one group link in the chat for all ten.
-- **The group link asks who you are.** People pick their name from the travelers already added; "Don't see your name?" lets them add themselves.
+- **The group link asks who you are.** People pick their name from the travelers already added; "Don't see your name?" lets them add themselves. Either way they get the role the trip's owner set as the link's default (Owner, for a casual trip), and a claimed name locks to that person's sign-in, so nobody else can take the spot.
 - **Direct invites go out two ways.** TripTab emails them the trip link, and a Text invite button opens your phone's Messages with the link filled in, for anyone you only have a number for.
 - **Opening a link claims a spot.** They sign in and take over the traveler with their name, so they can be put on plans and costs before they ever open TripTab.
-- **Three roles, set by the trip's owners.** Owner: full control. Editor: adds plans, activities and costs. Viewer: sees the trip. Most trips make everyone an owner; a leader running a corporate trip keeps the rest as viewers.
+- **Three roles, picked from an Add as menu.** Whoever adds someone picks Owner, Editor or Participant. Owner: everything, including removing people, changing roles and deleting the trip. Editor: adds and changes plans, activities and costs, and adds people too, so a friend can bring a friend. Participant: sees the trip, opts in or out and logs what they paid. Most trips make everyone an owner; a leader running a corporate trip keeps the rest as participants.
 - **Why TripTab won't text people itself, for now:** that needs a paid SMS service, and US carrier registration for app texts can take days to weeks. Texting from your own phone sends the same link for free.
 - **Roles live on the server, never in the link.** Share links, roles and collaborators were never ironed out in spring, so they're rebuilt from scratch; that closes the spring security gap.
 
@@ -163,7 +163,7 @@ Updated with your voice note. Nothing is thrown away: parked pieces stay in trip
 | See alternatives (spring's Remix) | Keep | Build 4 |
 | PDF and calendar export | Keep | Build 4 |
 | Landing with two ways in | Replace: Start a trip opens a blank itinerary, with help-planning buttons inside it | Build 2 |
-| Share links, roles, collaborators | Rebuild from scratch: Owner, Editor and Viewer roles, one group link plus direct adds | Build 2 |
+| Share links, roles, collaborators | Rebuild from scratch: Owner, Editor and Participant roles, one group link plus direct adds | Build 2 |
 | Data model and Lovable hosting | Replace; no Lovable hosting unless the course requires it | Build 2 |
 | Date poll, bedroom assignments | Later | After the course |
 | Full AI-built itineraries, floating chat | Park | After the course |
@@ -212,7 +212,7 @@ You see a real gap in the market and would keep TripTab running after the course
 
 - The ski group: still forming, about 7 to 10 people. Different people book the cars, the Airbnb and reservations, and several will pay; you don't expect trouble getting them on.
 - Currency: US dollars, since cards bill in dollars even when the price is in euros. Entering another currency at that day's rate could come later; it would miss card fees.
-- Who can add: three roles, Owner, Editor and Viewer. Most trips make everyone an owner; a corporate trip leader keeps the rest as viewers.
+- Roles: Owner, Editor and Participant, picked from an Add as menu when you add someone. Owners and editors can both add people, so a friend can bring a friend; most trips make everyone an owner, and a corporate trip leader keeps the rest as participants. People who come in through the group link get a default role the owner sets, and a claimed name locks to that person's sign-in.
 - The Sponsor Memo call: investing hinges on finding a way to make money, since TripTab doesn't handle payments (see How it could make money).
 - Beyond the course: a side project you'd keep running if it works; you see a real gap in the market.
 - Name: keep TripTab and sunset the spring app.
@@ -231,10 +231,9 @@ You see a real gap in the market and would keep TripTab running after the course
 
 **Still open**
 
-1. **Roles:** what can an Owner do that an Editor can't? Claude's pick: owners also add and remove people, change roles and delete the trip; editors add and change plans, activities and costs; viewers only look, and opt themselves in or out.
-2. **The group link:** what role does someone get when they join through it, or add themselves under "Don't see your name?"? Claude's pick: a default each trip's owner sets (Owner, for a casual trip), and a claimed name is locked to that person's sign-in, so only an owner can undo a wrong claim.
-3. **Statuses:** are Expensed and Complete two steps or one? Claude's pick: four statuses (Suggested → Planned → Confirmed → Complete) with the cost shown as a separate "$ ✓" badge, since concert tickets get paid at Confirmed but a dinner gets paid after it's Complete.
-4. **Week view:** in the course or after? Claude's pick: a Build 4 stretch, first to move right at the 11/17 trim check.
-5. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
-6. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
-7. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
+1. **Participant and adding people:** Claude set Participant as sees the trip, opts in or out and logs what they paid, but can't change the plan or the people (your first take on 11/9), and editors add people as editors or participants, so only owners make owners. Say if you meant Participant as view-only.
+2. **Statuses:** are Expensed and Complete two steps or one? Claude's pick: four statuses (Suggested → Planned → Confirmed → Complete) with the cost shown as a separate "$ ✓" badge, since concert tickets get paid at Confirmed but a dinner gets paid after it's Complete.
+3. **Week view:** in the course or after? Claude's pick: a Build 4 stretch, first to move right at the 11/17 trim check.
+4. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
+5. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
+6. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
