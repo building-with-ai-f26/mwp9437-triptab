@@ -3,15 +3,15 @@
 > Give this file to your coding agent and check that it is using these instructions. Keep the stack, commands, and ground rules current.
 
 ## 1. Project Overview
-- **What this repo builds:** [1–2 sentence summary]
+- **What this repo builds:** TripTab, a group-trip tool where confirming a plan logs who paid and who joined, and a settle-up view shows the fewest payments that square everyone.
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`]
-- **Tech stack:** [e.g., Python 3.12 / FastAPI / Next.js / SQLite / OpenRouter API]
+- **Tech stack:** React 19 + TypeScript + Vite in `app/`; data in browser localStorage (no server, no API keys in Build 1); Vitest for tests. Product Page is plain HTML in `docs/` (GitHub Pages). Money is stored in whole cents.
 
 ## 2. Commands
-- **Install dependencies:** `[e.g., npm install / uv sync]`
-- **Run locally:** `[e.g., npm run dev]`
-- **Run deterministic tests:** `[e.g., pytest / npm test]`
-- **Run model evals:** `[e.g., python tests/eval.py]`
+- **Install dependencies:** `cd app && npm install`
+- **Run locally:** `cd app && npm run dev` (then open the localhost URL and click "Load sample trip")
+- **Run deterministic tests:** `cd app && npm test`
+- **Run model evals:** none yet (no AI model in the product as of Build 1)
 
 ## 3. Non-Negotiable Engineering Rules
 1. **Plan before coding:** Before touching multiple files, propose a brief plan and wait for approval.

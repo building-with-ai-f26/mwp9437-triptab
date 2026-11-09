@@ -1,10 +1,10 @@
-# [Project Name]
+# TripTab
 
-> **One-line pitch:** [Who is this for, and what job does it do for them?]
+> **One-line pitch:** For friends on a group trip: confirming a plan logs who paid and who joined, so the settle-up is always current.
 
-- **Builder:** [Your Name] (`@github-handle`)
-- **Pod:** [Pod Name / Number]
-- **Product Page & Living PRD:** [Add your GitHub Pages URL]
+- **Builder:** Mike Pezza (`@mwp9437`)
+- **Pod:** Pod 9
+- **Product Page & Living PRD:** https://mwp9437.github.io/mwp9437-triptab/
 - **App:** runs locally through Week 4; add a cloud URL in Build 5.
 
 ## Start here: Build 1
@@ -38,8 +38,11 @@ Create your PostHog account in Week 1. Install it on the Product Page and local 
 Clone **your own repository** and ask your coding agent to document the exact install and run commands here and in `AGENTS.md`.
 
 ```bash
-git clone https://github.com/building-with-ai-f26/<your-repo-name>.git
-cd <your-repo-name>
+git clone https://github.com/mwp9437/mwp9437-triptab.git
+cd mwp9437-triptab/app
+npm install
+npm run dev     # open the localhost URL, then "Load sample trip"
+npm test        # split and settle-up tests
 ```
 
 If your app needs API keys, use a local environment file such as `.env`. Keep private keys out of source code, browser code, screenshots, and commits. The template ignores `.env`; `.env.example` contains placeholders only.

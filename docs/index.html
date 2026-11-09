@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>[Your Product Name] · Building with AI (Fall 2026)</title>
+  <title>TripTab · Building with AI (Fall 2026)</title>
 
   <!-- Week 1: create your PostHog account only.
        Build 2: paste your project's current PostHog web snippet here,
@@ -137,6 +137,17 @@
       font-size: 13px;
       color: var(--muted);
     }
+    .shot {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 8px 0 4px;
+    }
+    .todo {
+      background: #fef3c7;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -144,8 +155,8 @@
     <!-- HERO / PRODUCT PITCH -->
     <header>
       <span class="eyebrow">NYU Stern · Building with AI · Fall 2026</span>
-      <h1>[Your Product Name]</h1>
-      <p class="tagline">[One clear sentence: Who is this for, and what painful job does it do for them?]</p>
+      <h1>TripTab</h1>
+      <p class="tagline">For friends on a group trip: confirming a plan logs who paid and who joined in the same step, so the settle-up is always current and nobody rebuilds a spreadsheet afterward.</p>
       <div class="cta-row">
         <a class="btn" href="#live-demo" onclick="window.posthog && posthog.capture('clicked_try_product')">See the Product →</a>
         <a class="btn btn-secondary" href="#prd">Read the Living PRD</a>
@@ -157,49 +168,51 @@
     <section id="live-demo">
       <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
       <p>
-        <strong>Current Status:</strong> [Build 1: local prototype / Builds 2–4: local app / Build 5: cloud app]<br />
-        <strong>Demo:</strong> [Add a screenshot or GIF now; add the live cloud app URL in Build 5.]
+        <strong>Current Status:</strong> Build 1: rough local prototype (React + Vite, data in the browser's localStorage).<br />
+        <strong>Demo:</strong> the sample trip after two plans were confirmed. Dinner was paid by one person for four; tickets were paid by another for three.
       </p>
-      <p class="meta">
-        Ask your coding agent to embed a screenshot or GIF of your local prototype for Build 1. Keep this evidence current, then add your cloud app link and two-minute video in Build 5.
-      </p>
+      <img class="shot" src="prototype.png" alt="TripTab prototype: suggested and confirmed plans on the left, balances and the three payments that settle the trip on the right." />
+      <p class="meta">Run it: <code>cd app</code>, <code>npm install</code>, <code>npm run dev</code>, then click "Load sample trip". A cloud link and two-minute video come in Build 5.</p>
+      <p class="meta"><strong>Prior work:</strong> a spring 2026 TripTab prototype built in Lovable (<a href="https://github.com/mwp9437/triptab-RETIRED">mwp9437/triptab-RETIRED</a>), made before this course. This repo is a fresh rebuild; its settle-up math was adapted from that version.</p>
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
     <section id="prd">
       <h2>Living PRD (Product Requirements Document)</h2>
-      <p class="meta">Updated every week as we test with real users and learn what works.</p>
+      <p class="meta">PRD v1 · November 8, 2026. Updated every week as we test with real users and learn what works.</p>
 
       <h3>1. Target User & The Job to Be Done</h3>
-      <p><strong>Who is this for?</strong> [Name a specific, reachable person or role you have direct access to.]</p>
-      <p><strong>The painful "Before" workflow:</strong> [How do they do this today, and why is it slow, manual, or broken?]</p>
-      <p><strong>The "After" workflow with this product:</strong> [What does your tool do for them in one sitting?]</p>
+      <p><strong>Problem:</strong> On group trips, plans live in the group chat and money lives in Venmo requests. Nobody knows which plans are locked, who paid, or who owes whom until someone builds a spreadsheet after the trip.</p>
+      <p><strong>Who is this for?</strong> My friends with a group trip coming up: <span class="todo">[trip and dates]</span>. I'm on the trip, so I can watch them use it.</p>
+      <p><strong>The painful "Before" workflow:</strong> Plans get agreed in the chat. One person fronts the dinner or the tickets. After the trip, someone scrolls back through the chat and re-enters every cost, who joined and who paid into Splitwise or a sheet, and the group argues about what's missing.</p>
+      <p><strong>The "After" workflow with this product:</strong> Ideas go in as Suggested. When a plan happens, one tap confirms it with the real cost, who paid and who joined, and that logs the expense. The settle-up screen always shows the fewest payments that square everyone.</p>
 
       <h3>2. Scope & Explicit Non-Goals</h3>
       <ul>
-        <li><strong>In Scope (Core Workflow):</strong> [The 1 main workflow this product does reliably]</li>
-        <li><strong>Out of Scope #1:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #2:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #3:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
+        <li><strong>In Scope (Core Workflow):</strong> 1. Create a trip and add travelers. 2. Add plans as Suggested. 3. Confirm a plan: cost (total or per person), who paid, who joined; it becomes an evenly split expense. 4. Open Settle up: balances and the fewest payments.</li>
+        <li><strong>Out of Scope #1:</strong> AI itinerary generation (the spring version's starting point; the job here is managing the trip, not planning it).</li>
+        <li><strong>Out of Scope #2:</strong> Bookings or in-app payments. TripTab says who pays whom; Venmo moves the money.</li>
+        <li><strong>Out of Scope #3:</strong> Accounts, invites and multi-device sync in Build 1. Data stays in one browser for now.</li>
       </ul>
 
       <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
-      <p><strong>Riskiest Assumption:</strong> [What is the #1 technical or user risk that could sink this product?]</p>
-      <p><strong>Simple Architecture:</strong> [User Input] → [Your App / Server] → [AI Model / Tool] → [Output]</p>
+      <p><strong>Riskiest Assumption:</strong> Friends will tap Confirm in the moment, so the log is complete without anyone rebuilding it after the trip.</p>
+      <p><strong>Simple Architecture:</strong> [Traveler in the browser] → [React app] → [localStorage] → [Balances + fewest payments]. No server and no AI model in Build 1.</p>
+      <p><strong>How I'll know it works:</strong> My test group logs a real outing and agrees the settle-up matches what they're owed. From Build 2, PostHog tracks plans confirmed, expenses logged at confirm time, and settle-up views.</p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">[Record actual spend]</div>
+          <div class="stat-value"><span class="todo">[$ to date]</span></div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">[Not yet estimated]</div>
+          <div class="stat-value">$0 (runs in the browser; no API calls)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">[Not yet measured]</div>
+          <div class="stat-value">Not yet measured</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
@@ -216,10 +229,10 @@
       <div class="log-entry">
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [What you actually built; link your local prototype screenshot or GIF above.]</li>
-          <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong> PRD v1 and a local prototype of the core workflow: suggest plans, confirm one with cost, payer and who joined, and see balances plus the fewest payments to settle. Eight unit tests cover the split and settle-up math (<code>npm test</code>).</li>
+          <li><strong>Things learned with AI:</strong> <span class="todo">[after Terminus Episodes 1 and 2 and the Week 1 memo]</span></li>
+          <li><strong>What broke / changed in PRD:</strong> Narrowed the spring version (AI itinerary generator, chat, packing lists, budgets) to one job: confirm → settle. Money is now stored in whole cents so $100 split three ways is exactly $33.34 + $33.33 + $33.33. The settle-up column was squeezed by the plan form at desktop widths; fixed the grid.</li>
+          <li><strong>Cost & time this week:</strong> Agent: Claude. <span class="todo">[$ cost]</span> · <span class="todo">[hours]</span></li>
         </ul>
       </div>
 
