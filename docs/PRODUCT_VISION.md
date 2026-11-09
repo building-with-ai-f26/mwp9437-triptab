@@ -42,7 +42,7 @@ The group chat holds the ideas, Splitwise holds the money, and nobody holds the 
 1. **Straight to the trip.** Start a trip lands on a blank itinerary: tap a slot to add something by hand, or use the Plan with AI button. Help is a button inside the trip, never a gate in front of it. The spring home screen made you choose "already planned" or "plan it for me" before you could reach anything.
 2. **No chore for anyone.** Members can get the same control as whoever started the trip (most trips make everyone an owner), and action items can be handed out.
 3. **Only what matters goes in.** Costs people pay on their own stay out; an even split is the default, with shares, percentages or exact amounts when it isn't even.
-4. **A plan and its cost are one thing.** Every itinerary item carries a status: Suggested → Planned → Confirmed → Expensed → Complete. Concert tickets go from Planned to Confirmed when someone buys them, and Complete once the show is over; a slot that's only Planned can still move. Confirming captures the cost, who paid and who's in. Costs with no event, like a grocery run, go straight on the tab as general expenses.
+4. **A plan and its cost are one thing.** Every itinerary item carries a status: Suggested → Planned → Confirmed, and Confirmed means paid. Confirming captures the cost, who paid and who's in, in one step. Concert tickets go from Planned to Confirmed when someone buys them; a dinner stays Planned until the bill is paid; a free hike confirms at $0. A slot that's only Planned can still move. Whether something already happened comes from its date, not a status. Costs with no event, like a grocery run, go straight on the tab as general expenses.
 5. **AI suggests; the group decides.** It fills empty slots and enters what you tell it; it never overwrites a plan or makes one up (the spring version invented a flight nobody asked for).
 6. **Yours first, the group's one tap away.** Your itinerary shows your flights, the activities you're in (the rest look faded), your share of each cost, and what you owe or are owed. Everyone's flights are one tap away, for when you haven't booked yet.
 7. **Phone first, desktop too.** Most people will sign up and use it on their phones, on the move; there's a lot to show, so the desktop view has to be good as well.
@@ -68,7 +68,7 @@ What we're building for Demo Day (12/8) versus the wider product.
 | Add people directly by name, email or phone, or one group link where people pick their name | Date polls and bedroom assignments |
 | Owner and Viewer roles, picked from an Add as menu | Privacy controls, like keeping your flights to yourself |
 | Itinerary timeline with stays and morning, day, evening, night, plus a week view | Receipt scanning |
-| Statuses from Suggested to Complete; opt in and out | Entering costs in other currencies at the day's exchange rate |
+| Statuses: Suggested, Planned, Confirmed (paid); opt in and out | Entering costs in other currencies at the day's exchange rate |
 | Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings from forwarded emails |
 | General expenses not tied to a plan, like a grocery run | Full AI-built itineraries and an in-trip AI concierge |
 | Settle-up in the fewest payments | Post-trip recap |
@@ -85,7 +85,7 @@ You chose the aggressive cut and confirmed it on 11/9: core loop, trip logistics
 | Build (due) | What ships | Evidence it works |
 | --- | --- | --- |
 | Build 2 (11/16) | Trip, add people directly plus a group link, roles, itinerary timeline with stays, the spring look, PostHog | Events for trip created, person added, plan added |
-| Build 3 (11/23) | Statuses; plans and bookings with cost, payer and split; general expenses; opt in and out; settle-up; your own view and flights | A funnel from plan to confirmed to expensed |
+| Build 3 (11/23) | Statuses; plans and bookings with cost, payer and split; general expenses; opt in and out; settle-up; your own view and flights | A funnel from suggested to planned to confirmed (paid) |
 | Build 4 (11/30) | Plan with AI, packing list and tips, then survey suggestions and alternatives; action items with who's assigned; PDF and add to calendar; week view (stretch) | Ten-case evals on the AI features |
 | Build 5 (12/7) | Online, rollback check, two-minute video | The ski group using it from their phones |
 
@@ -213,6 +213,7 @@ You see a real gap in the market and would keep TripTab running after the course
 - The ski group: still forming, about 7 to 10 people. Different people book the cars, the Airbnb and reservations, and several will pay; you don't expect trouble getting them on.
 - Currency: US dollars, since cards bill in dollars even when the price is in euros. Entering another currency at that day's rate could come later; it would miss card fees.
 - Roles: start with two, Owner and Viewer, picked from an Add as menu when you add someone; you chose two to keep it simple. Owners add activities, costs and people, so a friend can bring a friend; most trips make everyone an owner, and a corporate trip leader keeps the rest as viewers. People who come in through the group link get a default role the owner sets, and a claimed name locks to that person's sign-in.
+- Statuses: three, Suggested → Planned → Confirmed, and Confirmed means paid; what matters is whether it's paid for, not whether it happened. Free things confirm at $0, and the date shows what's past.
 - The Sponsor Memo call: investing hinges on finding a way to make money, since TripTab doesn't handle payments (see How it could make money).
 - Beyond the course: a side project you'd keep running if it works; you see a real gap in the market.
 - Name: keep TripTab and sunset the spring app.
@@ -232,8 +233,7 @@ You see a real gap in the market and would keep TripTab running after the course
 **Still open**
 
 1. **Viewers:** Claude set Viewer as sees the trip and opts in or out of activities, nothing more. Say if viewers should also log what they paid.
-2. **Statuses:** are Expensed and Complete two steps or one? Claude's pick: four statuses (Suggested → Planned → Confirmed → Complete) with the cost shown as a separate "$ ✓" badge, since concert tickets get paid at Confirmed but a dinner gets paid after it's Complete.
-3. **Week view:** in the course or after? Claude's pick: a Build 4 stretch, first to move right at the 11/17 trim check.
-4. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
-5. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
-6. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
+2. **Week view:** in the course or after? Claude's pick: a Build 4 stretch, first to move right at the 11/17 trim check.
+3. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
+4. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
+5. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
