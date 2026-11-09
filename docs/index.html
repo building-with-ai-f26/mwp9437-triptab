@@ -216,7 +216,8 @@
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
-          <div class="stat-value">TBD</div>
+          <div class="stat-value">Made in Week 6, in the Sponsor Memo (Dec 14)</div>
+          <div class="meta" style="margin-top: 6px;">Open question: can TripTab find a way to make money that offsets the cost of its AI API calls?</div>
         </div>
       </div>
     </section>
@@ -230,7 +231,13 @@
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
           <li><strong>What shipped:</strong> PRD v1 and a local prototype of the core workflow: suggest plans, confirm one with cost, payer and who joined, and see balances plus the fewest payments to settle. Eight unit tests cover the split and settle-up math (<code>npm test</code>).</li>
-          <li><strong>Things learned with AI:</strong> To add after Terminus Episodes 1 and 2 and the Week 1 memo, before the Nov 10 class.</li>
+          <li><strong>Things learned with AI:</strong> from the Terminus terminal game.
+            <ul>
+              <li><strong>Seeing with the terminal:</strong> <code>ls</code> and <code>cat</code> let me see what's in a folder and in a file. Before, it always felt like I was running blind, mainly copy-pasting commands from Claude.</li>
+              <li><strong><code>&gt;</code> vs <code>&gt;&gt;</code> is critical:</strong> <code>&gt;</code> overwrites a file and <code>&gt;&gt;</code> adds to the end of it. A single missed key in the terminal can be super dangerous.</li>
+              <li><strong>Tab completion:</strong> when files have similar names, type the first letter and press Tab to complete up to where the names differ, then type the next letter or two and press Tab again.</li>
+            </ul>
+          </li>
           <li><strong>What broke / changed in PRD:</strong> Accounts moved into scope: friends join a trip and add their own plans and expenses (the prototype still adds travelers by name). Narrowed the spring version (AI itinerary generator, chat, packing lists, budgets) to one job: confirm → settle. Money is now stored in whole cents so $100 split three ways is exactly $33.34 + $33.33 + $33.33. The settle-up column was squeezed by the plan form at desktop widths; fixed the grid.</li>
           <li><strong>Cost & time this week:</strong> Agent: Claude, on a Claude Max plan ($100/month), so $0 extra for this build · about 5 hours</li>
         </ul>
