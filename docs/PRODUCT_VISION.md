@@ -86,7 +86,7 @@ You chose the aggressive cut and confirmed it on 11/9: core loop, trip logistics
 | --- | --- | --- |
 | Build 2 (11/16) | Trip, add people directly plus a group link, roles, itinerary timeline with stays, the spring look, PostHog | Events for trip created, person added, plan added |
 | Build 3 (11/23) | Statuses; plans and bookings with cost, payer and split; general expenses; opt in and out; settle-up; your own view and flights | A funnel from suggested to planned to confirmed (paid) |
-| Build 4 (11/30) | Plan with AI, packing list and tips, then survey suggestions and alternatives; action items with who's assigned; PDF and add to calendar; week view (stretch) | Ten-case evals on the AI features |
+| Build 4 (11/30) | Plan with AI, packing list and tips, then survey suggestions and alternatives; action items with who's assigned; PDF and add to calendar; week view | Ten-case evals on the AI features |
 | Build 5 (12/7) | Online, rollback check, two-minute video | The ski group using it from their phones |
 
 ## Does the aggressive cut fit the course?
@@ -213,7 +213,9 @@ You see a real gap in the market and would keep TripTab running after the course
 - The ski group: still forming, about 7 to 10 people. Different people book the cars, the Airbnb and reservations, and several will pay; you don't expect trouble getting them on.
 - Currency: US dollars, since cards bill in dollars even when the price is in euros. Entering another currency at that day's rate could come later; it would miss card fees.
 - Roles: start with two, Owner and Viewer, picked from an Add as menu when you add someone; you chose two to keep it simple. Owners add activities, costs and people, so a friend can bring a friend; most trips make everyone an owner, and a corporate trip leader keeps the rest as viewers. People who come in through the group link get a default role the owner sets, and a claimed name locks to that person's sign-in.
+- Viewers: see the trip and opt in or out of activities, nothing else.
 - Statuses: three, Suggested → Planned → Confirmed, and Confirmed means paid; what matters is whether it's paid for, not whether it happened. Free things confirm at $0, and the date shows what's past.
+- Week view: in the course, not a stretch.
 - The Sponsor Memo call: investing hinges on finding a way to make money, since TripTab doesn't handle payments (see How it could make money).
 - Beyond the course: a side project you'd keep running if it works; you see a real gap in the market.
 - Name: keep TripTab and sunset the spring app.
@@ -232,8 +234,6 @@ You see a real gap in the market and would keep TripTab running after the course
 
 **Still open**
 
-1. **Viewers:** Claude set Viewer as sees the trip and opts in or out of activities, nothing more. Say if viewers should also log what they paid.
-2. **Week view:** in the course or after? Claude's pick: a Build 4 stretch, first to move right at the 11/17 trim check.
-3. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
-4. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
-5. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
+1. **Other currencies:** in the course or after? Claude's pick: US dollars only through Demo Day, since the ski group's cards bill in dollars; the currency option after.
+2. **Day chips:** did you mean they show the actual day (Thu 2/5), not just Day 1? Applied that way; say if not.
+3. **The Sponsor Memo:** it's the course's last deliverable (12/14), a one-page call to invest, maintain or sunset, backed by real usage and costs. You said investing hinges on a way to make money; what would make you sunset it? Claude's pick: invest if 3 or more friends add costs without being chased and a money test looks worth running; maintain if it works but only you enter things; sunset if the group won't use it even once it's online.
