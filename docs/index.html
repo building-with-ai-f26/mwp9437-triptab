@@ -189,15 +189,15 @@
 
       <h3>2. Scope & Explicit Non-Goals</h3>
       <ul>
-        <li><strong>In Scope (Core Workflow):</strong> 1. Create a trip and add travelers. 2. Add plans as Suggested. 3. Confirm a plan: cost (total or per person), who paid, who joined; it becomes an evenly split expense. 4. Open Settle up: balances and the fewest payments.</li>
+        <li><strong>In Scope (Core Workflow):</strong> 1. Create a trip and invite friends, who join with an account. 2. Add plans as Suggested. 3. Confirm a plan: cost (total or per person), who paid, who joined; it becomes an evenly split expense. 4. Open Settle up: balances and the fewest payments.</li>
         <li><strong>Out of Scope #1:</strong> AI itinerary generation (the spring version's starting point; the job here is managing the trip, not planning it).</li>
         <li><strong>Out of Scope #2:</strong> Bookings or in-app payments. TripTab says who pays whom; Venmo moves the money.</li>
-        <li><strong>Out of Scope #3:</strong> Accounts, invites and multi-device sync in Build 1. Data stays in one browser for now.</li>
+        <li><strong>Out of Scope #3:</strong> A native iOS or Android app. TripTab is a phone-friendly web app.</li>
       </ul>
 
       <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
       <p><strong>Riskiest Assumption:</strong> Friends will tap Confirm in the moment, so the log is complete without anyone rebuilding it after the trip.</p>
-      <p><strong>Simple Architecture:</strong> [Traveler in the browser] → [React app] → [localStorage] → [Balances + fewest payments]. No server and no AI model in Build 1.</p>
+      <p><strong>Simple Architecture:</strong> [Traveler in the browser] → [React app] → [localStorage] → [Balances + fewest payments]. No server and no AI model in Build 1. Next: accounts and a shared database, since everyone on the trip joins and adds plans and expenses.</p>
       <p><strong>How I'll know it works:</strong> My test group logs a real outing and agrees the settle-up matches what they're owed. From Build 2, PostHog tracks plans confirmed, expenses logged at confirm time, and settle-up views.</p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
@@ -231,7 +231,7 @@
         <ul>
           <li><strong>What shipped:</strong> PRD v1 and a local prototype of the core workflow: suggest plans, confirm one with cost, payer and who joined, and see balances plus the fewest payments to settle. Eight unit tests cover the split and settle-up math (<code>npm test</code>).</li>
           <li><strong>Things learned with AI:</strong> To add after Terminus Episodes 1 and 2 and the Week 1 memo, before the Nov 10 class.</li>
-          <li><strong>What broke / changed in PRD:</strong> Narrowed the spring version (AI itinerary generator, chat, packing lists, budgets) to one job: confirm → settle. Money is now stored in whole cents so $100 split three ways is exactly $33.34 + $33.33 + $33.33. The settle-up column was squeezed by the plan form at desktop widths; fixed the grid.</li>
+          <li><strong>What broke / changed in PRD:</strong> Accounts moved into scope: friends join a trip and add their own plans and expenses (the prototype still adds travelers by name). Narrowed the spring version (AI itinerary generator, chat, packing lists, budgets) to one job: confirm → settle. Money is now stored in whole cents so $100 split three ways is exactly $33.34 + $33.33 + $33.33. The settle-up column was squeezed by the plan form at desktop widths; fixed the grid.</li>
           <li><strong>Cost & time this week:</strong> Agent: Claude, on a Claude Max plan ($100/month), so $0 extra for this build · about 5 hours</li>
         </ul>
       </div>
