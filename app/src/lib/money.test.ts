@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSettlements, splitEqually, totalCents } from "./money";
+import { calculateSettlements, parseDollars, splitEqually, totalCents } from "./money";
 import type { Expense, Traveler } from "../types";
 
 const people: Traveler[] = [
@@ -67,5 +67,18 @@ describe("calculateSettlements", () => {
       people,
     );
     expect(Object.values(balances).reduce((s, x) => s + x, 0)).toBe(0);
+  });
+});
+
+describe("parseDollars", () => {
+  it("accepts a dollar sign, commas and spaces", () => {
+    expect(parseDollars("$120")).toBe(120);
+    expect(parseDollars("1,200.50")).toBe(1200.5);
+    expect(parseDollars(" 35 ")).toBe(35);
+  });
+
+  it("rejects text and blanks", () => {
+    expect(parseDollars("abc")).toBeNaN();
+    expect(parseDollars("")).toBeNaN();
   });
 });

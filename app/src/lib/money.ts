@@ -2,6 +2,12 @@ import type { CostType, Expense, Transfer, Traveler } from "../types";
 
 export const toCents = (dollars: number): number => Math.round(dollars * 100);
 
+/** Reads a typed amount like "$120", "1,200.50" or " 35 " as dollars; anything else is NaN. */
+export const parseDollars = (typed: string): number => {
+  const cleaned = typed.replace(/[$,\s]/g, "");
+  return cleaned === "" ? NaN : Number(cleaned);
+};
+
 export const formatCents = (cents: number): string => {
   const sign = cents < 0 ? "-" : "";
   return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`;

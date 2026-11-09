@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CostType, Expense, Plan, Trip } from "./types";
-import { calculateSettlements, formatCents, splitEqually, totalCents } from "./lib/money";
+import { calculateSettlements, formatCents, parseDollars, splitEqually, totalCents } from "./lib/money";
 import { loadTrip, saveTrip } from "./lib/storage";
 import "./App.css";
 
@@ -81,12 +81,12 @@ function AddPlanForm({ onAdd }: { onAdd: (plan: Plan) => void }) {
 
   const add = () => {
     if (!title.trim()) return;
-    const cost = Number(estimate);
+    const cost = parseDollars(estimate);
     onAdd({
       id: newId(),
       title: title.trim(),
       when: when.trim() || undefined,
-      estimate: estimate && cost > 0 ? cost : undefined,
+      estimate: cost > 0 ? cost : undefined,
       costType,
       status: "suggested",
     });
@@ -132,7 +132,7 @@ function ConfirmPanel({
   const [paidBy, setPaidBy] = useState(trip.travelers[0]?.id ?? "");
   const [joined, setJoined] = useState<string[]>(trip.travelers.map((t) => t.id));
 
-  const value = Number(amount);
+  const value = parseDollars(amount);
   const valid = value > 0 && joined.length > 0 && paidBy !== "";
   const total = valid ? totalCents(value, costType, joined.length) : 0;
 
