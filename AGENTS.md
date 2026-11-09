@@ -1,4 +1,4 @@
-# AGENTS.md — Coding Agent Operating Manual
+# AGENTS.md: Coding Agent Operating Manual
 
 > Give this file to your coding agent and check that it is using these instructions. Keep the stack, commands, and ground rules current.
 

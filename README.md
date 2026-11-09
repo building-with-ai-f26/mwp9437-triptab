@@ -35,14 +35,23 @@ Create your PostHog account in Week 1. Install it on the Product Page and local 
 
 ## Local setup
 
-Clone **your own repository** and ask your coding agent to document the exact install and run commands here and in `AGENTS.md`.
+You need [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org/) 20 or 22 (LTS); check with `node -v`. The same commands work in PowerShell on Windows and in Terminal on a Mac.
 
 ```bash
 git clone https://github.com/building-with-ai-f26/mwp9437-triptab.git
 cd mwp9437-triptab/app
 npm install
-npm run dev     # open the localhost URL, then "Load sample trip"
-npm test        # split and settle-up tests
+npm run dev     # open the localhost link it prints (usually http://localhost:5173)
+npm test        # 8 tests on the split and settle-up math
 ```
 
-If your app needs API keys, use a local environment file such as `.env`. Keep private keys out of source code, browser code, screenshots, and commits. The template ignores `.env`; `.env.example` contains placeholders only.
+Already cloned? Run `git pull` in `mwp9437-triptab`, then `npm install` again in `app`. Stop the app with Ctrl+C.
+
+**Try the core loop (about a minute):**
+
+1. Click **Load sample trip** (four friends in Lisbon, three suggested plans).
+2. Confirm the seafood dinner: $240 total, Mike paid, all four joined.
+3. Confirm the Sintra tickets: $35 per person, paid by Alex, untick Sam.
+4. **Settle up** shows three payments: Priya pays Mike $95, Sam pays Mike $50, Sam pays Alex $10.
+
+Data stays in your browser (localStorage); **New trip** clears it. No accounts or API keys are needed yet. When keys arrive, they go in `app/.env.local`, which git ignores; `.env.example` holds placeholders only.
