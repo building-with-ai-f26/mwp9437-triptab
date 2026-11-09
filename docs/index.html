@@ -173,7 +173,7 @@
       </p>
       <img class="shot" src="prototype.png" alt="TripTab prototype: suggested and confirmed plans on the left, balances and the three payments that settle the trip on the right." />
       <p class="meta">Run it: <code>cd app</code>, <code>npm install</code>, <code>npm run dev</code>, then click "Load sample trip". A cloud link and two-minute video come in Build 5.</p>
-      <p class="meta"><strong>Prior work:</strong> a spring 2026 TripTab prototype built in Lovable (<a href="https://github.com/mwp9437/triptab-RETIRED">mwp9437/triptab-RETIRED</a>), made before this course. This repo is a fresh rebuild; its settle-up math was adapted from that version.</p>
+      <p class="meta"><strong>Prior work:</strong> a spring 2026 TripTab prototype built in Lovable (<a href="https://github.com/mwp9437/triptab-RETIRED">mwp9437/triptab-RETIRED</a>), made before this course (about 20 hours). This repo is a fresh rebuild; its settle-up math was adapted from that version.</p>
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
@@ -183,7 +183,7 @@
 
       <h3>1. Target User & The Job to Be Done</h3>
       <p><strong>Problem:</strong> On group trips, plans live in the group chat and money lives in Venmo requests. Nobody knows which plans are locked, who paid, or who owes whom until someone builds a spreadsheet after the trip.</p>
-      <p><strong>Who is this for?</strong> My friends with a group trip coming up: <span class="todo">[trip and dates]</span>. I'm on the trip, so I can watch them use it.</p>
+      <p><strong>Who is this for?</strong> My friends planning a Euro ski trip (about Feb 15 to 16, 2027). I'm on the trip. Lodging deposits, flights and lift passes get paid and split over the next few weeks, so the group can use TripTab before the trip as well as during it.</p>
       <p><strong>The painful "Before" workflow:</strong> Plans get agreed in the chat. One person fronts the dinner or the tickets. After the trip, someone scrolls back through the chat and re-enters every cost, who joined and who paid into Splitwise or a sheet, and the group argues about what's missing.</p>
       <p><strong>The "After" workflow with this product:</strong> Ideas go in as Suggested. When a plan happens, one tap confirms it with the real cost, who paid and who joined, and that logs the expense. The settle-up screen always shows the fewest payments that square everyone.</p>
 
@@ -204,7 +204,7 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value"><span class="todo">[$ to date]</span></div>
+          <div class="stat-value">$0 marginal (Claude Max, $100/mo, shared with other work)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
@@ -230,9 +230,9 @@
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
           <li><strong>What shipped:</strong> PRD v1 and a local prototype of the core workflow: suggest plans, confirm one with cost, payer and who joined, and see balances plus the fewest payments to settle. Eight unit tests cover the split and settle-up math (<code>npm test</code>).</li>
-          <li><strong>Things learned with AI:</strong> <span class="todo">[after Terminus Episodes 1 and 2 and the Week 1 memo]</span></li>
+          <li><strong>Things learned with AI:</strong> To add after Terminus Episodes 1 and 2 and the Week 1 memo, before the Nov 10 class.</li>
           <li><strong>What broke / changed in PRD:</strong> Narrowed the spring version (AI itinerary generator, chat, packing lists, budgets) to one job: confirm → settle. Money is now stored in whole cents so $100 split three ways is exactly $33.34 + $33.33 + $33.33. The settle-up column was squeezed by the plan form at desktop widths; fixed the grid.</li>
-          <li><strong>Cost & time this week:</strong> Agent: Claude. <span class="todo">[$ cost]</span> · <span class="todo">[hours]</span></li>
+          <li><strong>Cost & time this week:</strong> Agent: Claude, on a Claude Max plan ($100/month), so $0 extra for this build · about 5 hours</li>
         </ul>
       </div>
 
