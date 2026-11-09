@@ -4,7 +4,7 @@
 
 - **Builder:** Mike Pezza (`@mwp9437`)
 - **Pod:** Pod 9
-- **Product Page & Living PRD:** https://mwp9437.github.io/mwp9437-triptab/
+- **Product Page & Living PRD:** https://building-with-ai-f26.github.io/mwp9437-triptab/
 - **App:** runs locally through Week 4; add a cloud URL in Build 5.
 
 ## Start here: Build 1
@@ -38,7 +38,7 @@ Create your PostHog account in Week 1. Install it on the Product Page and local 
 Clone **your own repository** and ask your coding agent to document the exact install and run commands here and in `AGENTS.md`.
 
 ```bash
-git clone https://github.com/mwp9437/mwp9437-triptab.git
+git clone https://github.com/building-with-ai-f26/mwp9437-triptab.git
 cd mwp9437-triptab/app
 npm install
 npm run dev     # open the localhost URL, then "Load sample trip"
