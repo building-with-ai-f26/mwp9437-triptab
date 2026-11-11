@@ -6,7 +6,7 @@ Draft v3, Nov 9, 2026. Your 11/9 review is applied on top of the 11/8 voice note
 
 ## What exists today
 
-- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/). The design reference until the rebuild replaces it (you're keeping the TripTab name and sunsetting this one); its share links have a security gap (runbook step 24).
+- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/). The design reference until the rebuild replaces it (you're keeping the TripTab name and sunsetting this one); its share links have a security gap (runbook step 60).
 - **Build 1:** the [Product Page](https://building-with-ai-f26.github.io/mwp9437-triptab/) with PRD v1 and the build log, and a rough prototype in [the class repo](https://github.com/building-with-ai-f26/mwp9437-triptab): create a trip, suggest plans, confirm one with cost, payer and who joined, and see the fewest payments to settle. Eight tests on the money math; plain styling.
 - **Spring archive:** the legacy chat digest, usage export and Lovable's notes, in the course output folder (triptab-spring-archive).
 
@@ -107,7 +107,7 @@ Yes, with conditions. No rule caps scope, and the syllabus says size and difficu
 - **A hard cap removes the risk.** The course setup guide suggests a prepaid OpenRouter balance of $10 to $20 with a hard spend cap. The key stays on the server, never in the app or on GitHub.
 - **Every call gets logged with its cost,** which feeds the Sponsor Memo's cost section.
 
-**Who pays, open since 11/9:** you asked whether your Claude subscription can cover these calls, at least for the demo. If it can't, the app sends AI requests to OpenRouter on prepaid credits, and class credits are the fallback to ask about. Claude checks before PRD v2 (runbook step 29).
+**Who pays, open since 11/9:** you asked whether your Claude subscription can cover these calls, at least for the demo. If it can't, the app sends AI requests to OpenRouter on prepaid credits, and class credits are the fallback to ask about. Claude checks before PRD v2 (runbook step 54).
 
 ## Inviting people
 
@@ -195,7 +195,7 @@ You see a real gap in the market and would keep TripTab running after the course
 | TripIt | Builds an itinerary from forwarded booking emails | Later; manual entry first |
 | FlowTrip | AI group planning, very early | Confirms AI plus groups is a live direction |
 
-*From the spring 2026 competitor research in the legacy chat; not re-checked since. The field has likely moved, so a dedicated market research session is on the runbook (step 31).*
+*From the spring 2026 competitor research in the legacy chat; not re-checked since. The field has likely moved, so a dedicated market research session is on the runbook (step 66).*
 
 ## How we'll know it's working
 
