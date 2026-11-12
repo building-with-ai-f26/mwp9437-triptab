@@ -1,23 +1,153 @@
-:root {
-  --bg: #fafafa;
-  --card: #ffffff;
-  --text: #111827;
-  --muted: #4b5563;
-  --border: #e5e7eb;
-  --accent: #1d63dc;
-  --good: #15803d;
-  --bad: #b91c1c;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
-  color: var(--text);
-  background: var(--bg);
+/* TripTab design tokens and glass recipes, ported from the spring app.
+   Source of each value: docs/DESIGN.md (spring src/index.css and tailwind.config.ts). */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+
+  --color-background: hsl(45 25% 97%);
+  --color-foreground: hsl(240 20% 12%);
+  --color-primary: hsl(30 25% 44%);
+  --color-primary-foreground: #ffffff;
+  --color-gold-dark: hsl(30 30% 32%);
+  --color-gold-light: hsl(30 20% 90%);
+  --color-sand: hsl(35 30% 92%);
+  --color-muted: hsl(40 15% 94%);
+  --color-muted-foreground: hsl(220 10% 46%);
+  --color-border: hsl(35 15% 88%);
+  --color-stone: hsl(30 20% 78%);
+  --color-stone-dark: hsl(30 15% 55%);
+  --color-indigo: hsl(225 30% 45%);
+  --color-rose: hsl(350 50% 65%);
+  --color-sage: hsl(155 20% 55%);
+  --color-destructive: hsl(0 72% 51%);
+
+  --tracking-luxury: 0.15em;
+
+  --animate-kenburns: kenburns 25s ease-in-out infinite;
+  @keyframes kenburns {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.04);
+    }
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
+/* Glass: spring src/index.css, @layer utilities. */
+@utility glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px) saturate(1.3);
+  -webkit-backdrop-filter: blur(8px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility glass-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px) saturate(1.4) brightness(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4) brightness(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility glass-card-solid {
+  position: relative;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark readable glass for dialogs. Spring's mobile fix: no backdrop-filter inside dialogs
+   (it breaks on mobile WebKit), so the dialog version is fully opaque from the start. */
+@utility glass-card-readable {
+  position: relative;
+  background: rgb(30, 30, 30);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Inputs on glass: spring wizard/ExistingTripSetup.tsx. */
+@utility field {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition: background 0.2s;
+  &:focus {
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 45%, transparent);
+  }
+}
+
+/* Inputs inside the dark dialog. */
+@utility field-dark {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.95);
+  outline: none;
+  color-scheme: dark;
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+  &:focus {
+    border-color: color-mix(in oklab, var(--color-primary) 80%, white);
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+@utility label-luxury {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-luxury);
 }
