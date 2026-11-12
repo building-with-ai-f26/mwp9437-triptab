@@ -41,17 +41,20 @@ You need [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org/)
 git clone https://github.com/building-with-ai-f26/mwp9437-triptab.git
 cd mwp9437-triptab/app
 npm install
-npm run dev     # open the localhost link it prints (usually http://localhost:5173)
-npm test        # 8 tests on the split and settle-up math
+```
+
+Create `app/.env.local` from `app/.env.example` with the Supabase URL and publishable key (see [AGENTS.md](./AGENTS.md#set-up-and-run-locally); both are public values, and git ignores the file). Then:
+
+```bash
+npm run dev     # open http://localhost:5173
+npm test        # 26 offline tests: split and settle-up math, the data model, the timeline
 ```
 
 Already cloned? Run `git pull` in `mwp9437-triptab`, then `npm install` again in `app`. Stop the app with Ctrl+C.
 
-**Try the core loop (about a minute):**
+**Try it (about two minutes):**
 
-1. Click **Load sample trip** (four friends in Lisbon, three suggested plans).
-2. Confirm the seafood dinner: $240 total, Mike paid, all four joined.
-3. Confirm the Sintra tickets: $35 per person, paid by Alex, untick Sam.
-4. **Settle up** shows three payments: Priya pays Mike $95, Sam pays Mike $50, Sam pays Alex $10.
-
-Data stays in your browser (localStorage); **New trip** clears it. No accounts or API keys are needed yet. When keys arrive, they go in `app/.env.local`, which git ignores; `.env.example` holds placeholders only.
+1. Click **Start a trip** and create an account (name, email, password; no email to confirm).
+2. Click **Fill in the ski trip example** (Chamonix, Barcelona, Andorra) and **Start the trip**. You land on a blank itinerary.
+3. Tap a Morning slot to add a plan; leave it Suggested (faint) or make it Planned (solid). Tap **Add where everyone's staying** to add the Airbnb with check-in and check-out.
+4. In **People**, add a friend as a Viewer. Copy the **Group link**, open it in a private window, pick their name, make an account, and join: they see the trip but can't change it.
