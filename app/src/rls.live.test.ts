@@ -9,8 +9,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const url = process.env.VITE_SUPABASE_URL!;
-const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
+const url = import.meta.env.VITE_SUPABASE_URL!;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 const run = Math.random().toString(36).slice(2, 8);
 const password = `pw-${run}-${Math.random().toString(36).slice(2)}`;
 
