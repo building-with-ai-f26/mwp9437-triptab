@@ -9,7 +9,9 @@ TripTab, Mike Pezza's project for Building with AI (TECH-GB.2160 F2, NYU Stern, 
 
 ## Where the work happens (from 11/11)
 
-- **Build here, on Mike's laptop:** a Claude Code session in the Claude desktop app's Code tab, opened on `C:\Users\mpezza\code\mwp9437-triptab`. Run the app in the Code tab's Browser pane so Mike and Claude look at the same screen. Before calling a change done, click through it there and check it at desktop and phone width.
+- **When Mike is watching, build on his laptop:** a Claude Code session in the Claude desktop app's Code tab, opened on `C:\Users\mpezza\code\mwp9437-triptab`. Run the app in the Code tab's Browser pane so Mike and Claude look at the same screen.
+- **When Mike steps away, build in a cloud session:** the TripTab cloud environment (full network access, so the app can reach Supabase, PostHog, fonts and photos). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). `app/.env.local` lives only in that session, so the Morning report lists the lines Mike needs to recreate it on his laptop (the Supabase URL and publishable key, never a secret).
+- **Either way:** before calling a change done, click through it and check it at desktop and phone width.
 - **Product calls** happen in Mike's TripTab project in Claude; the decisions land in the Product Vision tab of the runbook, then get exported here.
 - **Course admin** (Icerynk, due dates, pod check-ins, grades, redos) runs in Mike's NYU Stern MBA project. Leave it there.
 
