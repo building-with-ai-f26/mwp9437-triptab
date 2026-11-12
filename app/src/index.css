@@ -151,3 +151,52 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-luxury);
 }
+
+/* Itinerary item cards and their status styling: docs/DESIGN.md, section 7 (spring Dashboard.tsx).
+   Planned and confirmed are solid glass with the kind's colored stripe; suggested is faint on
+   purpose (dashed, see-through, no stripe color) until it's decided. */
+@layer components {
+  .item-card {
+    position: relative;
+    display: block;
+    width: 100%;
+    text-align: left;
+    border-radius: 1rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-left-width: 4px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .item-card:hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  }
+  .item-card[data-kind="activity"] {
+    border-left-color: var(--color-rose);
+  }
+  .item-card[data-kind="meal"] {
+    border-left-color: var(--color-primary);
+  }
+  .item-card[data-kind="transport"],
+  .item-card[data-kind="flight"] {
+    border-left-color: var(--color-indigo);
+  }
+  .item-card[data-kind="stay"] {
+    border-left-color: var(--color-stone-dark);
+  }
+  .item-card[data-status="suggested"][data-kind] {
+    background: rgba(255, 255, 255, 0.1);
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.45);
+    border-left-color: color-mix(in oklab, var(--color-muted-foreground) 30%, transparent);
+    box-shadow: none;
+  }
+  .item-card[data-out="true"] {
+    opacity: 0.5;
+  }
+}

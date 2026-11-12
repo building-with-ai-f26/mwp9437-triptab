@@ -116,8 +116,31 @@ export function Dialog({
   );
 }
 
-/** A labeled field for the dark dialog. */
-export function DarkField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+/**
+ * A labeled field for the dark dialog. `group` is for a row of pill choices: it uses a fieldset,
+ * because a <label> around buttons ties the caption to the first button (a tap on "Kind" would
+ * pick Activity).
+ */
+export function DarkField({
+  label,
+  hint,
+  group = false,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  group?: boolean;
+  children: ReactNode;
+}) {
+  if (group) {
+    return (
+      <fieldset className="mb-3 block min-w-0">
+        <legend className="label-luxury mb-1.5 block text-white/65">{label}</legend>
+        {children}
+        {hint && <span className="mt-1 block text-xs text-white/50">{hint}</span>}
+      </fieldset>
+    );
+  }
   return (
     <label className="mb-3 block">
       <span className="label-luxury mb-1.5 block text-white/65">{label}</span>
@@ -151,5 +174,46 @@ export function ErrorNote({ children }: { children: ReactNode }) {
     <p role="alert" className="mt-2 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
       {children}
     </p>
+  );
+}
+
+/** A row of pill options (one choice), for the dark dialog or light glass. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  dark = true,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  label: string;
+  dark?: boolean;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.value)}
+            className={`min-h-9 rounded-full px-3.5 text-sm transition-colors ${
+              on
+                ? "bg-primary font-semibold text-white"
+                : dark
+                  ? "border border-white/15 bg-white/5 text-white/80 hover:bg-white/15"
+                  : "border border-white/50 bg-white/30 text-foreground hover:bg-white/50"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
