@@ -10,6 +10,22 @@ const run = Math.random().toString(36).slice(2, 7);
 const PW = `demo-${run}-Passw0rd`;
 const errors = [];
 
+
+// Every run is tagged test_run in PostHog (see src/lib/analytics.ts) so it never counts as real
+// usage. PostHog also drops events from browsers that look automated, so the run presents a
+// normal Chrome; the test_run tag is what keeps these events out of the dashboard.
+async function prep(ctx) {
+  await ctx.addInitScript(() => {
+    try { localStorage.setItem('triptab.test_run', '1'); } catch {}
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    Object.defineProperty(navigator, 'userAgentData', {
+      get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }),
+    });
+  });
+  return ctx;
+}
+const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
 function watch(page, who) {
   (global.__pages ||= []).push(page);
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${who}: ${m.text()}`); });
@@ -43,11 +59,11 @@ async function addPlan(page, day, slot, f) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--disable-blink-features=AutomationControlled'] });
   const result = {};
 
   // ---------- Owner, desktop ----------
-  const ownerCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ownerCtx = await prep(await browser.newContext({ viewport: { width: 1280, height: 800 }, userAgent: DESKTOP_UA }));
   const o = await ownerCtx.newPage();
   watch(o, 'owner');
   await o.goto(`${BASE}/`);
@@ -99,7 +115,7 @@ async function addPlan(page, day, slot, f) {
 
   // Phone screenshots of the owner's trip, same account.
   const state = await ownerCtx.storageState();
-  const phoneCtx = await browser.newContext({ ...PHONE, storageState: state });
+  const phoneCtx = await prep(await browser.newContext({ ...PHONE, storageState: state }));
   const op = await phoneCtx.newPage();
   watch(op, 'owner-phone');
   await op.goto(result.tripUrl);
@@ -120,7 +136,7 @@ async function addPlan(page, day, slot, f) {
   await shot(op, 'people-phone');
 
   // ---------- Vic, on a phone: claims the name the owner added ----------
-  const vicCtx = await browser.newContext({ ...PHONE });
+  const vicCtx = await prep(await browser.newContext({ ...PHONE }));
   const v = await vicCtx.newPage();
   watch(v, 'vic');
   await v.goto(groupUrl);
@@ -146,7 +162,7 @@ async function addPlan(page, day, slot, f) {
   await shot(v, 'viewer-people-phone');
 
   // ---------- Jules, desktop: adds their own name through the link ----------
-  const julesCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const julesCtx = await prep(await browser.newContext({ viewport: { width: 1280, height: 800 }, userAgent: DESKTOP_UA }));
   const j = await julesCtx.newPage();
   watch(j, 'jules');
   await j.goto(groupUrl);
@@ -176,6 +192,7 @@ async function addPlan(page, day, slot, f) {
   await o.waitForTimeout(800);
   await shot(o, 'my-trips-desktop');
 
+  await o.waitForTimeout(8000);
   result.errors = errors;
   console.log(JSON.stringify(result, null, 2));
   await browser.close();

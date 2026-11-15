@@ -21,6 +21,7 @@ export function startAnalytics(): void {
       session_recording: { maskAllInputs: true },
     });
     client = posthog;
+    tagTestRun(posthog);
     queue.splice(0).forEach((fn) => fn(posthog));
   });
 }
@@ -51,7 +52,34 @@ export function track(event: EventName, props: Record<string, unknown> = {}): vo
   run((ph) => ph.capture(event, props));
 }
 
-/** Ties events to the Supabase user id (never the email). */
+/**
+ * Automated click-throughs (e2e/) set this flag, so their events carry test_run and the PostHog
+ * dashboard can leave them out of real usage.
+ */
+function tagTestRun(ph: PostHog) {
+  try {
+    if (localStorage.getItem("triptab.test_run") === "1") ph.register({ test_run: true });
+  } catch {
+    // storage can be unavailable; then nothing is tagged
+  }
+}
+
+let identifiedAs: string | null = null;
+
+/**
+ * Ties events to the Supabase user id (never the email). Only an actual sign-out resets PostHog:
+ * resetting on every signed-out page load would give a visitor a new anonymous id each time and
+ * break the landing-to-sign-up funnel.
+ */
 export function identify(userId: string | null): void {
-  run((ph) => (userId ? ph.identify(userId) : ph.reset()));
+  run((ph) => {
+    if (userId && userId !== identifiedAs) {
+      ph.identify(userId);
+      identifiedAs = userId;
+    } else if (!userId && identifiedAs) {
+      ph.reset();
+      identifiedAs = null;
+      tagTestRun(ph);
+    }
+  });
 }
