@@ -37,10 +37,10 @@ _Last update 11/15 (evening): Build 3's row is built and checked. Since Auto mod
 13. **Pushing to `main`**, as you asked; the session's branch `claude/admiring-hypatia-85xxk4` is kept level with `main` (a stop hook asked for it).
 14. **Automated test runs are tagged in PostHog** (`test_run`), and the dashboard leaves them out and starts at 11/15 21:31 UTC, after my first, untagged run. So the dashboard is empty until you or the pod use the app: everything on it is real use. My first run's 3 test people and their events were deleted from PostHog; the tagged rerun stays so you can watch its replays (filter `test_run = true`).
 15. **Fixed a PostHog bug I'd written:** the app reset PostHog on every signed-out page load, which gave each visitor a new anonymous id per page and would have broken the landing-to-sign-up funnel. Now only a real sign-out resets it.
-17. **Plans default to everyone in; flights default to nobody but whoever added them** (flights are per person). Confirming a plan starts with whoever's in, and you can change it there.
-18. **Viewers can opt themselves in or out** (the vision) but can't confirm costs or add expenses; owners do the money.
-19. **Deleting a trip deletes its expenses;** removing one person who paid or owes is refused until that expense changes.
-16. **Your PostHog project is still named "Default project"** in UTC. Renaming it to TripTab and setting New York time needs the key's project-write scope, which it doesn't have; it's two fields in PostHog's project settings if you want them.
+16. **Plans default to everyone in; flights default to nobody but whoever added them** (flights are per person). Confirming a plan starts with whoever's in, and you can change it there.
+17. **Viewers can opt themselves in or out** (the vision) but can't confirm costs or add expenses; owners do the money.
+18. **Deleting a trip deletes its expenses;** removing one person who paid or owes is refused until that expense changes.
+19. **Your PostHog project is still named "Default project"** in UTC. Renaming it to TripTab and setting New York time needs the key's project-write scope, which it doesn't have; it's two fields in PostHog's project settings if you want them.
 
 ## For Mike: blocked / what you need to do
 
