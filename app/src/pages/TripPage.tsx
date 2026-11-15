@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { CalendarDays, Check, Plus, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
-import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
+import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
+import { WeekView } from "../components/trip/WeekView";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
@@ -44,6 +45,7 @@ export default function TripPage() {
   const [addingPerson, setAddingPerson] = useState(false);
   const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
   const [settling, setSettling] = useState(false);
+  const [view, setView] = useState<"days" | "week">("days");
 
   const reload = useCallback(
     () =>
@@ -191,13 +193,34 @@ export default function TripPage() {
                 </Button>
               )}
             </div>
-            {error && <ErrorNote>{error}</ErrorNote>}
-            <DayChips days={days} active={active} onPick={jump} />
-            <div className="divide-y divide-foreground/10 pb-16">
-              {days.map((d, i) => (
-                <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
-              ))}
+            <div className="mb-3">
+              <Segmented
+                dark={false}
+                label="Itinerary view"
+                value={view}
+                onChange={(v) => {
+                  setView(v);
+                  if (v === "week") track("week view opened", { days: days.length });
+                }}
+                options={[
+                  { value: "days", label: "Day by day" },
+                  { value: "week", label: "Week" },
+                ]}
+              />
             </div>
+            {error && <ErrorNote>{error}</ErrorNote>}
+            {view === "week" ? (
+              <WeekView days={days} actions={actions} />
+            ) : (
+              <>
+                <DayChips days={days} active={active} onPick={jump} />
+                <div className="divide-y divide-foreground/10 pb-16">
+                  {days.map((d, i) => (
+                    <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
+                  ))}
+                </div>
+              </>
+            )}
           </main>
 
           <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "itinerary" ? "hidden" : ""}`}>

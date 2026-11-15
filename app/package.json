@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:rls": "vitest run --config vitest.live.config.ts",
-    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs"
+    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

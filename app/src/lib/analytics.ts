@@ -40,6 +40,7 @@ export type EventName =
   | "plan added"
   | "plan updated"
   | "plan status changed"
+  | "week view opened"
   | "group link copied"
   | "group link opened"
   | "name claimed"

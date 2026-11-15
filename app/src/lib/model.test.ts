@@ -13,7 +13,7 @@ import {
   type ItemDraft,
   type Stop,
 } from "./model";
-import { buildTimeline } from "./timeline";
+import { buildTimeline, weeks } from "./timeline";
 
 const trip = { start_date: "2026-02-05", end_date: "2026-02-16" };
 
@@ -183,5 +183,13 @@ describe("buildTimeline", () => {
       "Check out: Chamonix Airbnb",
       "Check in: Barcelona hotel",
     ]);
+  });
+});
+
+describe("weeks", () => {
+  it("splits the 12-day ski trip into a week of 7 and a week of 5", () => {
+    const w = weeks(buildTimeline(trip, skiStops, []));
+    expect(w.map((x) => x.length)).toEqual([7, 5]);
+    expect(w[1][0].date).toBe("2026-02-12");
   });
 });
