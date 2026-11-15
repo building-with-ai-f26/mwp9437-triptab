@@ -7,29 +7,8 @@
  * Run: npm run test:rls (needs app/.env.local).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-const url = import.meta.env.VITE_SUPABASE_URL!;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
-const run = Math.random().toString(36).slice(2, 8);
-const password = `pw-${run}-${Math.random().toString(36).slice(2)}`;
-
-const client = () =>
-  createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-
-async function signedIn(who: string, name: string): Promise<SupabaseClient> {
-  const email = `rls-${run}-${who}@example.com`;
-  const res = await fetch(`${url}/functions/v1/sign-up`, {
-    method: "POST",
-    headers: { apikey: key, "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
-  });
-  expect(res.status, `sign-up for ${who}`).toBe(200);
-  const c = client();
-  const { error } = await c.auth.signInWithPassword({ email, password });
-  expect(error).toBeNull();
-  return c;
-}
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { client, signedIn } from "./test/live";
 
 let owner: SupabaseClient;
 let viewer: SupabaseClient;
