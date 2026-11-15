@@ -280,6 +280,9 @@ export default function TripPage() {
           if (existing) {
             await updateItem(existing.id, input);
             track("plan updated", { kind: input.kind, status: input.status });
+            if (existing.status !== input.status) {
+              track("plan status changed", { kind: input.kind, from: existing.status, to: input.status });
+            }
           } else {
             const added = await addItem(trip.id, input);
             // Flights are per person: whoever adds one is on it.
