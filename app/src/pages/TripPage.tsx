@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
-import { CalendarDays, Check, ListChecks, Plus, Users, Wallet } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
@@ -35,6 +35,7 @@ import { useAuth } from "../lib/auth";
 import { canEdit, dateRange, dollars, ROLE_LABEL } from "../lib/model";
 import { goingList, isGoing, myShareOf, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
+import { downloadIcs, icsForItems } from "../lib/ics";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
@@ -43,6 +44,7 @@ type Tab = "itinerary" | "money" | "todo" | "people";
 export default function TripPage() {
   const { id = "" } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [bundle, setBundle] = useState<TripBundle | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("itinerary");
@@ -149,8 +151,30 @@ export default function TripPage() {
           title={trip.name}
           subtitle={`${dateRange(trip.start_date, trip.end_date)}${stops.length ? ` · ${stops.map((s) => s.name).join(", ")}` : ""}`}
         >
+          <Button
+            variant="glass"
+            size="sm"
+            aria-label="Add your plans to your calendar"
+            title="Add your plans to your calendar"
+            onClick={() => {
+              const mine = items.filter((i) => (meId ? isGoing(i, meId, itemPeople) : true));
+              downloadIcs(`${trip.name}.ics`, icsForItems(trip, mine));
+              track("calendar downloaded", { scope: "trip", plans: mine.length });
+            }}
+          >
+            <CalendarPlus /> <span className="hidden md:inline">Calendar</span>
+          </Button>
+          <Button
+            variant="glass"
+            size="sm"
+            aria-label="PDF itinerary"
+            title="PDF itinerary"
+            onClick={() => navigate(`/trips/${trip.id}/print`)}
+          >
+            <FileText /> <span className="hidden md:inline">PDF</span>
+          </Button>
           {me && (
-            <span className="hidden rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-gold-dark sm:inline">
+            <span className="hidden rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-gold-dark lg:inline">
               You're {me.role === "owner" ? "an" : "a"} {ROLE_LABEL[me.role]}
             </span>
           )}
@@ -313,6 +337,7 @@ export default function TripPage() {
         extras={
           openItem && (
             <PlanPanel
+              tripName={trip.name}
               item={openItem}
               travelers={travelers}
               itemPeople={itemPeople}

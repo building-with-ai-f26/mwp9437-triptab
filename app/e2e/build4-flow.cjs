@@ -75,6 +75,25 @@ const h = require('./helpers.cjs');
   result.vicTabsOverflow = await h.overflowX(v);
   await h.shot(v, 'action-items-phone');
 
+  // Add to calendar: the whole trip (your plans) from the header, and one plan from its dialog.
+  const fs = require('fs');
+  const [tripIcs] = await Promise.all([o.waitForEvent('download'), o.getByRole('button', { name: 'Add your plans to your calendar' }).click()]);
+  const tripText = fs.readFileSync(await tripIcs.path(), 'utf8');
+  result.tripIcs = { file: tripIcs.suggestedFilename(), events: (tripText.match(/BEGIN:VEVENT/g) || []).length, hasSki: tripText.includes('SUMMARY:Ski school'), hasStay: tripText.includes('SUMMARY:Stay: Chamonix Airbnb') };
+  await o.locator('#day-2027-02-06').getByText('Ski school').click();
+  const [planIcs] = await Promise.all([o.waitForEvent('download'), h.dlg(o).getByRole('button', { name: 'Add to calendar' }).click()]);
+  const planText = fs.readFileSync(await planIcs.path(), 'utf8');
+  result.planIcs = { events: (planText.match(/BEGIN:VEVENT/g) || []).length, start: (planText.match(/DTSTART:(\S+)/) || [])[1] };
+  await h.dlg(o).getByRole('button', { name: 'Close' }).click();
+
+  // PDF itinerary: the print page, printed to a real PDF.
+  await o.getByRole('button', { name: 'PDF itinerary' }).click();
+  await o.getByText('TripTab itinerary').waitFor();
+  await o.waitForTimeout(500);
+  await h.shot(o, 'pdf-itinerary-desktop');
+  const pdf = await o.pdf({ format: 'Letter', printBackground: true });
+  result.pdf = { bytes: pdf.length, pages: (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length };
+
   // Phone: the grid scrolls inside its card; the page itself doesn't scroll sideways.
   const pCtx = await h.context(browser, { ...h.PHONE, storageState: await ownerCtx.storageState() });
   const p = h.watch(await pCtx.newPage(), 'owner-phone');

@@ -43,6 +43,8 @@ export type EventName =
   | "week view opened"
   | "action item added"
   | "action item done"
+  | "pdf opened"
+  | "calendar downloaded"
   | "group link copied"
   | "group link opened"
   | "name claimed"
