@@ -29,6 +29,8 @@ export interface TimelineActions {
   exactCents?: (item: Item) => number | null;
   /** Whether the viewer has opted out of this item (Build 3). */
   isOut?: (item: Item) => boolean;
+  /** A short line on the card: "Your share $40", or "3 of 4 in" (Build 3). */
+  note?: (item: Item) => string | null;
 }
 
 /** Sticky, horizontally scrolling day chips showing the actual day: "Thu" over "2/5". */
@@ -116,7 +118,8 @@ function ItemCard({ item, actions }: { item: Item; actions: TimelineActions }) {
             {item.status !== "confirmed" && (
               <span className="label-luxury text-[9px] text-muted-foreground/70">{STATUS_LABEL[item.status]}</span>
             )}
-            {out && <span className="text-[11px]">You're out</span>}
+            {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}
+            {!out && actions.note?.(item) && <span className="text-[11px] text-foreground/75">{actions.note(item)}</span>}
           </div>
         </div>
       </div>

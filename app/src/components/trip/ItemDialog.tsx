@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
@@ -39,6 +39,7 @@ export function ItemDialog({
   state,
   trip,
   canEdit,
+  extras,
   onClose,
   onSave,
   onDelete,
@@ -46,6 +47,8 @@ export function ItemDialog({
   state: ItemDialogState | null;
   trip: Trip;
   canEdit: boolean;
+  /** Shown above the form for an existing plan: its cost, your in or out, who's going (Build 3). */
+  extras?: ReactNode;
   onClose: () => void;
   onSave: (input: ItemInput, existing: Item | null) => Promise<void>;
   onDelete: (item: Item) => Promise<void>;
@@ -56,6 +59,7 @@ export function ItemDialog({
       onClose={onClose}
       title={state?.item ? (canEdit ? "Edit plan" : state.item.title) : state?.kind === "stay" ? "Add a stay" : "Add a plan"}
     >
+      {state?.item && extras}
       {state && (
         <ItemForm key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`} {...{ state, trip, canEdit, onClose, onSave, onDelete }} />
       )}
@@ -226,7 +230,7 @@ function ItemForm({
       )}
 
       {status !== "confirmed" ? (
-        <DarkField group label="Status" hint="Suggested looks faint until the group decides. Confirming with the real cost comes next.">
+        <DarkField group label="Status" hint="Suggested looks faint until the group decides. Confirm it with the real cost from the button above once it's saved.">
           <Segmented
             label="Status"
             value={status}

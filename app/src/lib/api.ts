@@ -5,6 +5,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, Role, Stop, StopDraft, Traveler, Trip } from "./model";
+import type { SplitMode } from "./split";
 
 /** Turns a database error into a sentence a traveler can act on. */
 export function friendly(error: PostgrestError | Error | null | undefined): string {
@@ -16,6 +17,9 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
   if (msg.includes("row-level security") || msg.includes("permission denied")) {
     return "Only the trip's owners can do that.";
   }
+  if (msg.includes("expenses_paid_by_fkey") || msg.includes("expense_shares_traveler_id_fkey")) {
+    return "They're on an expense. Change or remove that expense first.";
+  }
   if (msg.includes("Failed to fetch")) return "Can't reach TripTab. Check your connection and try again.";
   const known = [
     "Pick a day inside the trip",
@@ -25,6 +29,12 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
     "This link isn't active",
     "Pick your name or add it",
     "Only owners can do that",
+    "Confirm a plan with its cost, who paid and who's in",
+    "Undo the confirmation to change its status",
+    "The split has to add up to the cost",
+    "Everyone in the split has to be on the trip",
+    "Pick who paid from the trip",
+    "Pick at least one person",
   ];
   const hit = known.find((k) => msg.includes(k));
   return hit ? `${hit}.` : msg || "Something went wrong. Try again.";
@@ -59,6 +69,33 @@ export async function createTrip(name: string, stops: StopDraft[], myName: strin
   return must(data as string | null, error);
 }
 
+export interface ExpenseShare {
+  traveler_id: string;
+  amount_cents: number;
+  weight: number | null;
+}
+
+/** Money that changed hands: a confirmed plan's cost (item_id set) or a general expense. */
+export interface ExpenseRow {
+  id: string;
+  trip_id: string;
+  item_id: string | null;
+  description: string;
+  day: string | null;
+  total_cents: number;
+  paid_by: string;
+  split_mode: SplitMode;
+  created_at: string;
+  expense_shares: ExpenseShare[];
+}
+
+/** Someone's in or out of a plan; no row means the default (in, except flights). */
+export interface ItemPerson {
+  item_id: string;
+  traveler_id: string;
+  going: boolean;
+}
+
 export interface TripBundle {
   trip: Trip;
   stops: Stop[];
@@ -66,15 +103,19 @@ export interface TripBundle {
   items: Item[];
   /** Only owners can read the group link; null for viewers. */
   link: GroupLink | null;
+  expenses: ExpenseRow[];
+  itemPeople: ItemPerson[];
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select("*").eq("trip_id", id).order("created_at"),
     supabase.from("items").select("*").eq("trip_id", id).order("created_at"),
     supabase.from("trip_links").select("*").eq("trip_id", id).maybeSingle(),
+    supabase.from("expenses").select("*, expense_shares(traveler_id, amount_cents, weight)").eq("trip_id", id).order("created_at"),
+    supabase.from("item_people").select("item_id, traveler_id, going, items!inner(trip_id)").eq("items.trip_id", id),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -84,6 +125,10 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     travelers: must(travelers.data, travelers.error) as Traveler[],
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
+    expenses: must(expenses.data, expenses.error) as ExpenseRow[],
+    itemPeople: (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(
+      ({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going }),
+    ),
   };
 }
 
@@ -197,4 +242,66 @@ export async function deleteItem(id: string): Promise<void> {
   const { data, error } = await supabase.from("items").delete().eq("id", id).select("id");
   must(data, error);
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+// ---------- Money (Build 3) ----------
+
+export interface ShareInput {
+  traveler_id: string;
+  amount_cents: number;
+  weight?: number | null;
+}
+
+/** Confirm a plan: its real cost, who paid, who's in and the split, all in one transaction. */
+export async function confirmItem(itemId: string, total: number, paidBy: string, mode: SplitMode, shares: ShareInput[]) {
+  const { error } = await supabase.rpc("confirm_item", {
+    p_item: itemId,
+    p_total_cents: total,
+    p_paid_by: paidBy,
+    p_split_mode: mode,
+    p_shares: shares,
+  });
+  if (error) throw new Error(friendly(error));
+}
+
+/** Undo a confirmation: the expense goes and the plan is Planned again. */
+export async function unconfirmItem(itemId: string) {
+  const { error } = await supabase.rpc("unconfirm_item", { p_item: itemId });
+  if (error) throw new Error(friendly(error));
+}
+
+/** Add or edit a general expense (not tied to a plan). */
+export async function saveExpense(
+  tripId: string,
+  expenseId: string | null,
+  description: string,
+  day: string | null,
+  total: number,
+  paidBy: string,
+  mode: SplitMode,
+  shares: ShareInput[],
+) {
+  const { error } = await supabase.rpc("save_expense", {
+    p_trip: tripId,
+    p_expense: expenseId,
+    p_description: description.trim(),
+    p_day: day,
+    p_total_cents: total,
+    p_paid_by: paidBy,
+    p_split_mode: mode,
+    p_shares: shares,
+  });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function deleteExpense(id: string) {
+  const { data, error } = await supabase.from("expenses").delete().eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+/** In or out of a plan. You can set your own; owners can set anyone's. */
+export async function setGoing(itemId: string, travelerId: string, going: boolean) {
+  const { error } = await supabase.from("item_people").upsert({ item_id: itemId, traveler_id: travelerId, going });
+  if (error) throw new Error(friendly(error));
 }

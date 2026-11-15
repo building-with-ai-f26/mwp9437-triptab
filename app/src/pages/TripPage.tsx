@@ -1,30 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { CalendarDays, Check, Plus, Users } from "lucide-react";
+import { CalendarDays, Check, Plus, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
+import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget } from "../components/trip/Money";
+import { PlanPanel } from "../components/trip/PlanPanel";
 import {
   addItem,
   addTraveler,
+  confirmItem,
+  deleteExpense,
   deleteItem,
   loadTrip,
   removeTraveler,
   resetLink,
+  saveExpense,
+  setGoing,
   setRole,
+  unconfirmItem,
   updateItem,
   updateLink,
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { canEdit, dateRange, ROLE_LABEL } from "../lib/model";
+import { canEdit, dateRange, dollars, ROLE_LABEL } from "../lib/model";
+import { goingList, isGoing, myShareOf, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
-type Tab = "itinerary" | "people";
+type Tab = "itinerary" | "money" | "people";
 
 export default function TripPage() {
   const { id = "" } = useParams();
@@ -34,6 +42,8 @@ export default function TripPage() {
   const [tab, setTab] = useState<Tab>("itinerary");
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
   const [addingPerson, setAddingPerson] = useState(false);
+  const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
+  const [settling, setSettling] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -80,15 +90,28 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, items } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
+  const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
   const photo = photoFor(`${stops.map((s) => s.name).join(" ")} ${trip.name}`);
+  const expenseByItem = new Map(expenses.filter((e) => e.item_id).map((e) => [e.item_id as string, e]));
+  const { balances, transfers } = settle(expenses, travelers);
+  const openItem = dialog?.item ? (items.find((i) => i.id === dialog.item!.id) ?? dialog.item) : null;
 
   const actions: TimelineActions = {
     canEdit: editable,
     onAdd: (day, part, kind = "activity") => setDialog({ item: null, day, part, kind }),
     onOpen: (item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind }),
+    exactCents: (item) => expenseByItem.get(item.id)?.total_cents ?? null,
+    isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
+    note: (item) => {
+      const share = myShareOf(expenseByItem.get(item.id), meId);
+      if (item.status === "confirmed" && share != null) return `Your share ${dollars(share)}`;
+      const n = goingList(item, travelers, itemPeople).length;
+      if (item.kind === "flight") return `${n} on it`;
+      return n < travelers.length ? `${n} of ${travelers.length} in` : null;
+    },
   };
 
   const peopleCard = (
@@ -131,6 +154,7 @@ export default function TripPage() {
           {(
             [
               ["itinerary", "Itinerary", CalendarDays],
+              ["money", "Money", Wallet],
               ["people", `People (${travelers.length})`, Users],
             ] as const
           ).map(([key, label, Icon]) => (
@@ -176,7 +200,30 @@ export default function TripPage() {
             </div>
           </main>
 
-          <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "people" ? "" : "hidden"}`}>
+          <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "itinerary" ? "hidden" : ""}`}>
+            <div className={`space-y-4 ${tab === "money" ? "" : "hidden lg:block"}`}>
+              <MoneyCard
+                travelers={travelers}
+                expenses={expenses}
+                balances={balances}
+                meId={meId}
+                canEdit={editable}
+                onAdd={() => setExpenseTarget({ kind: "general" })}
+                onOpen={(e) => setExpenseTarget({ kind: "general", expense: e })}
+                onSettle={() => {
+                  setSettling(true);
+                  track("settle up viewed", { transfers: transfers.length, people: travelers.length });
+                }}
+              />
+              <FlightsCard
+                items={items}
+                travelers={travelers}
+                itemPeople={itemPeople}
+                meId={meId}
+                onOpen={(item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind })}
+              />
+            </div>
+            <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
             {peopleCard}
             {editable && link && (
               <GroupLinkCard
@@ -194,10 +241,11 @@ export default function TripPage() {
             )}
             {!editable && (
               <section className="glass-card-solid rounded-2xl p-4 text-sm text-muted-foreground">
-                You're a viewer on this trip: you see every plan and who's going. Ask an owner if you need to add or
-                change something.
+                You're a viewer on this trip: you see every plan and who's going, and you can opt in or out. Ask an owner
+                if you need to add or change something.
               </section>
             )}
+            </div>
           </aside>
         </div>
       </div>
@@ -206,13 +254,36 @@ export default function TripPage() {
         state={dialog}
         trip={trip}
         canEdit={editable}
+        extras={
+          openItem && (
+            <PlanPanel
+              item={openItem}
+              travelers={travelers}
+              itemPeople={itemPeople}
+              meId={meId}
+              expense={expenseByItem.get(openItem.id)}
+              canEdit={editable}
+              onGoing={async (travelerId, going) => {
+                await setGoing(openItem.id, travelerId, going);
+                if (travelerId === meId) track(going ? "opted in" : "opted out", { kind: openItem.kind });
+                await reload();
+              }}
+              onConfirm={() => {
+                setExpenseTarget({ kind: "item", item: openItem, expense: expenseByItem.get(openItem.id) });
+                setDialog(null);
+              }}
+            />
+          )
+        }
         onClose={() => setDialog(null)}
         onSave={async (input, existing) => {
           if (existing) {
             await updateItem(existing.id, input);
             track("plan updated", { kind: input.kind, status: input.status });
           } else {
-            await addItem(trip.id, input);
+            const added = await addItem(trip.id, input);
+            // Flights are per person: whoever adds one is on it.
+            if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
             track("plan added", { kind: input.kind, status: input.status, part: input.part, has_estimate: input.est_cents != null });
           }
           await reload();
@@ -222,6 +293,38 @@ export default function TripPage() {
           await reload();
         }}
       />
+      <ExpenseDialog
+        target={expenseTarget}
+        trip={trip}
+        travelers={travelers}
+        itemPeople={itemPeople}
+        meId={meId}
+        onClose={() => setExpenseTarget(null)}
+        onSubmit={async (target, input) => {
+          if (target.kind === "item") {
+            await confirmItem(target.item.id, input.total, input.paidBy, input.mode, input.shares);
+            track(target.expense ? "plan updated" : "plan confirmed", {
+              kind: target.item.kind,
+              split: input.mode,
+              people: input.shares.length,
+              from_status: target.item.status,
+            });
+          } else {
+            await saveExpense(trip.id, target.expense?.id ?? null, input.description, input.day, input.total, input.paidBy, input.mode, input.shares);
+            if (!target.expense) track("expense added", { split: input.mode, people: input.shares.length });
+          }
+          await reload();
+        }}
+        onUndo={async (item) => {
+          await unconfirmItem(item.id);
+          await reload();
+        }}
+        onDelete={async (e) => {
+          await deleteExpense(e.id);
+          await reload();
+        }}
+      />
+      <SettleDialog open={settling} transfers={transfers} travelers={travelers} meId={meId} onClose={() => setSettling(false)} />
       <AddPersonDialog
         open={addingPerson}
         defaultRole={link?.default_role ?? "owner"}
