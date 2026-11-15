@@ -1,6 +1,6 @@
 # Morning report (overnight build, 11/11 to 11/12)
 
-_Last update 11/15 (evening): Build 3's row is built and checked. Since Auto mode blocked pushes to `main`, newer work is on the session branch in draft PR [building-with-ai-f26/mwp9437-triptab#1](https://github.com/building-with-ai-f26/mwp9437-triptab/pull/1)._
+_Last update 11/15 (late): Build 3's row is built and checked, and so is the non-AI half of Build 4's (week view, action items, calendar, PDF). Since Auto mode blocked pushes to `main`, newer work is on the session branch in draft PR [building-with-ai-f26/mwp9437-triptab#1](https://github.com/building-with-ai-f26/mwp9437-triptab/pull/1)._
 
 ## Done and verified
 
@@ -19,6 +19,10 @@ _Last update 11/15 (evening): Build 3's row is built and checked. Since Auto mod
 | Build 3: database | Expenses with each person's share, general expenses, who's going to each plan, `confirm_item` (cost and Confirmed status in one transaction), `unconfirm_item`, `save_expense`, and a guard so a plan can't be Confirmed without its cost. **18 live tests** (42 with Build 2's): confirm, undo, splits that must add up, general expenses, opt in and out, who may do each, deleting a trip | `73e8b86`, `287419f` (PR #1) |
 | Build 3: screens | Confirm a plan with its real cost (total or per person), who paid, who's in and the split; edit or undo; general expenses; opt in or out (faded when out; owners can set anyone's); Money card with your balance, trip spend, your share and everyone's balance; Settle up; your flights and everyone's. 4 ledger tests (**38 offline tests**). Click-through `e2e/build3-flow.cjs` matches a worked example: Mike owed $38, Vic owes $61, Vic pays Mike $38 and Priya $23; no console errors, no sideways scroll at 390. Screenshots: `confirm-dialog-*`, `expense-shares-desktop`, `trip-money-desktop`, `settle-up-desktop`, `viewer-opted-out-phone`, `viewer-money-phone`, `everyones-flights-phone` | `8752b30`, `835bff5` |
 | Build 3: PostHog | Events `plan confirmed`, `expense added`, `settle up viewed`, `opted in`, `opted out`, `plan status changed` (checked arriving in PostHog). Dashboard **"TripTab: Build 3"** with the course plan's funnel, suggested to planned to confirmed (paid): https://us.posthog.com/project/721211/dashboard/2359981 | `835bff5` |
+
+| Build 4: week view | Day by day / Week toggle; seven days side by side, Morning to Night, stays along the bottom; add from an empty cell; scrolls inside its card on a phone. Screenshots `week-view-*` | `c9f4981` (PR #1) |
+| Build 4: action items | Database with 6 live tests (**48 live tests** in all): owners add and assign; everyone sees who has what; the assignee ticks it off, even as a viewer. Screen: Action items card on desktop, To do tab on phones, yours first. Screenshots `action-items-*` | `7c74c3d`, `1051c40` (PR #1) |
+| Build 4: calendar and PDF | `.ics` for your plans (header) or one plan (its dialog); stays all day, suggestions tentative; 3 tests (**42 offline tests**). PDF itinerary page, printed in the click-through to a 2-page PDF. Screenshot `pdf-itinerary-desktop` | `c99e678` (PR #1) |
 
 ## Decisions I made for you
 
@@ -41,6 +45,10 @@ _Last update 11/15 (evening): Build 3's row is built and checked. Since Auto mod
 17. **Viewers can opt themselves in or out** (the vision) but can't confirm costs or add expenses; owners do the money.
 18. **Deleting a trip deletes its expenses;** removing one person who paid or owes is refused until that expense changes.
 19. **Your PostHog project is still named "Default project"** in UTC. Renaming it to TripTab and setting New York time needs the key's project-write scope, which it doesn't have; it's two fields in PostHog's project settings if you want them.
+20. **Week view weeks start on the trip's first day** (Fri to Thu for the ski trip), not on Sunday, so no week is mostly empty.
+21. **Action items: owners add and assign; whoever has one can tick it off,** even a viewer. Due dates are limited to the trip's days.
+22. **Calendar times by part of the day:** Morning 9 to 12, Day 12 to 5, Evening 6 to 9, Night 9 to midnight, in floating local time. The header button exports only the plans you're in.
+23. **The PDF is a print page** (the browser's "Save as PDF"), not a generated file, so it needs no server.
 
 ## For Mike: blocked / what you need to do
 
@@ -54,7 +62,9 @@ _Last update 11/15 (evening): Build 3's row is built and checked. Since Auto mod
 
 ## What I'd do next
 
-Build 4's row, the pieces that need no paid AI: the week view, action items with who's assigned, add to calendar, and a printable PDF itinerary. The AI pieces (Plan with AI, packing list, tips, alternatives) wait for your OpenRouter prepaid balance with a hard cap (CLAUDE.md), and the question of whether your Claude plan can cover them (runbook step 54).
+1. **Contact details owner-only in the database** (today only the app hides them from viewers).
+2. **Build 4's AI pieces** (Plan with AI, packing list, tips, alternatives) once you've set up an OpenRouter prepaid balance with a hard cap (CLAUDE.md) or decided whether your Claude plan covers them (runbook step 54). Each call goes through a Supabase Edge Function so the key never reaches the browser, and logs its tokens and cost from the first call.
+3. **Build 5 prep:** hosting choice for putting the app online (runbook step 67), and a custom email sender for magic links and password resets.
 
 ## app/.env.local on your laptop
 
