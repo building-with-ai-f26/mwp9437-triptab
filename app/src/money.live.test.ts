@@ -222,3 +222,15 @@ describe("opting in and out", () => {
     expect(error).not.toBeNull();
   });
 });
+
+describe("deleting a trip", () => {
+  it("a viewer can't; an owner can, expenses and all", async () => {
+    const byViewer = await viewer.from("trips").delete().eq("id", tripId).select();
+    expect(byViewer.data ?? []).toEqual([]);
+    const { data: before } = await owner.from("expenses").select("id").eq("trip_id", tripId);
+    expect(before?.length).toBeGreaterThan(0);
+    const del = await owner.from("trips").delete().eq("id", tripId).select();
+    expect(del.error).toBeNull();
+    expect(del.data).toHaveLength(1);
+  });
+});
