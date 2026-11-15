@@ -35,6 +35,8 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
     "Everyone in the split has to be on the trip",
     "Pick who paid from the trip",
     "Pick at least one person",
+    "Assign it to someone on the trip",
+    "Only owners or the person it's assigned to can do that",
   ];
   const hit = known.find((k) => msg.includes(k));
   return hit ? `${hit}.` : msg || "Something went wrong. Try again.";
@@ -96,6 +98,18 @@ export interface ItemPerson {
   going: boolean;
 }
 
+/** Something that still needs doing, and who's on it (Build 4). */
+export interface ActionItem {
+  id: string;
+  trip_id: string;
+  title: string;
+  assignee: string | null;
+  due_day: string | null;
+  done: boolean;
+  done_at: string | null;
+  created_at: string;
+}
+
 export interface TripBundle {
   trip: Trip;
   stops: Stop[];
@@ -105,10 +119,11 @@ export interface TripBundle {
   link: GroupLink | null;
   expenses: ExpenseRow[];
   itemPeople: ItemPerson[];
+  actions: ActionItem[];
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select("*").eq("trip_id", id).order("created_at"),
@@ -116,6 +131,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("trip_links").select("*").eq("trip_id", id).maybeSingle(),
     supabase.from("expenses").select("*, expense_shares(traveler_id, amount_cents, weight)").eq("trip_id", id).order("created_at"),
     supabase.from("item_people").select("item_id, traveler_id, going, items!inner(trip_id)").eq("items.trip_id", id),
+    supabase.from("action_items").select("*").eq("trip_id", id).order("created_at"),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -129,6 +145,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     itemPeople: (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(
       ({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going }),
     ),
+    actions: must(actions.data, actions.error) as ActionItem[],
   };
 }
 
@@ -304,4 +321,31 @@ export async function deleteExpense(id: string) {
 export async function setGoing(itemId: string, travelerId: string, going: boolean) {
   const { error } = await supabase.from("item_people").upsert({ item_id: itemId, traveler_id: travelerId, going });
   if (error) throw new Error(friendly(error));
+}
+
+// ---------- Action items (Build 4) ----------
+
+export async function addAction(tripId: string, title: string, assignee: string | null, dueDay: string | null) {
+  const { error } = await supabase
+    .from("action_items")
+    .insert({ trip_id: tripId, title: title.trim(), assignee, due_day: dueDay });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function updateAction(id: string, patch: Partial<Pick<ActionItem, "title" | "assignee" | "due_day">>) {
+  const { data, error } = await supabase.from("action_items").update(patch).eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+/** Tick off (or back on): owners, or whoever it's assigned to. */
+export async function setActionDone(id: string, done: boolean) {
+  const { error } = await supabase.rpc("set_action_done", { p_id: id, p_done: done });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function deleteAction(id: string) {
+  const { data, error } = await supabase.from("action_items").delete().eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }

@@ -92,7 +92,7 @@ async function addPlan(page, day, slot, f) {
   await addPlan(o, '2027-02-05', 'Add to day', { title: 'Train from Geneva', kind: 'Transport', status: 'Planned', est: '35', perPerson: true });
 
   // People: add Vic as a viewer and Priya as an owner, directly.
-  await o.getByRole('button', { name: 'Add', exact: true }).click();
+  await o.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
   let d = o.locator('dialog[open]');
   await d.getByLabel('Name').fill('Vic');
   await d.getByLabel('Email (optional)').fill(`vic-${run}@example.com`);

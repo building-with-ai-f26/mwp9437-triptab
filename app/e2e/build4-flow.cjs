@@ -33,6 +33,48 @@ const h = require('./helpers.cjs');
   await week.getByText('Week 2 of 2').waitFor();
   result.week2HasTrain = await week.getByText('Train to Barcelona').count();
 
+  // Action items: add Vic and Priya, hand out two items.
+  await o.getByRole('radio', { name: 'Day by day' }).click();
+  await o.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
+  await h.dlg(o).getByLabel('Name').fill('Vic');
+  await h.dlg(o).getByRole('radio', { name: 'Viewer' }).click();
+  await h.dlg(o).getByRole('button', { name: 'Add to trip' }).click();
+  await h.dlg(o).getByText('Added Vic').waitFor();
+  await h.dlg(o).getByLabel('Name').fill('Priya');
+  await h.dlg(o).getByRole('button', { name: 'Add to trip' }).click();
+  await h.dlg(o).getByText('Added Vic, Priya').waitFor();
+  await h.dlg(o).getByRole('button', { name: 'Done' }).click();
+  const todo = o.locator('section[aria-labelledby="actions-title"]');
+  await todo.getByLabel('New action item').fill('Book the Barcelona flight');
+  await todo.getByLabel("Who's on it").selectOption({ label: 'Vic' });
+  await todo.getByLabel('Due by').selectOption('2027-02-08');
+  await todo.getByRole('button', { name: 'Add' }).click();
+  await todo.getByText('Book the Barcelona flight').waitFor();
+  await todo.getByLabel('New action item').fill('Thursday night plans');
+  await todo.getByLabel("Who's on it").selectOption({ label: 'Priya' });
+  await todo.getByRole('button', { name: 'Add' }).click();
+  await todo.getByText('Thursday night plans').waitFor();
+  await todo.scrollIntoViewIfNeeded();
+  await h.shot(o, 'action-items-desktop');
+  const groupUrl = (await o.locator('section[aria-labelledby="link-title"] code').textContent()).trim();
+
+  // Vic on a phone: sees his item first, ticks it off, can't tick Priya's.
+  const vCtx = await h.context(browser, h.PHONE);
+  const v = h.watch(await vCtx.newPage(), 'vic');
+  await v.goto(groupUrl);
+  await v.getByRole('button', { name: 'Vic' }).click();
+  await h.signUp(v, 'Vic', 'vic');
+  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
+  await v.getByRole('tab', { name: 'To do' }).click();
+  const vt = v.locator('section[aria-labelledby="actions-title"]');
+  result.vicFirstItem = await vt.locator('li').first().innerText();
+  result.vicCanTickPriyas = await vt.getByLabel('Mark done: Thursday night plans').isEnabled();
+  await vt.getByLabel('Mark done: Book the Barcelona flight').click();
+  await vt.getByText('1 done').waitFor();
+  result.vicTabsOverflow = await h.overflowX(v);
+  await h.shot(v, 'action-items-phone');
+
   // Phone: the grid scrolls inside its card; the page itself doesn't scroll sideways.
   const pCtx = await h.context(browser, { ...h.PHONE, storageState: await ownerCtx.storageState() });
   const p = h.watch(await pCtx.newPage(), 'owner-phone');

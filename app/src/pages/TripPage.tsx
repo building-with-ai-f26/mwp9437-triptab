@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { CalendarDays, Check, Plus, Users, Wallet } from "lucide-react";
+import { CalendarDays, Check, ListChecks, Plus, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
+import { ActionsCard } from "../components/trip/Actions";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
@@ -11,17 +12,21 @@ import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget
 import { PlanPanel } from "../components/trip/PlanPanel";
 import {
   addItem,
+  addAction,
   addTraveler,
   confirmItem,
+  deleteAction,
   deleteExpense,
   deleteItem,
   loadTrip,
   removeTraveler,
   resetLink,
   saveExpense,
+  setActionDone,
   setGoing,
   setRole,
   unconfirmItem,
+  updateAction,
   updateItem,
   updateLink,
   type TripBundle,
@@ -33,7 +38,7 @@ import { buildTimeline } from "../lib/timeline";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
-type Tab = "itinerary" | "money" | "people";
+type Tab = "itinerary" | "money" | "todo" | "people";
 
 export default function TripPage() {
   const { id = "" } = useParams();
@@ -92,7 +97,7 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link, expenses, itemPeople, items } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, items, actions: todos } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
@@ -157,6 +162,7 @@ export default function TripPage() {
             [
               ["itinerary", "Itinerary", CalendarDays],
               ["money", "Money", Wallet],
+              ["todo", "To do", ListChecks],
               ["people", `People (${travelers.length})`, Users],
             ] as const
           ).map(([key, label, Icon]) => (
@@ -165,11 +171,11 @@ export default function TripPage() {
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 font-display text-sm font-semibold transition-all ${
+              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-1 py-2 font-display text-[13px] font-semibold transition-all sm:text-sm ${
                 tab === key ? "glass-card text-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="size-4" /> {label}
+              <Icon className="hidden size-4 min-[420px]:inline" /> {label}
             </button>
           ))}
         </div>
@@ -244,6 +250,33 @@ export default function TripPage() {
                 itemPeople={itemPeople}
                 meId={meId}
                 onOpen={(item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind })}
+              />
+            </div>
+            <div className={tab === "todo" ? "" : "hidden lg:block"}>
+              <ActionsCard
+                trip={trip}
+                actions={todos}
+                travelers={travelers}
+                meId={meId}
+                canEdit={editable}
+                onAdd={async (title, assignee, due) => {
+                  await addAction(trip.id, title, assignee, due);
+                  track("action item added", { assigned: Boolean(assignee), to_self: assignee === meId, has_due: Boolean(due) });
+                  await reload();
+                }}
+                onDone={async (a, done) => {
+                  await setActionDone(a.id, done);
+                  if (done) track("action item done", { own: a.assignee === meId });
+                  await reload();
+                }}
+                onAssign={async (a, assignee) => {
+                  await updateAction(a.id, { assignee });
+                  await reload();
+                }}
+                onDelete={async (a) => {
+                  await deleteAction(a.id);
+                  await reload();
+                }}
               />
             </div>
             <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
