@@ -1,6 +1,6 @@
 # Morning report (overnight build, 11/11 to 11/12)
 
-_Last update: stopped for the night at your request, partway into Build 3. Build 2's row is done and verified._
+_Last update 11/15 (afternoon): PostHog is live and checked in PostHog; test accounts deleted; Build 3 in progress._
 
 ## Done and verified
 
@@ -13,7 +13,7 @@ _Last update: stopped for the night at your request, partway into Build 3. Build
 | Data model | One record per itinerary item with a status; stays as items with a check-out day; timeline by morning, day, evening, night. **26 offline tests pass** (10 money + 16 new) | `d90400e` |
 | Supabase tables with row-level security | Trips, stops, travelers (Owner/Viewer), group link, items; `create_trip`, `join_preview`, `join_trip`, `reset_group_link`; the `sign-up` Edge Function. **24 live tests pass** (`npm run test:rls`): owner, viewer, link joiner, stranger and signed-out visitor, each checked on what they can read and change. Security advisor re-run after a hardening migration | `c983918`, `7dedc6e` |
 | Trip screens (Build 2 row) | Start a trip with dates and stops; the timeline with day chips ("Fri 2/5"), Morning/Day/Evening/Night, stays with check-in and check-out, suggested faint and planned solid; add people directly with Add as Owner/Viewer; the group link with pick-your-name, default role, off switch and reset; viewers get no edit controls. **Full click-through passes** (`npm run e2e`): owner on desktop, Vic claiming his name on a 390-wide phone (stays a Viewer), Jules adding himself through the link (gets Owner, the link default); no console errors, no sideways scroll at 390. 18 screenshots in `docs/screenshots/` | `3cbbcea` |
-| PostHog | `trip created`, `person added`, `plan added` (plus pageviews, `signed up`, `group link opened`, `name claimed`) wired, key read from `VITE_POSTHOG_KEY`. Checked with a dummy key and PostHog's network calls intercepted: all three Build 2 events fire. **Not yet checked in PostHog itself** (needs your key) | `fd76a1a` |
+| PostHog | **Checked in PostHog itself on 11/15**, through its API with your personal key (saved as a network secret on the TripTab cloud environment, never in a file or the chat). The click-through's events arrived: `$pageview`, `$autocapture` (clicks), `trip created`, `person added`, `plan added`, `group link opened`, `name claimed`, and **3 session recordings**. Product Page snippet added to `docs/index.html` (head only) and checked locally. Dashboard **"TripTab: Build 2"**: https://us.posthog.com/project/721211/dashboard/2359712 | `fd76a1a`, `249824c` |
 | AGENTS.md and README | Stack, commands, project structure, local setup; README walkthrough replaces "Load sample trip" | `b77e48b` |
 | Build 3: split math | Even, shares, percent and exact splits in whole cents, always adding back to the total. **34 offline tests pass** (8 new) | this commit |
 | Build 3: database (applied, no screens yet) | Expenses with each person's share, general expenses, who's going to each plan (flights default to "not going"), `confirm_item` (writes the plan's cost and its Confirmed status in one transaction), `unconfirm_item`, `save_expense`, and a guard so a plan can't become Confirmed without its expense. Applied to Supabase; the 24 Build 2 security tests still pass. **Not yet covered by its own live tests, and no screens use it yet** | this commit |
@@ -32,15 +32,18 @@ _Last update: stopped for the night at your request, partway into Build 3. Build
 10. **A trip always keeps at least one signed-in owner** (the database refuses the change that would leave none). Trips are capped at 60 days and 20 stops.
 11. **Removed the Build 1 localStorage screen** from the app; its money math and tests stay and feed Build 3. The Product Page's Build 1 section is untouched.
 12. **Screenshots are JPEG** (PNG was 15 MB for 20 shots).
-13. **Pushing to `main`**, as you asked; the session's own branch `claude/admiring-hypatia-85xxk4` is left where it started.
+13. **Pushing to `main`**, as you asked; the session's branch `claude/admiring-hypatia-85xxk4` is kept level with `main` (a stop hook asked for it).
+14. **Automated test runs are tagged in PostHog** (`test_run`), and the dashboard leaves them out and starts at 11/15 21:31 UTC, after my first, untagged run. So the dashboard is empty until you or the pod use the app: everything on it is real use. My first run's 3 test people and their events were deleted from PostHog; the tagged rerun stays so you can watch its replays (filter `test_run = true`).
+15. **Fixed a PostHog bug I'd written:** the app reset PostHog on every signed-out page load, which gave each visitor a new anonymous id per page and would have broken the landing-to-sign-up funnel. Now only a real sign-out resets it.
+16. **Your PostHog project is still named "Default project"** in UTC. Renaming it to TripTab and setting New York time needs the key's project-write scope, which it doesn't have; it's two fields in PostHog's project settings if you want them.
 
 ## For Mike: blocked / what you need to do
 
-1. **PostHog:** put your project key (`phc_...`) in `app/.env.local`, turn on session replay in PostHog's project settings, click around, and check pageviews, clicks and a replay in PostHog. The Product Page snippet (`docs/index.html` head) also needs your key; I left the page alone as you asked.
+1. **PostHog:** watch one of the 3 recordings (Session replay, filter `test_run = true`), then use the app yourself on your laptop (`app/.env.local` lines below now include the PostHog key) so the dashboard has real data, and take the dashboard screenshot for Icerynk. Optional: rename the project to TripTab and set its timezone to New York in project settings.
 2. **Supabase security advisor, two warnings left on purpose:** the app's own entry functions are callable (they check the caller inside), and "leaked password protection" is off (Supabase offers it on paid plans, as far as I can tell; check Auth settings).
-3. **Test accounts:** the tests created throwaway accounts named `rls-...@example.com` and `demo-...@example.com`, plus their test trips. I stopped before cleaning them up. Delete the trips first (Table Editor, `trips`), then the users (Authentication, Users); deleting a user first is blocked by the keep-an-owner rule.
-4. **PRD v2 and the Build 2 log on Sunday** (not touched, as you asked).
-5. **Runbook:** I didn't add these steps to the runbook's Steps table (I stopped before trying the Claude Docs connector), so this list is the record for now.
+3. **Test accounts:** deleted on 11/15 (all 36 accounts and 10 trips were tests). Each `npm run test:rls` or `npm run e2e` creates new `rls-...`/`demo-...@example.com` accounts; I clear them at the end of each session.
+4. **PRD v2 and the Build 2 log** on the Product Page, from real numbers (not touched).
+5. **Runbook:** I haven't added these steps to the runbook's Steps table (the Claude Docs connector isn't tried yet), so this list is the record for now.
 
 ## What I'd do next
 
@@ -52,16 +55,16 @@ _Last update: stopped for the night at your request, partway into Build 3. Build
 
 ## app/.env.local on your laptop
 
-Create `app/.env.local` with these lines (both Supabase values are public and ship in the browser; no secret):
+Create `app/.env.local` with these lines (all public values that ship in the browser; no secret):
 
 ```
 VITE_SUPABASE_URL=https://pptzbogslzicfyjooqra.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_-_AJFvHpurCuAHnKjIEuvQ__xAzXCJ_
-VITE_POSTHOG_KEY=
+VITE_POSTHOG_KEY=phc_pN7znkKDFxYdyXzvBva5VMxpxBRu5tVPhMo5V5DcwfbT
 VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-Put your PostHog project key after `VITE_POSTHOG_KEY=`.
+The PostHog project key is public too (it can only send events).
 
 ---
 
