@@ -7,6 +7,9 @@ import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, Role, Stop, StopDraft, Traveler, Trip } from "./model";
 import type { SplitMode } from "./split";
 
+/** Every traveler column a member may read; email and phone come from tripContacts (owners only). */
+const TRAVELER_COLUMNS = "id, trip_id, name, role, user_id, claimed_at, added_by, created_at";
+
 /** Turns a database error into a sentence a traveler can act on. */
 export function friendly(error: PostgrestError | Error | null | undefined): string {
   if (!error) return "Something went wrong. Try again.";
@@ -124,22 +127,26 @@ export interface TripBundle {
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
-    supabase.from("travelers").select("*").eq("trip_id", id).order("created_at"),
+    supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
     supabase.from("items").select("*").eq("trip_id", id).order("created_at"),
     supabase.from("trip_links").select("*").eq("trip_id", id).maybeSingle(),
     supabase.from("expenses").select("*, expense_shares(traveler_id, amount_cents, weight)").eq("trip_id", id).order("created_at"),
     supabase.from("item_people").select("item_id, traveler_id, going, items!inner(trip_id)").eq("items.trip_id", id),
     supabase.from("action_items").select("*").eq("trip_id", id).order("created_at"),
+    supabase.rpc("trip_contacts", { p_trip: id }),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
   return {
     trip: trip.data as Trip,
     stops: must(stops.data, stops.error) as Stop[],
-    travelers: must(travelers.data, travelers.error) as Traveler[],
+    travelers: withContacts(
+      must(travelers.data, travelers.error) as Omit<Traveler, "email" | "phone">[],
+      (contacts.data as { traveler_id: string; email: string | null; phone: string | null }[] | null) ?? [],
+    ),
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
     expenses: must(expenses.data, expenses.error) as ExpenseRow[],
@@ -159,6 +166,15 @@ export interface PersonDraft {
   role: Role;
 }
 
+/** Owners get each person's email and phone; everyone else gets null for both. */
+function withContacts(
+  travelers: Omit<Traveler, "email" | "phone">[],
+  contacts: { traveler_id: string; email: string | null; phone: string | null }[],
+): Traveler[] {
+  const byId = new Map(contacts.map((c) => [c.traveler_id, c]));
+  return travelers.map((t) => ({ ...t, email: byId.get(t.id)?.email ?? null, phone: byId.get(t.id)?.phone ?? null }));
+}
+
 export async function addTraveler(tripId: string, p: PersonDraft): Promise<Traveler> {
   const { data, error } = await supabase
     .from("travelers")
@@ -169,9 +185,10 @@ export async function addTraveler(tripId: string, p: PersonDraft): Promise<Trave
       phone: p.phone.trim() || null,
       role: p.role,
     })
-    .select("*")
+    .select(TRAVELER_COLUMNS)
     .single();
-  return must(data as Traveler | null, error);
+  const row = must(data as Omit<Traveler, "email" | "phone"> | null, error);
+  return { ...row, email: p.email.trim() || null, phone: p.phone.trim() || null };
 }
 
 export async function setRole(travelerId: string, role: Role): Promise<void> {
