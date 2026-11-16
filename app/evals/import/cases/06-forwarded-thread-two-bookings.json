@@ -1,0 +1,43 @@
+{
+  "id": "06-forwarded-thread-two-bookings",
+  "group": "messy",
+  "what": "A forwarded thread with replies, signatures and two bookings: a rental car and coach tickets.",
+  "text": "---------- Forwarded message ---------\nFrom: Sam Okafor <sam.okafor@mail.example>\nDate: Tue, Dec 1, 2026 at 9:14 PM\nSubject: Fwd: Fwd: car + the Andorra bus\nTo: Jordan Avery\n\nok both sorted, see below. can you put them in the trip thing? sent from my phone\n\n> ---------- Forwarded message ---------\n> From: AlpesCar Reservations <resa@alpescar.example>\n> Subject: Votre reservation AC-7741920\n>\n> Pickup: Geneva Airport (French sector), Fri 5 Feb 2027, 09:30\n> Return: Geneva Airport (French sector), Fri 12 Feb 2027, 10:00\n> Vehicle: 9-seat minivan, winter tyres included\n> Estimated total: CHF 412.00, payable at pickup. No deposit taken.\n> Reference: AC-7741920\n>\n> > On Mon, Nov 30, 2026 Priya wrote:\n> > do we even need a car?? thought there was a shuttle\n> > - P\n\n> ---------- Forwarded message ---------\n> From: Pyrenees Coach <tickets@pyreneescoach.example>\n> Subject: Your e-tickets, order PC55210\n>\n> Barcelona Nord to Andorra la Vella\n> Sat 13 Feb 2027, departs 10:15, arrives 13:30\n> 2 x Adult     EUR 64.00\n> Paid by card. Order PC55210. Show this email when boarding.\n>\n> Unsubscribe | Terms | Pyrenees Coach SL\n\n--\nSam\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "transport"
+        ],
+        "day": "2027-02-05",
+        "part": [
+          "morning"
+        ],
+        "cost_cents": 41200,
+        "currency": "CHF",
+        "who_pays": [
+          "split"
+        ],
+        "paid": false
+      },
+      {
+        "kind": [
+          "transport"
+        ],
+        "day": "2027-02-13",
+        "part": [
+          "morning"
+        ],
+        "cost_cents": 6400,
+        "currency": "EUR",
+        "who_pays": [
+          "split",
+          "own"
+        ],
+        "paid": true,
+        "depart_time": "10:15",
+        "arrive_time": "13:30"
+      }
+    ]
+  }
+}

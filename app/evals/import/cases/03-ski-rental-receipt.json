@@ -1,0 +1,26 @@
+{
+  "id": "03-ski-rental-receipt",
+  "group": "normal",
+  "what": "One person's ski rental receipt, priced in euros.",
+  "text": "SPORT ALPIN LOCATION\n22 avenue Ravanel le Rouge, Chamonix\nTicket no 004417\n\n06 Feb 2027   09:12\nClient: J. AVERY\n\n1 x Pack ski + chaussures PERFORMANCE, 6 jours (06 Feb to 11 Feb)   148.00\nTVA 20% incluse\nTOTAL EUR   148.00\nPaye par carte VISA ****4417\n\nMerci et bon ski !\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "activity",
+          "transport"
+        ],
+        "day": "2027-02-06",
+        "part": [
+          "morning"
+        ],
+        "cost_cents": 14800,
+        "currency": "EUR",
+        "who_pays": [
+          "own"
+        ],
+        "paid": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "01-airline-confirmation",
+  "group": "normal",
+  "what": "An airline confirmation email with times, a total and a confirmation code.",
+  "text": "From: Skyline Air <no-reply@skylineair.example>\nSubject: Your trip confirmation (QK7RWD) - Newark to Geneva\n\nThanks for flying with us, Jordan.\n\nConfirmation number: QK7RWD\nTraveler: AVERY/JORDAN MR\n\nThu, Feb 4, 2027\nFlight SK 57   Newark (EWR) to Geneva (GVA)\nDeparts 5:05 PM   Arrives 7:10 AM (Fri, Feb 5)   Economy (K)   Seat 31C\n\nFare           $512.00\nTaxes and fees $103.50\nTotal          $615.50  charged to Visa ending 4417 on Nov 2, 2026\n\nBags: first checked bag $0 on this fare. Manage your trip at skylineair.example/trips\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "flight"
+        ],
+        "day": "2027-02-04",
+        "part": [
+          "evening",
+          "day"
+        ],
+        "end_day": "2027-02-05",
+        "cost_cents": 61550,
+        "currency": "USD",
+        "who_pays": [
+          "own"
+        ],
+        "paid": true,
+        "depart_time": "17:05",
+        "arrive_time": "07:10",
+        "title_has": [
+          "57"
+        ]
+      }
+    ]
+  }
+}

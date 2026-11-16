@@ -1,0 +1,42 @@
+{
+  "id": "08-dates-day-first",
+  "group": "messy",
+  "what": "A hotel booking and a dinner reservation with dates written day first (05/02/2027 is 5 February).",
+  "text": "HOTEL PLACA ROUREDA - Andorra la Vella\nConfirmacio de reserva 88213-AND\nData de la reserva: 03/11/2026\n\nArribada: 13/02/2027   Sortida: 16/02/2027\n4 habitacions dobles, esmorzar inclos\nImport total: 1.140,00 EUR  (pagament a l'hotel)\nAdreca: Carrer de la Unio 14, Andorra la Vella\n\nP.S. from Jordan: also I reserved Brasserie du Mole in Chamonix for all 8 of us on 05/02/2027 at 20:00, no deposit.\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": "2027-02-13",
+        "end_day": "2027-02-16",
+        "cost_cents": 114000,
+        "currency": "EUR",
+        "who_pays": [
+          "split"
+        ],
+        "paid": false
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": "2027-02-05",
+        "part": [
+          "evening",
+          "night"
+        ],
+        "cost_cents": null,
+        "who_pays": [
+          "split"
+        ],
+        "paid": false,
+        "depart_time_in": [
+          "20:00",
+          null
+        ]
+      }
+    ]
+  }
+}

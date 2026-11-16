@@ -1,0 +1,9 @@
+{
+  "id": "10-not-travel",
+  "group": "adversarial",
+  "what": "A grocery receipt that has nothing to do with the trip: nothing should be proposed.",
+  "text": "CORNER MARKET #114\n388 Atlantic Ave, Brooklyn NY\n11/14/2026 6:42 PM   Cashier: 07\n\nOat milk 64oz            5.49\nBananas 2.1 lb           1.24\nSourdough loaf           6.50\nEggs dozen large         4.99\nDish soap                3.79\nSubtotal                22.01\nTax                      1.17\nTOTAL                   23.18\nVISA ****4417           23.18\nThank you!\n",
+  "expect": {
+    "plans": []
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "02-stay-confirmation",
+  "group": "normal",
+  "what": "A home-rental confirmation: check-in and check-out, an address, a paid total.",
+  "text": "Reservation confirmed: Chalet des Aiguilles\nHost: Maelle. Confirmation code: HMXT4K29PZ\n\nCheck-in   Fri, Feb 5, 2027 after 4:00 PM\nCheckout   Fri, Feb 12, 2027 by 11:00 AM\nGuests     8\n\nAddress: 114 Route des Pelerins, 74400 Chamonix-Mont-Blanc, France\n\nPrice details\n$412.00 x 7 nights     $2,884.00\nCleaning fee             $180.00\nService fee              $148.40\nTotal (USD)            $3,212.40\nPaid Nov 9, 2026 with Mastercard ending 2208\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": "2027-02-05",
+        "end_day": "2027-02-12",
+        "cost_cents": 321240,
+        "currency": "USD",
+        "who_pays": [
+          "split"
+        ],
+        "paid": true,
+        "title_has": [
+          "Aiguilles"
+        ]
+      }
+    ]
+  }
+}
