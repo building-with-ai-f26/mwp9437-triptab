@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
 import { ActionsCard } from "../components/trip/Actions";
+import { TripSettingsDialog } from "../components/trip/TripSettings";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
@@ -16,6 +17,7 @@ import {
   addTraveler,
   confirmItem,
   deleteAction,
+  deleteTrip,
   deleteExpense,
   deleteItem,
   loadTrip,
@@ -27,6 +29,7 @@ import {
   setRole,
   unconfirmItem,
   updateAction,
+  updateTrip,
   updateItem,
   updateLink,
   type TripBundle,
@@ -53,6 +56,7 @@ export default function TripPage() {
   const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
   const [settling, setSettling] = useState(false);
   const [view, setView] = useState<"days" | "week">("days");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -164,6 +168,11 @@ export default function TripPage() {
           >
             <CalendarPlus /> <span className="hidden md:inline">Calendar</span>
           </Button>
+          {editable && (
+            <Button variant="glass" size="sm" aria-label="Trip settings" title="Trip settings" onClick={() => setSettingsOpen(true)}>
+              <Settings />
+            </Button>
+          )}
           <Button
             variant="glass"
             size="sm"
@@ -406,6 +415,20 @@ export default function TripPage() {
         onDelete={async (e) => {
           await deleteExpense(e.id);
           await reload();
+        }}
+      />
+      <TripSettingsDialog
+        open={settingsOpen}
+        trip={trip}
+        stops={stops}
+        onClose={() => setSettingsOpen(false)}
+        onSave={async (name, newStops) => {
+          await updateTrip(trip.id, name, newStops);
+          await reload();
+        }}
+        onDelete={async () => {
+          await deleteTrip(trip.id);
+          navigate("/trips", { replace: true });
         }}
       />
       <SettleDialog open={settling} transfers={transfers} travelers={travelers} meId={meId} onClose={() => setSettling(false)} />

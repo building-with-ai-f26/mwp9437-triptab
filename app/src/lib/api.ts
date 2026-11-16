@@ -36,6 +36,7 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
     "Pick who paid from the trip",
     "Pick at least one person",
     "Assign it to someone on the trip",
+    "Some plans fall outside the new dates; move or remove them first",
     "Only owners or the person it's assigned to can do that",
   ];
   const hit = known.find((k) => msg.includes(k));
@@ -346,6 +347,25 @@ export async function setActionDone(id: string, done: boolean) {
 
 export async function deleteAction(id: string) {
   const { data, error } = await supabase.from("action_items").delete().eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+// ---------- Trip settings ----------
+
+/** Rename a trip and replace its stops (which set its dates), in one step. Owners only. */
+export async function updateTrip(tripId: string, name: string, stops: StopDraft[]) {
+  const { error } = await supabase.rpc("update_trip", {
+    p_trip: tripId,
+    p_name: name.trim(),
+    p_stops: stops.map((s) => ({ name: s.name.trim(), start_date: s.start_date, end_date: s.end_date })),
+  });
+  if (error) throw new Error(friendly(error));
+}
+
+/** Delete the whole trip: plans, people, money and all. Owners only. */
+export async function deleteTrip(tripId: string) {
+  const { data, error } = await supabase.from("trips").delete().eq("id", tripId).select("id");
   must(data, error);
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }
