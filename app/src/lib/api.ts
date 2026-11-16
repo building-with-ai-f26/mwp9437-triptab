@@ -6,6 +6,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, PayMode, Role, Stop, StopDraft, Traveler, Trip } from "./model";
 import type { SplitMode } from "./split";
+import type { ImportResult } from "./importPlans";
 
 /** Every traveler column a member may read; email and phone come from tripContacts (owners only). */
 const TRAVELER_COLUMNS = "id, trip_id, name, role, user_id, claimed_at, added_by, created_at";
@@ -447,4 +448,42 @@ export async function deleteTrip(tripId: string) {
   const { data, error } = await supabase.from("trips").delete().eq("id", tripId).select("id");
   must(data, error);
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+// ---------- AI import (Build 4) ----------
+
+/**
+ * Asks the import-bookings Edge Function to propose plans from pasted text or an attached file.
+ * Owners only; the function checks. Nothing is saved by this call: the review step saves what
+ * the Owner keeps. Automated click-throughs mark their calls test_run in the cost log.
+ */
+export async function importBookings(
+  tripId: string,
+  text: string,
+  file: { media_type: string; data: string } | null,
+): Promise<ImportResult> {
+  let testRun = false;
+  try {
+    testRun = localStorage.getItem("triptab.test_run") === "1";
+  } catch {
+    // storage can be unavailable
+  }
+  const { data, error } = await supabase.functions.invoke("import-bookings", {
+    body: { trip_id: tripId, text, file, test_run: testRun },
+  });
+  if (error) {
+    // The function answers refusals with a sentence for the traveler in `error`.
+    let message = "Can't reach TripTab's import right now. Check your connection and try again.";
+    const response = (error as { context?: unknown }).context;
+    if (response instanceof Response) {
+      try {
+        const body = (await response.json()) as { error?: string };
+        if (body?.error) message = body.error;
+      } catch {
+        // not JSON; keep the general message
+      }
+    }
+    throw new Error(message);
+  }
+  return data as ImportResult;
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
@@ -12,6 +12,10 @@ import { splitEqually } from "../lib/money";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
 import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget } from "../components/trip/Money";
 import { PlanPanel } from "../components/trip/PlanPanel";
+import { ImportDialog } from "../components/trip/Import";
+import { draftCents } from "../lib/importPlans";
+import type { ItemInput } from "../lib/api";
+import type { PaidNow } from "../components/trip/ItemDialog";
 import {
   addItem,
   addAction,
@@ -61,6 +65,7 @@ export default function TripPage() {
   const [settling, setSettling] = useState(false);
   const [view, setView] = useState<"days" | "week">("days");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -163,6 +168,36 @@ export default function TripPage() {
     }
   };
 
+  /**
+   * Adds a plan, and when it's already paid logs the one bill (split evenly among who's in) or
+   * your own line in the same step. Used by Add a plan and by AI import.
+   */
+  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import") => {
+    const added = await addItem(trip.id, input);
+    // Flights are per person: whoever adds one is on it.
+    if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
+    track("plan added", {
+      kind: input.kind,
+      status: input.status,
+      part: input.part,
+      has_estimate: input.est_cents != null,
+      who_pays: added.pay_mode,
+      already_paid: Boolean(paid),
+      via,
+    });
+    if (paid?.mode === "split") {
+      const inIds = added.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
+      const parts = splitEqually(paid.totalCents, inIds);
+      await confirmItem(added.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
+      track("plan confirmed", { kind: added.kind, split: "even", people: inIds.length, from_status: "new", who_pays: "split" });
+      track("plan status changed", { kind: added.kind, from: "planned", to: "confirmed", who_pays: "split" });
+    } else if (paid?.mode === "own" && meId) {
+      const after = await logOwnLine(added.id, meId, paid.cents, paid.withPoints);
+      trackOwn(added, meId, paid.cents, paid.withPoints, "planned", after);
+    }
+    return added;
+  };
+
   const peopleCard = (
     <PeopleCard
       trip={trip}
@@ -263,9 +298,14 @@ export default function TripPage() {
                 </p>
               </div>
               {editable && (
-                <Button size="sm" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
-                  <Plus /> Add a plan
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setImporting(true)}>
+                    <Sparkles /> Import
+                  </Button>
+                  <Button size="sm" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
+                    <Plus /> Add a plan
+                  </Button>
+                </div>
               )}
             </div>
             <div className="mb-3">
@@ -431,28 +471,8 @@ export default function TripPage() {
               track("plan status changed", { kind: input.kind, from: existing.status, to: input.status });
             }
           } else {
-            const added = await addItem(trip.id, input);
-            // Flights are per person: whoever adds one is on it.
-            if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
-            track("plan added", {
-              kind: input.kind,
-              status: input.status,
-              part: input.part,
-              has_estimate: input.est_cents != null,
-              who_pays: added.pay_mode,
-              already_paid: Boolean(paid),
-            });
-            // "Already booked and paid?": log the one bill, or your own line, in the same step.
-            if (paid?.mode === "split") {
-              const inIds = added.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
-              const parts = splitEqually(paid.totalCents, inIds);
-              await confirmItem(added.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
-              track("plan confirmed", { kind: added.kind, split: "even", people: inIds.length, from_status: "new", who_pays: "split" });
-              track("plan status changed", { kind: added.kind, from: "planned", to: "confirmed", who_pays: "split" });
-            } else if (paid?.mode === "own" && meId) {
-              const after = await logOwnLine(added.id, meId, paid.cents, paid.withPoints);
-              trackOwn(added, meId, paid.cents, paid.withPoints, "planned", after);
-            }
+            // "Already booked and paid?" logs the one bill, or your own line, in the same step.
+            await createPlan(input, paid, "form");
           }
           await reload();
         }}
@@ -461,6 +481,55 @@ export default function TripPage() {
           await reload();
         }}
       />
+      {editable && (
+        <ImportDialog
+          open={importing}
+          trip={trip}
+          items={items}
+          onClose={() => setImporting(false)}
+          onSave={async (kept) => {
+            for (const d of kept) {
+              const cents = draftCents(d);
+              const stay = d.kind === "stay";
+              const paid: PaidNow | undefined =
+                d.paid && cents != null && meId
+                  ? d.payMode === "own"
+                    ? { mode: "own", cents, withPoints: false }
+                    : { mode: "split", totalCents: d.perPerson && !stay ? cents * travelers.length : cents, paidBy: meId }
+                  : undefined;
+              await createPlan(
+                {
+                  kind: d.kind,
+                  title: d.title.trim(),
+                  day: d.day,
+                  part: stay ? "night" : d.part,
+                  end_day: stay ? d.end_day : null,
+                  location: d.location.trim() || null,
+                  notes: d.notes.trim() || null,
+                  status: "planned",
+                  est_cents: paid ? null : cents,
+                  cost_type: d.perPerson && !stay ? "per_person" : "total",
+                  pay_mode: d.payMode,
+                },
+                paid,
+                "import",
+              );
+            }
+            await reload();
+          }}
+          onDone={(result, keptCount) =>
+            track("ai import", {
+              plans_proposed: result.plans.length,
+              plans_kept: keptCount,
+              cost_usd: result.usage.cost_usd,
+              searches: result.usage.searches,
+              model: result.usage.model,
+              effort: result.usage.effort,
+              latency_ms: result.usage.latency_ms,
+            })
+          }
+        />
+      )}
       <ExpenseDialog
         target={expenseTarget}
         trip={trip}
