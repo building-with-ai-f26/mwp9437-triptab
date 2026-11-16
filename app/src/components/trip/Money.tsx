@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Check, Plane, Plus, Receipt, Scale, Undo2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, ShareInput } from "../../lib/api";
-import { goingList, isGoing, myNumbers } from "../../lib/ledger";
+import { goingList, groupExpenses, isGoing, myNumbers } from "../../lib/ledger";
 import { dollars, longDay, tripDays, type CostType, type Item, type Traveler, type Trip } from "../../lib/model";
 import { parseDollars, toCents, totalCents } from "../../lib/money";
 import { computeSplit, SPLIT_LABEL, type SplitMode } from "../../lib/split";
@@ -349,6 +349,7 @@ export function MoneyCard({
   onSettle: () => void;
 }) {
   const mine = myNumbers(expenses, meId);
+  const shared = groupExpenses(expenses);
   const general = expenses.filter((e) => !e.item_id);
   const name = (id: string) => travelers.find((t) => t.id === id)?.name ?? "?";
 
@@ -375,9 +376,14 @@ export function MoneyCard({
         <p className="mt-1 text-xs text-muted-foreground">
           Trip spend {dollars(mine.tripTotal)} · your share {dollars(mine.share)} · you paid {dollars(mine.paid)}
         </p>
+        {mine.own > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground" data-testid="own-spend">
+            Includes {dollars(mine.own)} you paid on your own (flights and the like). Own costs are never split and never in Settle up.
+          </p>
+        )}
       </div>
 
-      {expenses.length > 0 ? (
+      {shared.length > 0 ? (
         <ul className="mb-3 space-y-1 text-sm">
           {travelers.map((t) => {
             const b = balances[t.id] ?? 0;
@@ -420,7 +426,7 @@ export function MoneyCard({
         </div>
       )}
 
-      <Button className="w-full" onClick={onSettle} disabled={expenses.length === 0}>
+      <Button className="w-full" onClick={onSettle} disabled={shared.length === 0}>
         <Scale /> Settle up
       </Button>
     </section>

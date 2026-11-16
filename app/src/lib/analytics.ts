@@ -49,6 +49,7 @@ export type EventName =
   | "group link opened"
   | "name claimed"
   | "plan confirmed"
+  | "own cost logged"
   | "expense added"
   | "settle up viewed"
   | "opted out"
