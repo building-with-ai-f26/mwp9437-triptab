@@ -4,7 +4,7 @@
  */
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, Role, Stop, StopDraft, Traveler, Trip } from "./model";
+import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, PayMode, Role, Stop, StopDraft, Traveler, Trip } from "./model";
 import type { SplitMode } from "./split";
 
 /** Every traveler column a member may read; email and phone come from tripContacts (owners only). */
@@ -41,6 +41,16 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
     "Assign it to someone on the trip",
     "Some plans fall outside the new dates; move or remove them first",
     "Only owners or the person it's assigned to can do that",
+    "You can log your own cost; owners can log anyone's",
+    "They logged this one themselves, so only they can change it",
+    "This plan is one bill, split. Switch it to everyone pays their own first",
+    "People have logged their own costs on this plan. Clear those to make it one bill",
+    "Clear what's logged on this plan before switching who pays",
+    "On this plan each person clears their own line",
+    "It's confirmed once everyone going has logged their own cost",
+    "Everyone going has booked, so it stays confirmed until a line is cleared",
+    "Nothing is logged for them on this plan",
+    "Enter the cost",
   ];
   const hit = known.find((k) => msg.includes(k));
   return hit ? `${hit}.` : msg || "Something went wrong. Try again.";
@@ -91,8 +101,22 @@ export interface ExpenseRow {
   total_cents: number;
   paid_by: string;
   split_mode: SplitMode;
+  /**
+   * An own line: one person's own price on an "everyone pays their own" plan. Its payer is its
+   * only share, so it never moves a balance. The database only returns it to that person and to
+   * whoever entered it.
+   */
+  own: boolean;
+  /** Own lines only: paid with points; total_cents is then the optional cash value. */
+  with_points: boolean;
   created_at: string;
   expense_shares: ExpenseShare[];
+}
+
+/** Someone has logged their own line on a plan (booked). Everyone on the trip sees this, never the price. */
+export interface OwnMark {
+  item_id: string;
+  traveler_id: string;
 }
 
 /** Someone's in or out of a plan; no row means the default (in, except flights). */
@@ -123,11 +147,12 @@ export interface TripBundle {
   link: GroupLink | null;
   expenses: ExpenseRow[];
   itemPeople: ItemPerson[];
+  ownMarks: OwnMark[];
   actions: ActionItem[];
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -137,6 +162,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("item_people").select("item_id, traveler_id, going, items!inner(trip_id)").eq("items.trip_id", id),
     supabase.from("action_items").select("*").eq("trip_id", id).order("created_at"),
     supabase.rpc("trip_contacts", { p_trip: id }),
+    supabase.rpc("own_marks", { p_trip: id }),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -153,6 +179,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     itemPeople: (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(
       ({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going }),
     ),
+    ownMarks: (marks.data as OwnMark[] | null) ?? [],
     actions: must(actions.data, actions.error) as ActionItem[],
   };
 }
@@ -266,6 +293,8 @@ export interface ItemInput {
   status: ItemStatus;
   est_cents: number | null;
   cost_type: CostType;
+  /** Left out, the database picks by kind: flights are their own, the rest one bill. */
+  pay_mode?: PayMode;
 }
 
 export async function addItem(tripId: string, input: ItemInput): Promise<Item> {
@@ -343,6 +372,29 @@ export async function deleteExpense(id: string) {
   const { data, error } = await supabase.from("expenses").delete().eq("id", id).select("id");
   must(data, error);
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+/**
+ * Log (or change) one person's own line on an "everyone pays their own" plan: what they paid, or
+ * the cash value if it was points. Anyone logs their own; owners can log anyone's. Returns the
+ * plan's status afterwards, which follows the lines.
+ */
+export async function logOwnLine(itemId: string, travelerId: string, cents: number, withPoints: boolean): Promise<ItemStatus> {
+  const { data, error } = await supabase.rpc("log_own_line", {
+    p_item: itemId,
+    p_traveler: travelerId,
+    p_cents: cents,
+    p_with_points: withPoints,
+  });
+  if (error) throw new Error(friendly(error));
+  return data as ItemStatus;
+}
+
+/** Remove an own line (not booked after all). Returns the plan's status afterwards. */
+export async function clearOwnLine(itemId: string, travelerId: string): Promise<ItemStatus> {
+  const { data, error } = await supabase.rpc("clear_own_line", { p_item: itemId, p_traveler: travelerId });
+  if (error) throw new Error(friendly(error));
+  return data as ItemStatus;
 }
 
 /** In or out of a plan. You can set your own; owners can set anyone's. */
