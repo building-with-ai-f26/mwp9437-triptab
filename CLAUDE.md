@@ -35,7 +35,7 @@ Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build th
 
 ## Runbook
 
-The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV (Run book, Product Vision and Build history tabs). Anything Mike has to do goes in its Steps table when this session can reach the Claude Docs connector. If it can't, list it under "For Mike" at the top of the current `journal/build-0N` file and say so in chat. Keep the Target column at width 130 on any row you add.
+The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV (Run book, Product Vision and Build history tabs). Anything Mike has to do goes in its Steps table when this session can reach the Claude Docs connector. If it can't, list it under "For Mike" at the top of the current `journal/build-0N` file and say so in chat. Keep the Target column at width 130 on any row you add. Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
 
 ## Rules
 
