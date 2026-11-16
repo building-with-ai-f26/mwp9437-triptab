@@ -1,6 +1,6 @@
 # Morning report (overnight build, 11/11 to 11/12)
 
-_Last update 11/15 (late): Build 3's row is built and checked, and so is the non-AI half of Build 4's (week view, action items, calendar, PDF). Since Auto mode blocked pushes to `main`, newer work is on the session branch in draft PR [building-with-ai-f26/mwp9437-triptab#1](https://github.com/building-with-ai-f26/mwp9437-triptab/pull/1)._
+_Last update 11/15, late evening (New York): Builds 2 and 3 are built and checked, plus the non-AI half of Build 4, trip settings, live updates and owner-only contacts. Newer work is in draft PR [building-with-ai-f26/mwp9437-triptab#1](https://github.com/building-with-ai-f26/mwp9437-triptab/pull/1). **For today's noon deadline, start with `journal/build-02-product-page-draft.md`.**_
 
 ## Done and verified
 
@@ -23,6 +23,11 @@ _Last update 11/15 (late): Build 3's row is built and checked, and so is the non
 | Build 4: week view | Day by day / Week toggle; seven days side by side, Morning to Night, stays along the bottom; add from an empty cell; scrolls inside its card on a phone. Screenshots `week-view-*` | `c9f4981` (PR #1) |
 | Build 4: action items | Database with 6 live tests (**48 live tests** in all): owners add and assign; everyone sees who has what; the assignee ticks it off, even as a viewer. Screen: Action items card on desktop, To do tab on phones, yours first. Screenshots `action-items-*` | `7c74c3d`, `1051c40` (PR #1) |
 | Build 4: calendar and PDF | `.ics` for your plans (header) or one plan (its dialog); stays all day, suggestions tentative; 3 tests (**42 offline tests**). PDF itinerary page, printed in the click-through to a 2-page PDF. Screenshot `pdf-itinerary-desktop` | `c99e678` (PR #1) |
+
+| Trip settings | Owners rename a trip, change its stops (the dates follow), or delete it; refused if a plan would fall outside the new dates. 3 live tests; `e2e/settings-flow.cjs`. Screenshots `trip-settings-*` | `c621302` (PR #1) |
+| Live updates | A friend's change appears without a refresh (Supabase Realtime, row-level security applies). `e2e/live-flow.cjs`: a new plan reached the other phone in about 2 s | `778fdac` (PR #1) |
+| Contacts owner-only in the database | Emails and phones are readable only by owners (`trip_contacts()`); 1 live test (**52 live tests**). Security advisor rerun: nothing new | `a8dba2f` (PR #1) |
+| Draft PRD v2 and Build 2 log | `journal/build-02-product-page-draft.md`: checked against the Build 2 minimum, with every blank you need to fill marked [MIKE] | this commit |
 
 ## Decisions I made for you
 
@@ -49,22 +54,28 @@ _Last update 11/15 (late): Build 3's row is built and checked, and so is the non
 21. **Action items: owners add and assign; whoever has one can tick it off,** even a viewer. Due dates are limited to the trip's days.
 22. **Calendar times by part of the day:** Morning 9 to 12, Day 12 to 5, Evening 6 to 9, Night 9 to midnight, in floating local time. The header button exports only the plans you're in.
 23. **The PDF is a print page** (the browser's "Save as PDF"), not a generated file, so it needs no server.
+24. **Changing a trip's dates never strands a plan:** the change is refused until plans outside the new dates are moved or removed.
+25. **Supabase deletes wait for you:** Supabase's server asks you to confirm any statement that deletes data, and that question can't be pre-approved. While you're away I run no deletes; test accounts and trips from the click-throughs pile up until you're back (all named `rls-...` or `demo-...@example.com`).
 
 ## For Mike: blocked / what you need to do
 
-1. **Merge PR #1** (or tell me to push to `main` and I'll try again). Auto mode now blocks my pushes to `main`, so new commits land on `claude/admiring-hypatia-85xxk4` and show up in [building-with-ai-f26/mwp9437-triptab#1](https://github.com/building-with-ai-f26/mwp9437-triptab/pull/1). GitHub Pages builds from `main`, so the Product Page's PostHog snippet is already live; anything newer waits for the merge.
-2. **PostHog:** watch one of the test recordings (Session replay, filter `test_run = true`), then use the app yourself on your laptop so the Build 2 dashboard has real data, and take the dashboard screenshot for Icerynk. Optional: rename the project to TripTab and set New York time in project settings (my key can't).
-3. **Permission prompts:** you're on Auto already. For standing rules (npm, git, the Supabase tools), add them yourself in a committed `.claude/settings.json`; Auto refused to let me write rules that widen my own access, which is the right call.
-4. **Supabase security advisor, two warnings left on purpose:** the app's entry functions are callable (they check the caller inside), and leaked-password protection is off (a paid-plan feature, as far as I can tell).
-5. **Test accounts:** cleared again on 11/15 evening (0 accounts, 0 trips). Each `npm run test:rls` or `npm run e2e` makes new `rls-...`/`demo-...@example.com` accounts; I clear them at the end of each session.
-6. **PRD v2 and the Build 2 log** on the Product Page, from real numbers (not touched).
-7. **Runbook:** these steps aren't in the runbook's Steps table yet; this list is the record for now.
+**For Build 2 (due today, noon):**
+1. Open `journal/build-02-product-page-draft.md`: PRD v2 and the Build 2 log, drafted and checked against the minimum. Fill the [MIKE] blanks (your hours, what you learned, real PostHog numbers), edit to your voice, paste into the Product Page, and add a screenshot.
+2. Use the app on your laptop for a few minutes (the `app/.env.local` lines are below), then screenshot the [Build 2 dashboard](https://us.posthog.com/project/721211/dashboard/2359712). It shows real use only.
+3. Submit on Icerynk: Product Page URL, repo URL, dashboard screenshot.
+
+**Any time:**
+4. Merge PR #1 (Builds 3 and 4 work), or tell me to push to `main`. Not needed for Build 2.
+5. Say "go" when you're back and I'll clear the test accounts (Supabase will ask you to confirm the delete).
+6. Optional in PostHog: rename the project to TripTab and set New York time (my key can't).
+7. Build 4's AI features need an OpenRouter prepaid balance with a hard cap, or your call on whether your Claude plan covers them (runbook step 54).
+8. The runbook's Steps table isn't updated; this list is the record for now.
 
 ## What I'd do next
 
-1. **Contact details owner-only in the database** (today only the app hides them from viewers).
-2. **Build 4's AI pieces** (Plan with AI, packing list, tips, alternatives) once you've set up an OpenRouter prepaid balance with a hard cap (CLAUDE.md) or decided whether your Claude plan covers them (runbook step 54). Each call goes through a Supabase Edge Function so the key never reaches the browser, and logs its tokens and cost from the first call.
-3. **Build 5 prep:** hosting choice for putting the app online (runbook step 67), and a custom email sender for magic links and password resets.
+1. Build 4's AI pieces once there's a capped key: Plan with AI, packing list, local tips, alternatives, each call through a Supabase Edge Function and logged with tokens and cost.
+2. Build 5 prep: where to host the app (runbook step 67), a custom email sender for magic links and password resets, and a rollback check.
+3. Pod test prep for 11/17: a short script for the pod (join through the link on your laptop in a private window).
 
 ## app/.env.local on your laptop
 
