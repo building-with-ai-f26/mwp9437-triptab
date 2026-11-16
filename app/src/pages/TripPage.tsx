@@ -39,6 +39,7 @@ import { canEdit, dateRange, dollars, ROLE_LABEL } from "../lib/model";
 import { goingList, isGoing, myShareOf, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
+import { subscribeToTrip } from "../lib/live";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
@@ -76,6 +77,10 @@ export default function TripPage() {
     document.addEventListener("visibilitychange", onFocus);
     return () => document.removeEventListener("visibilitychange", onFocus);
   }, [reload]);
+
+  // Live updates: reload when anyone on the trip changes something.
+  const loaded = Boolean(bundle);
+  useEffect(() => (loaded ? subscribeToTrip(id, reload) : undefined), [id, loaded, reload]);
 
   const days = useMemo(
     () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items) : []),
