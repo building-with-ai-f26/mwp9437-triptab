@@ -205,8 +205,18 @@ export async function removeTraveler(travelerId: string): Promise<void> {
 
 // ---------- Group link ----------
 
+/**
+ * The online build (GitHub Pages, `npm run build:pages`) uses hash URLs like /app/#/join/abc,
+ * because Pages serves files and can't route a deep link to the app. Local dev uses plain paths.
+ */
+export const HASH_ROUTES = import.meta.env.MODE === "pages";
+
+/** A full link to a screen of the app, for sharing outside it (invites). */
+export const appUrl = (path: string) =>
+  HASH_ROUTES ? `${window.location.origin}${import.meta.env.BASE_URL}#${path}` : `${window.location.origin}${path}`;
+
 export const inviteUrl = (token: string, travelerId?: string) =>
-  `${window.location.origin}/join/${token}${travelerId ? `?as=${travelerId}` : ""}`;
+  appUrl(`/join/${token}${travelerId ? `?as=${travelerId}` : ""}`);
 
 export async function updateLink(tripId: string, patch: Partial<Pick<GroupLink, "default_role" | "enabled">>) {
   const { data, error } = await supabase.from("trip_links").update(patch).eq("trip_id", tripId).select("*").single();

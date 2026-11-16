@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, HashRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import { HASH_ROUTES } from "./lib/api";
 import "./index.css";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { startAnalytics } from "./lib/analytics";
@@ -16,6 +17,8 @@ const Join = lazy(() => import("./pages/Join"));
 const PrintTrip = lazy(() => import("./pages/PrintTrip"));
 
 startAnalytics();
+
+const Router = HASH_ROUTES ? HashRouter : BrowserRouter;
 
 /** Pages that need an account send you to sign in, then back. */
 function RequireUser({ children }: { children: ReactNode }) {
@@ -42,7 +45,7 @@ function App() {
   if (!isConfigured) return <NotConfigured />;
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <Suspense fallback={<Spinner />}>
           <Routes>
             <Route path="/" element={<Landing />} />
@@ -55,7 +58,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
 }

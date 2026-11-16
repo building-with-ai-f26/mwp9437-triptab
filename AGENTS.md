@@ -16,6 +16,7 @@
 - **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, then the Build 3 money flow; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
 - **Check PostHog events:** start a dev server with a dummy key (`VITE_POSTHOG_KEY=phc_dummy npx vite --port 5174`), then `node e2e/posthog-check.cjs`. PostHog calls are intercepted; nothing is sent.
 - **Build:** `cd app && npm run build` (type-checks, then bundles).
+- **Publish online:** `cd app && npm run build:pages`, then commit `docs/app` and merge to `main`; GitHub Pages serves it at https://building-with-ai-f26.github.io/mwp9437-triptab/app/ (hash routes). The build carries only public values from `app/.env.local`. Check it with `node e2e/online-flow.cjs` (live) or against a local copy of the Pages layout.
 - **Run model evals:** none yet (no AI model in the product until Build 4).
 
 ## Project structure
