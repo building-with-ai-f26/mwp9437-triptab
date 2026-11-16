@@ -7,6 +7,9 @@ import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, Role, Stop, StopDraft, Traveler, Trip } from "./model";
 import type { SplitMode } from "./split";
 
+/** Every traveler column a member may read; email and phone come from tripContacts (owners only). */
+const TRAVELER_COLUMNS = "id, trip_id, name, role, user_id, claimed_at, added_by, created_at";
+
 /** Turns a database error into a sentence a traveler can act on. */
 export function friendly(error: PostgrestError | Error | null | undefined): string {
   if (!error) return "Something went wrong. Try again.";
@@ -35,6 +38,9 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
     "Everyone in the split has to be on the trip",
     "Pick who paid from the trip",
     "Pick at least one person",
+    "Assign it to someone on the trip",
+    "Some plans fall outside the new dates; move or remove them first",
+    "Only owners or the person it's assigned to can do that",
   ];
   const hit = known.find((k) => msg.includes(k));
   return hit ? `${hit}.` : msg || "Something went wrong. Try again.";
@@ -96,6 +102,18 @@ export interface ItemPerson {
   going: boolean;
 }
 
+/** Something that still needs doing, and who's on it (Build 4). */
+export interface ActionItem {
+  id: string;
+  trip_id: string;
+  title: string;
+  assignee: string | null;
+  due_day: string | null;
+  done: boolean;
+  done_at: string | null;
+  created_at: string;
+}
+
 export interface TripBundle {
   trip: Trip;
   stops: Stop[];
@@ -105,30 +123,37 @@ export interface TripBundle {
   link: GroupLink | null;
   expenses: ExpenseRow[];
   itemPeople: ItemPerson[];
+  actions: ActionItem[];
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
-    supabase.from("travelers").select("*").eq("trip_id", id).order("created_at"),
+    supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
     supabase.from("items").select("*").eq("trip_id", id).order("created_at"),
     supabase.from("trip_links").select("*").eq("trip_id", id).maybeSingle(),
     supabase.from("expenses").select("*, expense_shares(traveler_id, amount_cents, weight)").eq("trip_id", id).order("created_at"),
     supabase.from("item_people").select("item_id, traveler_id, going, items!inner(trip_id)").eq("items.trip_id", id),
+    supabase.from("action_items").select("*").eq("trip_id", id).order("created_at"),
+    supabase.rpc("trip_contacts", { p_trip: id }),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
   return {
     trip: trip.data as Trip,
     stops: must(stops.data, stops.error) as Stop[],
-    travelers: must(travelers.data, travelers.error) as Traveler[],
+    travelers: withContacts(
+      must(travelers.data, travelers.error) as Omit<Traveler, "email" | "phone">[],
+      (contacts.data as { traveler_id: string; email: string | null; phone: string | null }[] | null) ?? [],
+    ),
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
     expenses: must(expenses.data, expenses.error) as ExpenseRow[],
     itemPeople: (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(
       ({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going }),
     ),
+    actions: must(actions.data, actions.error) as ActionItem[],
   };
 }
 
@@ -141,6 +166,15 @@ export interface PersonDraft {
   role: Role;
 }
 
+/** Owners get each person's email and phone; everyone else gets null for both. */
+function withContacts(
+  travelers: Omit<Traveler, "email" | "phone">[],
+  contacts: { traveler_id: string; email: string | null; phone: string | null }[],
+): Traveler[] {
+  const byId = new Map(contacts.map((c) => [c.traveler_id, c]));
+  return travelers.map((t) => ({ ...t, email: byId.get(t.id)?.email ?? null, phone: byId.get(t.id)?.phone ?? null }));
+}
+
 export async function addTraveler(tripId: string, p: PersonDraft): Promise<Traveler> {
   const { data, error } = await supabase
     .from("travelers")
@@ -151,9 +185,10 @@ export async function addTraveler(tripId: string, p: PersonDraft): Promise<Trave
       phone: p.phone.trim() || null,
       role: p.role,
     })
-    .select("*")
+    .select(TRAVELER_COLUMNS)
     .single();
-  return must(data as Traveler | null, error);
+  const row = must(data as Omit<Traveler, "email" | "phone"> | null, error);
+  return { ...row, email: p.email.trim() || null, phone: p.phone.trim() || null };
 }
 
 export async function setRole(travelerId: string, role: Role): Promise<void> {
@@ -304,4 +339,50 @@ export async function deleteExpense(id: string) {
 export async function setGoing(itemId: string, travelerId: string, going: boolean) {
   const { error } = await supabase.from("item_people").upsert({ item_id: itemId, traveler_id: travelerId, going });
   if (error) throw new Error(friendly(error));
+}
+
+// ---------- Action items (Build 4) ----------
+
+export async function addAction(tripId: string, title: string, assignee: string | null, dueDay: string | null) {
+  const { error } = await supabase
+    .from("action_items")
+    .insert({ trip_id: tripId, title: title.trim(), assignee, due_day: dueDay });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function updateAction(id: string, patch: Partial<Pick<ActionItem, "title" | "assignee" | "due_day">>) {
+  const { data, error } = await supabase.from("action_items").update(patch).eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+/** Tick off (or back on): owners, or whoever it's assigned to. */
+export async function setActionDone(id: string, done: boolean) {
+  const { error } = await supabase.rpc("set_action_done", { p_id: id, p_done: done });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function deleteAction(id: string) {
+  const { data, error } = await supabase.from("action_items").delete().eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+// ---------- Trip settings ----------
+
+/** Rename a trip and replace its stops (which set its dates), in one step. Owners only. */
+export async function updateTrip(tripId: string, name: string, stops: StopDraft[]) {
+  const { error } = await supabase.rpc("update_trip", {
+    p_trip: tripId,
+    p_name: name.trim(),
+    p_stops: stops.map((s) => ({ name: s.name.trim(), start_date: s.start_date, end_date: s.end_date })),
+  });
+  if (error) throw new Error(friendly(error));
+}
+
+/** Delete the whole trip: plans, people, money and all. Owners only. */
+export async function deleteTrip(tripId: string) {
+  const { data, error } = await supabase.from("trips").delete().eq("id", tripId).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }

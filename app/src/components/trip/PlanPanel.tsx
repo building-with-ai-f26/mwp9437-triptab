@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Check, CircleDollarSign, Pencil } from "lucide-react";
+import { CalendarPlus, Check, CircleDollarSign, Pencil } from "lucide-react";
 import { Button, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson } from "../../lib/api";
 import { isGoing, myShareOf } from "../../lib/ledger";
 import { dollars, type Item, type Traveler } from "../../lib/model";
+import { downloadIcs, icsForItems } from "../../lib/ics";
+import { track } from "../../lib/analytics";
 
 /**
  * Top of a plan's dialog: its money (confirm with the real cost, or what was paid), your own
  * in or out, and who's going. Everyone can set their own in or out; owners can set anyone's.
  */
 export function PlanPanel({
+  tripName,
   item,
   travelers,
   itemPeople,
@@ -19,6 +22,7 @@ export function PlanPanel({
   onGoing,
   onConfirm,
 }: {
+  tripName: string;
   item: Item;
   travelers: Traveler[];
   itemPeople: ItemPerson[];
@@ -116,6 +120,16 @@ export function PlanPanel({
           <p className="text-sm text-white/80">{going.length ? going.map((t) => t.name).join(", ") : "Nobody yet"}</p>
         )}
       </div>
+      <Button
+        size="sm"
+        variant="light"
+        onClick={() => {
+          downloadIcs(`${item.title}.ics`, icsForItems({ name: tripName }, [item]));
+          track("calendar downloaded", { scope: "plan", kind: item.kind });
+        }}
+      >
+        <CalendarPlus /> Add to calendar
+      </Button>
       {error && (
         <p role="alert" className="rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
           {error}

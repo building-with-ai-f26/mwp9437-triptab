@@ -13,6 +13,7 @@ const Trips = lazy(() => import("./pages/Trips"));
 const NewTrip = lazy(() => import("./pages/NewTrip"));
 const TripPage = lazy(() => import("./pages/TripPage"));
 const Join = lazy(() => import("./pages/Join"));
+const PrintTrip = lazy(() => import("./pages/PrintTrip"));
 
 startAnalytics();
 
@@ -50,6 +51,7 @@ function App() {
             <Route path="/trips" element={<RequireUser><Trips /></RequireUser>} />
             <Route path="/trips/new" element={<RequireUser><NewTrip /></RequireUser>} />
             <Route path="/trips/:id" element={<RequireUser><TripPage /></RequireUser>} />
+            <Route path="/trips/:id/print" element={<RequireUser><PrintTrip /></RequireUser>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

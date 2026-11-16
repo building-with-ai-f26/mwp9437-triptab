@@ -174,18 +174,19 @@
     <section id="live-demo">
       <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
       <p>
-        <strong>Current Status:</strong> Build 1: rough local prototype (React + Vite, data in the browser's localStorage).<br />
-        <strong>Demo:</strong> the sample trip after two plans were confirmed. Dinner was paid by one person for four; tickets were paid by another for three.
+        <strong>Current Status:</strong> Build 2: the local app on a real backend (React + Vite + Supabase), in the spring app's look. Runs on localhost; online in Build 5.<br />
+        <strong>Demo:</strong> the Euro ski trip. The itinerary runs day by day with the actual day on each chip, Morning to Night, and where everyone's staying; Suggested plans are faint, Planned ones solid. On the right, the people on the trip (added directly or through the group link) and the group link itself.
       </p>
-      <img class="shot" src="prototype.png" alt="TripTab prototype: suggested and confirmed plans on the left, balances and the three payments that settle the trip on the right." />
-      <p class="meta">Run it: <code>cd app</code>, <code>npm install</code>, <code>npm run dev</code>, then click "Load sample trip". A cloud link and two-minute video come in Build 5.</p>
+      <img class="shot" src="screenshots/trip-plans-desktop.jpg" alt="TripTab Build 2: the Euro ski trip's itinerary for Sat 2/6 with a planned ski school, a suggested fondue and drinks, the Chamonix Airbnb stay, and the People and Group link cards on the right." />
+      <img class="shot" src="screenshots/join-pick-phone.jpg" style="max-width: 320px;" alt="TripTab Build 2 on a phone: the group link's invite screen, where a friend picks their name from the people already added." />
+      <p class="meta">Run it: <code>cd app</code>, <code>npm install</code>, create <code>app/.env.local</code> (see AGENTS.md), <code>npm run dev</code>, then Start a trip and Fill in the ski trip example. A cloud link and two-minute video come in Build 5.</p>
       <p class="meta"><strong>Prior work:</strong> a spring 2026 TripTab prototype built in Lovable (<a href="https://github.com/mwp9437/triptab-RETIRED">mwp9437/triptab-RETIRED</a>), made before this course (about 20 hours). This repo is a fresh rebuild; its settle-up math was adapted from that version.</p>
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
     <section id="prd">
       <h2>Living PRD (Product Requirements Document)</h2>
-      <p class="meta">PRD v1 · November 8, 2026. Updated every week as we test with real users and learn what works.</p>
+      <p class="meta">PRD v2 · November 16, 2026 (v1: November 8). Updated every week as we test with real users and learn what works.</p>
 
       <h3>1. Target User & The Job to Be Done</h3>
       <p><strong>Problem:</strong> On group trips, plans live in the group chat and money lives in Venmo requests. Nobody knows which plans are locked, who paid, or who owes whom until someone builds a spreadsheet after the trip.</p>
@@ -195,16 +196,18 @@
 
       <h3>2. Scope & Explicit Non-Goals</h3>
       <ul>
-        <li><strong>In Scope (Core Workflow):</strong> 1. Create a trip and invite friends, who join with an account. 2. Add plans as Suggested. 3. Confirm a plan: cost (total or per person), who paid, who joined; it becomes an evenly split expense. 4. Open Settle up: balances and the fewest payments.</li>
-        <li><strong>Out of Scope #1:</strong> AI itinerary generation (the spring version's starting point; the job here is managing the trip, not planning it).</li>
+        <li><strong>In Scope (Core Workflow):</strong> unchanged: plan, confirm, split, settle. 1. Start a trip with dates and stops and get the group on it (added directly by name, or one group link where people pick their name), as Owners or Viewers. 2. Add plans to the day-by-day itinerary as Suggested or Planned. 3. Confirm a plan: the real cost, who paid, who's in; it becomes an expense, split evenly or by shares, percent or exact amounts. 4. Settle up: balances and the fewest payments.</li>
+        <li><strong>Out of Scope #1 (narrowed in v2):</strong> full AI-built itineraries. v1 ruled out AI itinerary generation entirely; AI that suggests and fills gaps comes in Build 4, so only whole-trip generation stays out.</li>
         <li><strong>Out of Scope #2:</strong> Bookings or in-app payments. TripTab says who pays whom; Venmo moves the money.</li>
         <li><strong>Out of Scope #3:</strong> A native iOS or Android app. TripTab is a phone-friendly web app.</li>
       </ul>
 
       <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
-      <p><strong>Riskiest Assumption:</strong> Friends will tap Confirm in the moment, so the log is complete without anyone rebuilding it after the trip.</p>
-      <p><strong>Simple Architecture:</strong> [Traveler in the browser] → [React app] → [localStorage] → [Balances + fewest payments]. No server and no AI model in Build 1. Next: accounts and a shared database, since everyone on the trip joins and adds plans and expenses.</p>
-      <p><strong>How I'll know it works:</strong> My test group logs a real outing and agrees the settle-up matches what they're owed. From Build 2, PostHog tracks plans confirmed, expenses logged at confirm time, and settle-up views.</p>
+      <p><strong>Riskiest Assumption (changed in v2):</strong> friends actually get into one shared trip. The spring version had 38 trips and 0 accepted invites, and every other feature (who paid, the split, settle-up) assumes the group is on the trip. v1's assumption, that friends tap Confirm in the moment, comes after this one.</p>
+      <p><strong>How Build 2 tests it:</strong> two ways in, and people are on the trip right away. The owner adds people directly by name, so they can be put on plans before they ever open TripTab, or drops one group link in the chat: it shows the trip and the names already added, you pick yours, make an account, and you're in. Roles live on the server: the database checks every read and write, and the link only grants the role the owner set. 25 automated tests sign in as an owner, a viewer, a link joiner, a stranger and a signed-out visitor and check what each can read and change. PostHog counts <code>group link opened</code> against <code>name claimed</code>, so the joining funnel is measured once the pod (11/17) and the ski group use it.</p>
+      <p><strong>Simple Architecture:</strong> [Traveler's browser] → [React app] → [Supabase: Postgres with row-level security, sign-in, one sign-up function] → back to the browser; [PostHog] records events and session replays. No AI model yet (Build 4).</p>
+      <p><strong>One action, end to end (adding a plan):</strong> the owner taps a Morning slot and saves "Ski school" → the app sends it to Supabase with the owner's sign-in token → the database checks the owner is an Owner on this trip → the plan is saved as Suggested → the app redraws the day with the plan faint → PostHog records <code>plan added</code>.</p>
+      <p><strong>How I'll know it works:</strong> the pod joins my trip through the group link on 11/17 without help; then the ski group, once the app is online.</p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
       <div class="grid-2">
@@ -214,11 +217,12 @@
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">$0 (runs in the browser; no API calls)</div>
+          <div class="stat-value">$0 (a few Supabase reads and writes and PostHog events, on free plans; no AI calls until Build 4)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">Not yet measured</div>
+          <div class="stat-value">Tracked in PostHog since 11/15; first real use at the 11/17 pod test</div>
+          <div class="meta" style="margin-top: 6px;">Claude's automated test runs are tagged and left out of the dashboard.</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
@@ -252,9 +256,9 @@
       <div class="log-entry">
         <h3>Build 2 · Smallest Local Version & PostHog (Due Nov 16)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [Local working slice, PostHog verified on this page and the local app, PRD v2, and local setup in AGENTS.md]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong> a rebuild on a real backend. Supabase (database, sign-in, row-level security) replaces Build 1's browser storage. Start a trip with dates and stops, add people directly as Owner or Viewer, or send one group link where people pick their name. The itinerary is a day-by-day timeline with the actual day on each chip (Fri 2/5), Morning, Day, Evening and Night, and where everyone's staying; Suggested plans are faint and Planned ones solid, in the spring app's look. PostHog is on this page and in the app, with events checked arriving in PostHog. Verified by 42 offline tests, 52 database tests (25 of them on who can read and change what) and click-throughs at laptop and phone width (<a href="https://github.com/building-with-ai-f26/mwp9437-triptab/tree/main/docs/screenshots">screenshots</a>). Local setup and project structure are in AGENTS.md. Work for Builds 3 and 4 started early (confirming a plan with its cost and split, settle-up, week view, action items).</li>
+          <li><strong>What broke / changed in PRD:</strong> The riskiest assumption moved from "friends will tap Confirm in the moment" to "friends get into one shared trip" (0 accepted invites in spring); the AI non-goal narrowed to full AI-built itineraries. Broke, and fixed: the PostHog code reset the visitor on every signed-out page load, which would have broken the landing-to-sign-up funnel (caught when test events arrived untagged in PostHog); a row of pill buttons sat inside a form label, so tapping the word "Kind" silently chose "Activity" (caught by an automated click-through); one pushed commit broke the production build for a few minutes; and the database refused to delete a trip that had expenses (caught while clearing test data). Partway through, the coding agent's Auto mode blocked direct pushes to <code>main</code>, so later work went through a pull request.</li>
+          <li><strong>Cost & time this week:</strong> Agent: Claude Code (Claude Max, $100/month), so $0 extra; Supabase and PostHog on free plans, $0 · about 4 hours</li>
         </ul>
       </div>
 

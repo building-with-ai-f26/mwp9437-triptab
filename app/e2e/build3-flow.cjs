@@ -62,7 +62,7 @@ async function addPlan(page, day, slot, f) {
   result.tripUrl = o.url();
 
   // People: Vic (viewer) and Priya (owner), added directly.
-  await o.getByRole('button', { name: 'Add', exact: true }).click();
+  await o.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
   await dlg(o).getByLabel('Name').fill('Vic');
   await dlg(o).getByRole('radio', { name: 'Viewer' }).click();
   await dlg(o).getByRole('button', { name: 'Add to trip' }).click();

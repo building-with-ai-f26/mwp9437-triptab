@@ -50,3 +50,10 @@ export function buildTimeline(trip: Pick<Trip, "start_date" | "end_date">, stops
     return { date, chip: dayChip(date), title: here.join(" to "), parts, stays };
   });
 }
+
+/** Splits the trip into weeks of seven days from its first day, for the week view. */
+export function weeks<T>(days: T[], size = 7): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < days.length; i += size) out.push(days.slice(i, i + size));
+  return out;
+}

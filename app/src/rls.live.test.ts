@@ -102,7 +102,7 @@ describe("someone who isn't on the trip", () => {
   it("sees nothing when signed in", async () => {
     for (const table of ["trips", "stops", "travelers", "items"] as const) {
       const col = table === "trips" ? "id" : "trip_id";
-      const { data } = await stranger.from(table).select("*").eq(col, tripId);
+      const { data } = await stranger.from(table).select("id").eq(col, tripId);
       expect(data, table).toEqual([]);
     }
     const { data: link } = await stranger.from("trip_links").select("*").eq("trip_id", tripId);
@@ -233,7 +233,7 @@ describe("a viewer", () => {
   it("can't add people or make themselves an owner", async () => {
     const add = await viewer.from("travelers").insert({ trip_id: tripId, name: "Friend", role: "owner" });
     expect(add.error).not.toBeNull();
-    const promote = await viewer.from("travelers").update({ role: "owner" }).eq("id", vicId).select();
+    const promote = await viewer.from("travelers").update({ role: "owner" }).eq("id", vicId).select("id");
     expect(promote.data ?? []).toEqual([]);
     const { data } = await owner.from("travelers").select("role").eq("id", vicId).single();
     expect(data?.role).toBe("viewer");
@@ -247,7 +247,7 @@ describe("a viewer", () => {
   });
 
   it("becomes able to edit when an owner makes them an owner", async () => {
-    const promote = await owner.from("travelers").update({ role: "owner" }).eq("id", vicId).select();
+    const promote = await owner.from("travelers").update({ role: "owner" }).eq("id", vicId).select("id");
     expect(promote.data).toHaveLength(1);
     const edit = await viewer.from("items").update({ status: "planned" }).eq("id", itemId).select();
     expect(edit.data).toHaveLength(1);
@@ -274,5 +274,19 @@ describe("keeping an owner", () => {
     const id = extraTrips.pop()!;
     const del = await owner.from("trips").delete().eq("id", id).select();
     expect(del.data).toHaveLength(1);
+  });
+});
+
+describe("contact details", () => {
+  it("only owners can read the emails and phones owners typed in", async () => {
+    const asViewer = await viewer.from("travelers").select("email, phone").eq("trip_id", tripId);
+    expect(asViewer.error).not.toBeNull();
+    const viewerContacts = await viewer.rpc("trip_contacts", { p_trip: tripId });
+    expect(viewerContacts.data).toEqual([]);
+    const ownerContacts = await owner.rpc("trip_contacts", { p_trip: tripId });
+    const vic = (ownerContacts.data as { traveler_id: string; email: string | null }[]).find((c) => c.traveler_id === vicId);
+    expect(vic?.email).toBe("vic@example.com");
+    const strangerContacts = await stranger.rpc("trip_contacts", { p_trip: tripId });
+    expect(strangerContacts.data).toEqual([]);
   });
 });

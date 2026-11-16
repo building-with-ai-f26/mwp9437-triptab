@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
-import { CalendarDays, Check, Plus, Users, Wallet } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Users, Wallet } from "lucide-react";
 import { TopBar } from "../components/TopBar";
-import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
+import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
+import { WeekView } from "../components/trip/WeekView";
+import { ActionsCard } from "../components/trip/Actions";
+import { TripSettingsDialog } from "../components/trip/TripSettings";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
@@ -10,17 +13,23 @@ import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget
 import { PlanPanel } from "../components/trip/PlanPanel";
 import {
   addItem,
+  addAction,
   addTraveler,
   confirmItem,
+  deleteAction,
+  deleteTrip,
   deleteExpense,
   deleteItem,
   loadTrip,
   removeTraveler,
   resetLink,
   saveExpense,
+  setActionDone,
   setGoing,
   setRole,
   unconfirmItem,
+  updateAction,
+  updateTrip,
   updateItem,
   updateLink,
   type TripBundle,
@@ -29,14 +38,17 @@ import { useAuth } from "../lib/auth";
 import { canEdit, dateRange, dollars, ROLE_LABEL } from "../lib/model";
 import { goingList, isGoing, myShareOf, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
+import { downloadIcs, icsForItems } from "../lib/ics";
+import { subscribeToTrip } from "../lib/live";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
-type Tab = "itinerary" | "money" | "people";
+type Tab = "itinerary" | "money" | "todo" | "people";
 
 export default function TripPage() {
   const { id = "" } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [bundle, setBundle] = useState<TripBundle | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("itinerary");
@@ -44,6 +56,8 @@ export default function TripPage() {
   const [addingPerson, setAddingPerson] = useState(false);
   const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
   const [settling, setSettling] = useState(false);
+  const [view, setView] = useState<"days" | "week">("days");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -63,6 +77,10 @@ export default function TripPage() {
     document.addEventListener("visibilitychange", onFocus);
     return () => document.removeEventListener("visibilitychange", onFocus);
   }, [reload]);
+
+  // Live updates: reload when anyone on the trip changes something.
+  const loaded = Boolean(bundle);
+  useEffect(() => (loaded ? subscribeToTrip(id, reload) : undefined), [id, loaded, reload]);
 
   const days = useMemo(
     () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items) : []),
@@ -90,7 +108,7 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link, expenses, itemPeople, items } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, items, actions: todos } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
@@ -142,8 +160,35 @@ export default function TripPage() {
           title={trip.name}
           subtitle={`${dateRange(trip.start_date, trip.end_date)}${stops.length ? ` · ${stops.map((s) => s.name).join(", ")}` : ""}`}
         >
+          <Button
+            variant="glass"
+            size="sm"
+            aria-label="Add your plans to your calendar"
+            title="Add your plans to your calendar"
+            onClick={() => {
+              const mine = items.filter((i) => (meId ? isGoing(i, meId, itemPeople) : true));
+              downloadIcs(`${trip.name}.ics`, icsForItems(trip, mine));
+              track("calendar downloaded", { scope: "trip", plans: mine.length });
+            }}
+          >
+            <CalendarPlus /> <span className="hidden md:inline">Calendar</span>
+          </Button>
+          {editable && (
+            <Button variant="glass" size="sm" aria-label="Trip settings" title="Trip settings" onClick={() => setSettingsOpen(true)}>
+              <Settings />
+            </Button>
+          )}
+          <Button
+            variant="glass"
+            size="sm"
+            aria-label="PDF itinerary"
+            title="PDF itinerary"
+            onClick={() => navigate(`/trips/${trip.id}/print`)}
+          >
+            <FileText /> <span className="hidden md:inline">PDF</span>
+          </Button>
           {me && (
-            <span className="hidden rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-gold-dark sm:inline">
+            <span className="hidden rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-gold-dark lg:inline">
               You're {me.role === "owner" ? "an" : "a"} {ROLE_LABEL[me.role]}
             </span>
           )}
@@ -155,6 +200,7 @@ export default function TripPage() {
             [
               ["itinerary", "Itinerary", CalendarDays],
               ["money", "Money", Wallet],
+              ["todo", "To do", ListChecks],
               ["people", `People (${travelers.length})`, Users],
             ] as const
           ).map(([key, label, Icon]) => (
@@ -163,11 +209,11 @@ export default function TripPage() {
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 font-display text-sm font-semibold transition-all ${
+              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-1 py-2 font-display text-[13px] font-semibold transition-all sm:text-sm ${
                 tab === key ? "glass-card text-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="size-4" /> {label}
+              <Icon className="hidden size-4 min-[420px]:inline" /> {label}
             </button>
           ))}
         </div>
@@ -191,13 +237,34 @@ export default function TripPage() {
                 </Button>
               )}
             </div>
-            {error && <ErrorNote>{error}</ErrorNote>}
-            <DayChips days={days} active={active} onPick={jump} />
-            <div className="divide-y divide-foreground/10 pb-16">
-              {days.map((d, i) => (
-                <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
-              ))}
+            <div className="mb-3">
+              <Segmented
+                dark={false}
+                label="Itinerary view"
+                value={view}
+                onChange={(v) => {
+                  setView(v);
+                  if (v === "week") track("week view opened", { days: days.length });
+                }}
+                options={[
+                  { value: "days", label: "Day by day" },
+                  { value: "week", label: "Week" },
+                ]}
+              />
             </div>
+            {error && <ErrorNote>{error}</ErrorNote>}
+            {view === "week" ? (
+              <WeekView days={days} actions={actions} />
+            ) : (
+              <>
+                <DayChips days={days} active={active} onPick={jump} />
+                <div className="divide-y divide-foreground/10 pb-16">
+                  {days.map((d, i) => (
+                    <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
+                  ))}
+                </div>
+              </>
+            )}
           </main>
 
           <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "itinerary" ? "hidden" : ""}`}>
@@ -221,6 +288,33 @@ export default function TripPage() {
                 itemPeople={itemPeople}
                 meId={meId}
                 onOpen={(item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind })}
+              />
+            </div>
+            <div className={tab === "todo" ? "" : "hidden lg:block"}>
+              <ActionsCard
+                trip={trip}
+                actions={todos}
+                travelers={travelers}
+                meId={meId}
+                canEdit={editable}
+                onAdd={async (title, assignee, due) => {
+                  await addAction(trip.id, title, assignee, due);
+                  track("action item added", { assigned: Boolean(assignee), to_self: assignee === meId, has_due: Boolean(due) });
+                  await reload();
+                }}
+                onDone={async (a, done) => {
+                  await setActionDone(a.id, done);
+                  if (done) track("action item done", { own: a.assignee === meId });
+                  await reload();
+                }}
+                onAssign={async (a, assignee) => {
+                  await updateAction(a.id, { assignee });
+                  await reload();
+                }}
+                onDelete={async (a) => {
+                  await deleteAction(a.id);
+                  await reload();
+                }}
               />
             </div>
             <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
@@ -257,6 +351,7 @@ export default function TripPage() {
         extras={
           openItem && (
             <PlanPanel
+              tripName={trip.name}
               item={openItem}
               travelers={travelers}
               itemPeople={itemPeople}
@@ -325,6 +420,20 @@ export default function TripPage() {
         onDelete={async (e) => {
           await deleteExpense(e.id);
           await reload();
+        }}
+      />
+      <TripSettingsDialog
+        open={settingsOpen}
+        trip={trip}
+        stops={stops}
+        onClose={() => setSettingsOpen(false)}
+        onSave={async (name, newStops) => {
+          await updateTrip(trip.id, name, newStops);
+          await reload();
+        }}
+        onDelete={async () => {
+          await deleteTrip(trip.id);
+          navigate("/trips", { replace: true });
         }}
       />
       <SettleDialog open={settling} transfers={transfers} travelers={travelers} meId={meId} onClose={() => setSettling(false)} />
