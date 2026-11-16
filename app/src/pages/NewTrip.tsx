@@ -66,7 +66,7 @@ export default function NewTrip() {
               Dates and stops now; plans, people and costs go in from the trip.{" "}
               <button
                 type="button"
-                className="font-medium text-gold-dark underline-offset-4 hover:underline"
+                className="font-semibold text-foreground underline underline-offset-4"
                 onClick={() => {
                   setName(SKI_EXAMPLE.name);
                   setStops(SKI_EXAMPLE.stops);

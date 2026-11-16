@@ -65,7 +65,7 @@ export default function Trips() {
                         <div className="flex items-start justify-between gap-3">
                           <h2 className="font-display text-lg font-bold">{t.name}</h2>
                           {me && (
-                            <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-gold-dark">
+                            <span className="shrink-0 rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold text-gold-dark">
                               {ROLE_LABEL[me.role]}
                             </span>
                           )}

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { CalendarDays, ListChecks, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui";
 import type { ActionItem } from "../../lib/api";
-import { longDay, tripDays, type Traveler, type Trip } from "../../lib/model";
+import { dueDayOk, dueWindow, longDay, type Traveler, type Trip } from "../../lib/model";
 
 /**
  * Action items (vision, "Help along the way"): what still needs booking or deciding and who's on
@@ -35,6 +35,7 @@ export function ActionsCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const dueRange = dueWindow(trip.end_date);
   const name = (id: string | null) => (id ? (travelers.find((t) => t.id === id)?.name ?? "?") : null);
   const open = actions.filter((a) => !a.done);
   const done = actions.filter((a) => a.done);
@@ -56,6 +57,10 @@ export function ActionsCard({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (due && !dueDayOk(due, trip.end_date)) {
+      setError(`Pick a due date from today through ${longDay(trip.end_date)}, the trip's last day.`);
+      return;
+    }
     setBusy(true);
     await run(async () => {
       await onAdd(title, assignee || null, due || null);
@@ -135,15 +140,20 @@ export function ActionsCard({
 
       {canEdit && (
         <form onSubmit={submit} className="mb-2 space-y-2 rounded-2xl bg-white/30 p-2.5">
-          <input
-            className="field"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Book the Barcelona flight"
-            aria-label="New action item"
-          />
+          <div className="flex gap-2">
+            <input
+              className="field min-w-0 flex-1"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Book the Barcelona flight"
+              aria-label="New action item"
+            />
+            <Button type="submit" className="!h-11 shrink-0" disabled={busy || !title.trim()}>
+              <Plus /> Add
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
-            <select className="field !w-auto flex-1" value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Who's on it">
+            <select className="field !w-auto min-w-32 flex-1" value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Who's on it">
               <option value="">Who's on it?</option>
               {travelers.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -152,18 +162,21 @@ export function ActionsCard({
                 </option>
               ))}
             </select>
-            <select className="field !w-auto flex-1" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Due by">
-              <option value="">No due date</option>
-              {tripDays(trip.start_date, trip.end_date).map((d) => (
-                <option key={d} value={d}>
-                  By {longDay(d)}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" size="sm" disabled={busy || !title.trim()}>
-              <Plus /> Add
-            </Button>
+            <label className="flex min-w-48 flex-1 items-center gap-2 text-xs">
+              <span className="shrink-0 font-semibold text-foreground">Due by</span>
+              <input
+                type="date"
+                className="field min-w-0 flex-1"
+                value={due}
+                min={dueRange.min}
+                max={dueRange.max}
+                onChange={(e) => setDue(e.target.value)}
+                aria-label="Due by (optional)"
+                title={`Any day from today through ${longDay(trip.end_date)}`}
+              />
+            </label>
           </div>
+          <p className="text-xs text-muted-foreground">Due any day from today through {longDay(trip.end_date)}, so pre-trip bookings fit too.</p>
         </form>
       )}
 

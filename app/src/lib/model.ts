@@ -96,6 +96,26 @@ export function addDays(iso: string, n: number): string {
   return toIso(d);
 }
 
+/** Today on this device's calendar, as YYYY-MM-DD. */
+export function todayIso(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+/**
+ * The days an action item can be due: from today through the trip's last day, so bookings that
+ * happen before the trip get a date too. Once the trip is over, any day up to its last one.
+ */
+export function dueWindow(tripEnd: string, today: string = todayIso()): { min: string | undefined; max: string } {
+  return { min: today <= tripEnd ? today : undefined, max: tripEnd };
+}
+
+/** Whether a due day falls in that window. */
+export function dueDayOk(day: string, tripEnd: string, today: string = todayIso()): boolean {
+  const { min, max } = dueWindow(tripEnd, today);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && day <= max && (min === undefined || day >= min);
+}
+
 /** Every date from start to end, inclusive. */
 export function tripDays(start: string, end: string): string[] {
   const days: string[] = [];

@@ -368,7 +368,7 @@ export function MoneyCard({
       <div className="mb-3 rounded-2xl bg-white/35 p-3">
         <p className="label-luxury text-muted-foreground">Your balance</p>
         <p
-          className={`font-display text-2xl font-bold ${mine.balance > 0 ? "text-green-700" : mine.balance < 0 ? "text-destructive" : ""}`}
+          className={`font-display text-2xl font-bold ${mine.balance > 0 ? "text-green-800" : mine.balance < 0 ? "text-destructive" : ""}`}
         >
           {mine.balance > 0 ? `You're owed ${dollars(mine.balance)}` : mine.balance < 0 ? `You owe ${dollars(-mine.balance)}` : "You're even"}
         </p>
@@ -387,7 +387,7 @@ export function MoneyCard({
                   {t.name}
                   {t.id === meId ? " (you)" : ""}
                 </span>
-                <span className={`tabular-nums ${b > 0 ? "text-green-700" : b < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                <span className={`tabular-nums ${b > 0 ? "text-green-800" : b < 0 ? "text-destructive" : "text-muted-foreground"}`}>
                   {b > 0 ? `is owed ${dollars(b)}` : b < 0 ? `owes ${dollars(-b)}` : "even"}
                 </span>
               </li>

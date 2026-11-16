@@ -75,7 +75,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
           <div />
           {week.map((d) => (
             <div key={d.date} className="min-w-0 border-b border-l border-white/30 px-1.5 py-2 text-center">
-              <p className="font-display text-xs font-bold text-muted-foreground">{d.chip.weekday}</p>
+              <p className="font-display text-xs font-bold text-foreground">{d.chip.weekday}</p>
               <p className="text-sm font-semibold">{d.chip.date}</p>
               <p className="truncate text-[10px] text-muted-foreground">{d.title}</p>
             </div>
@@ -83,7 +83,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
 
           {PARTS.map((part) => (
             <div key={part} className="contents">
-              <div className="label-luxury border-b border-white/30 px-2 pt-2.5 text-muted-foreground">{PART_LABEL[part]}</div>
+              <div className="label-luxury border-b border-white/30 px-2 pt-2.5 text-foreground">{PART_LABEL[part]}</div>
               {week.map((d) => (
                 <div key={d.date + part} className="min-h-16 min-w-0 space-y-1 border-b border-l border-white/30 p-1">
                   {d.parts[part].map(chip)}
@@ -102,7 +102,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
             </div>
           ))}
 
-          <div className="label-luxury px-2 pt-2.5 text-muted-foreground">Stay</div>
+          <div className="label-luxury px-2 pt-2.5 text-foreground">Stay</div>
           {week.map((d) => {
             const nights = d.stays.filter((s) => !s.checkout);
             return (

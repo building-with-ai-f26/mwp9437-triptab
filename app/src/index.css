@@ -14,7 +14,9 @@
   --color-gold-light: hsl(30 20% 90%);
   --color-sand: hsl(35 30% 92%);
   --color-muted: hsl(40 15% 94%);
-  --color-muted-foreground: hsl(220 10% 46%);
+  /* Secondary text. Darkened 11/16 (was hsl(220 10% 46%)): the lighter gray measured under
+     4.5:1 almost everywhere it sat on glass or a photo (e2e/contrast-check.cjs). */
+  --color-muted-foreground: hsl(225 16% 22%);
   --color-border: hsl(35 15% 88%);
   --color-stone: hsl(30 20% 78%);
   --color-stone-dark: hsl(30 15% 55%);
@@ -55,6 +57,22 @@
   }
   button:disabled {
     cursor: not-allowed;
+  }
+  /* Native dropdown lists. Chrome on Windows paints the open list from the select's own colors,
+     and a see-through background lands on white: white text on white in the dark dialogs
+     (11/16 walkthrough). So every option gets solid colors: dark on white by default, light on
+     dark inside a dark field or dialog. */
+  select option,
+  select optgroup {
+    background-color: #ffffff;
+    color: var(--color-foreground);
+  }
+  dialog select option,
+  dialog select optgroup,
+  select.field-dark option,
+  select.field-dark optgroup {
+    background-color: rgb(30, 30, 30);
+    color: rgba(255, 255, 255, 0.95);
   }
 }
 
@@ -157,6 +175,8 @@
    purpose (dashed, see-through, no stripe color) until it's decided. */
 @layer components {
   .item-card {
+    /* Plan cards keep the lighter gray: how Suggested and Planned look waits for the pod test. */
+    --color-muted-foreground: hsl(220 10% 46%);
     position: relative;
     display: block;
     width: 100%;

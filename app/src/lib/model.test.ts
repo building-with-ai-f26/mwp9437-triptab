@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  dueDayOk,
+  dueWindow,
+  todayIso,
   addDays,
   canEdit,
   dateRange,
@@ -191,5 +194,26 @@ describe("weeks", () => {
     const w = weeks(buildTimeline(trip, skiStops, []));
     expect(w.map((x) => x.length)).toEqual([7, 5]);
     expect(w[1][0].date).toBe("2026-02-12");
+  });
+});
+
+describe("action item due dates", () => {
+  it("run from today through the trip's last day, not only trip days", () => {
+    expect(dueWindow("2027-02-16", "2026-11-16")).toEqual({ min: "2026-11-16", max: "2027-02-16" });
+    expect(dueDayOk("2026-12-01", "2027-02-16", "2026-11-16")).toBe(true); // a pre-trip booking
+    expect(dueDayOk("2026-11-16", "2027-02-16", "2026-11-16")).toBe(true); // today
+    expect(dueDayOk("2027-02-16", "2027-02-16", "2026-11-16")).toBe(true); // the last day
+  });
+  it("refuse yesterday and anything after the trip", () => {
+    expect(dueDayOk("2026-11-15", "2027-02-16", "2026-11-16")).toBe(false);
+    expect(dueDayOk("2027-02-17", "2027-02-16", "2026-11-16")).toBe(false);
+    expect(dueDayOk("not a date", "2027-02-16", "2026-11-16")).toBe(false);
+  });
+  it("still allow a day inside the trip once the trip is over", () => {
+    expect(dueWindow("2027-02-16", "2027-03-01")).toEqual({ min: undefined, max: "2027-02-16" });
+    expect(dueDayOk("2027-02-10", "2027-02-16", "2027-03-01")).toBe(true);
+  });
+  it("reads today off the device's calendar", () => {
+    expect(todayIso(new Date(2026, 10, 6, 23, 30))).toBe("2026-11-06");
   });
 });
