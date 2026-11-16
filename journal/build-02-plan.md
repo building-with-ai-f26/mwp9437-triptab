@@ -75,7 +75,7 @@ _Last update 11/15, late evening (New York): Builds 2 and 3 are built and checke
 
 1. Build 4's AI pieces once there's a capped key: Plan with AI, packing list, local tips, alternatives, each call through a Supabase Edge Function and logged with tokens and cost.
 2. Build 5 prep: where to host the app (runbook step 67), a custom email sender for magic links and password resets, and a rollback check.
-3. Pod test prep for 11/17: a short script for the pod (join through the link on your laptop in a private window).
+3. Run the pod test on 11/17 from `journal/pod-test-11-17.md` (written: five tasks, what to watch, where to record it).
 
 ## app/.env.local on your laptop
 
