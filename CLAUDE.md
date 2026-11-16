@@ -40,7 +40,7 @@ The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shM
 ## Rules
 
 - Icerynk course key `fa26-tech-gb-2160-dm2-f2`. The Icerynk connector is read-only; Mike does all submitting. Builds are due Mondays at noon, New York time; each can be redone once within 7 days of feedback.
-- The app stays on localhost through Build 4 and goes online for Build 5, unless Mike decides to put it online sooner for the ski group (runbook step 67).
+- The app is online early (Mike's call, 11/16): GitHub Pages at https://building-with-ai-f26.github.io/mwp9437-triptab/app/, built into `docs/app` with `npm run build:pages` (hash routes, since Pages can't route deep links). Rebuild and commit `docs/app` whenever a change should go live; Build 5 still adds the rollback check and a decision on hosting.
 - Commits on two separate days each week, outside class (class is Tuesday, 9 to 11:50 AM).
 - Commits are authored as Mike Pezza (mwp9437@stern.nyu.edu) with no Co-Authored-By or other AI trailer (Mike's call; the course doesn't require one). The build log names the agent under costs.
 - Never fabricate user tests, analytics, evals or cost logs; the course treats that as an integrity violation. Costs in the build log are real: Claude Max at $100 a month plus any API spend.
