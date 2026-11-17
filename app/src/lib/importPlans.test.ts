@@ -90,6 +90,12 @@ describe("a proposal becomes a draft to review", () => {
     expect(d.paid).toBe(false);
     expect(d.warnings.join(" ")).toContain("Priced in EUR 3200.00");
   });
+  it("a price with no currency is kept but flagged, never assumed silently", () => {
+    const d = toDraft(proposal({ cost_cents: 6400, currency: null, unsure: ["cost"] }), trip, []);
+    expect(d.cost).toBe("64");
+    expect(d.warnings.join(" ")).toContain("No currency was found for this price");
+    expect(d.unsure).toContain("cost");
+  });
   it("looked-up flight times are marked and carry their source", () => {
     const d = toDraft(proposal({ depart_time: "17:05", arrive_time: "07:10", times_from: "lookup", source_url: "https://example.com/ua57" }), trip, []);
     expect(d.notes).toContain("looked up, check against your booking: https://example.com/ua57");

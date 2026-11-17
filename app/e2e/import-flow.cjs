@@ -100,6 +100,14 @@ async function run(browser, label, opts, result) {
     const kept = await h.dlg(p).getByRole('button', { name: /Add \d+ to the trip/ }).innerText().catch(() => 'nothing to add');
     r.saveButton = kept.trim();
     r.cards = (await cards.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').slice(0, 260));
+    // Save what the model proposed and the review kept, unedited, and read it back off the trip.
+    if (/Add [1-9]/.test(kept)) {
+      await h.dlg(p).getByRole('button', { name: /Add \d+ to the trip/ }).click();
+      await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 });
+      if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});
+      await p.waitForTimeout(1500);
+      r.onTheTrip = (await p.locator('.item-card').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => !t.includes('Fondue'));
+    }
   }
   r.overflow = await h.overflowX(p);
   await p.locator('#day-2027-02-05').scrollIntoViewIfNeeded().catch(() => {});

@@ -90,6 +90,24 @@ describe("limits, checked before anything is sent to the model", () => {
   });
 });
 
+/**
+ * The daily cap, live. The cap is a secret the tests can't change, so this check needs today's
+ * spend to already be at the cap: a marked fixture row (result 'cap_check_fixture', test_run) is
+ * put in ai_calls by hand for the minute this runs, then removed. Run it with VITE_CAP_FIXTURE=1;
+ * without the fixture it is skipped, and the cap rule itself is unit tested in importRules.test.ts.
+ */
+describe("the daily cap", () => {
+  it.runIf(import.meta.env.VITE_CAP_FIXTURE === "1")("blocks a call once today's spend has reached it, before anything is sent to the model", async () => {
+    const r = await call(owner, { trip_id: tripId, text: "We fly UA 57 on Feb 4.", test_run: true });
+    expect(r.status).toBe(429);
+    expect(r.body.code).toBe("capped_daily");
+    expect(String(r.body.error)).toContain("reached its AI budget for today");
+    // The blocked call is logged at no cost and with no tokens: it never reached the model.
+    const { data } = await owner.from("ai_calls").select("result, cost_usd, input_tokens").eq("trip_id", tripId);
+    expect(data).toEqual([{ result: "capped_daily", cost_usd: 0, input_tokens: 0 }]);
+  });
+});
+
 describe("the cost log", () => {
   it("can't be written from the app, by anyone", async () => {
     for (const c of [owner, viewer]) {

@@ -131,6 +131,7 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
   if (p.cost_cents != null && p.currency && p.currency !== "USD") {
     warnings.push(`Priced in ${p.currency} ${(p.cost_cents / 100).toFixed(2)}. TripTab keeps the tab in US dollars: enter what your card was charged.`);
   }
+  if (p.cost_cents != null && !p.currency) warnings.push("No currency was found for this price. Check that it's in US dollars before saving.");
   if (p.kind === "flight" && !p.depart_time && !p.arrive_time) warnings.push("No times found. Add times in the notes once you have them.");
   if (p.times_from === "lookup") warnings.push("Times were looked up, not in what you pasted. Check them against your booking.");
   const dup = possibleDuplicate(p, items);
