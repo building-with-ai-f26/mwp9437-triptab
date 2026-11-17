@@ -46,6 +46,24 @@ const ROOT = (process.argv[2] || 'https://building-with-ai-f26.github.io') + '/m
   result.vicOverflow = await h.overflowX(v);
   await h.shot(v, 'online-viewer-phone');
 
+  // Someone who already has an account opens the link, adds their name and uses the Sign in tab
+  // (the 11/16 fix: Sign in and Create account are two labeled choices, not a small link).
+  const pre = h.watch(await (await h.context(browser, h.PHONE)).newPage(), 'sam-signup');
+  await pre.goto(ROOT);
+  await pre.getByRole('button', { name: 'Create account' }).click();
+  await h.signUp(pre, 'Sam', 'sam');
+  await pre.waitForURL(/#\/trips$/);
+  await pre.context().close();
+  const s = h.watch(await (await h.context(browser, h.PHONE)).newPage(), 'sam');
+  await s.goto(groupUrl);
+  await s.getByRole('button', { name: "Don't see your name?" }).click();
+  await s.getByLabel('Your name').fill('Sam');
+  await s.getByRole('button', { name: 'Next' }).click();
+  await h.signIn(s, 'sam');
+  await s.getByRole('button', { name: 'Join the trip' }).click();
+  await s.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
+  result.samSignedInAndJoined = true;
+
   await o.waitForTimeout(3000);
   result.errors = h.errors;
   console.log(JSON.stringify(result, null, 2));

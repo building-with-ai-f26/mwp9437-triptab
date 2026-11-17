@@ -112,7 +112,7 @@ export function PeopleCard({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {t.user_id ? (
-                      <span className="inline-flex items-center gap-1 text-green-700">
+                      <span className="inline-flex items-center gap-1 font-medium text-green-900">
                         <Check className="size-3" /> Joined
                       </span>
                     ) : (
@@ -132,7 +132,7 @@ export function PeopleCard({
                     <option value="viewer">Viewer</option>
                   </select>
                 ) : (
-                  <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-gold-dark">
+                  <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold text-gold-dark">
                     {ROLE_LABEL[t.role]}
                   </span>
                 )}

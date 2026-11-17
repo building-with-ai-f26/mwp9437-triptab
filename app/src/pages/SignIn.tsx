@@ -20,7 +20,10 @@ export default function SignIn() {
       </header>
       <main className="relative z-10 flex flex-1 items-start justify-center px-4 pb-10 pt-4 sm:items-center">
         <div className="glass-card-readable w-full max-w-sm rounded-3xl p-6">
-          <AuthForm onDone={() => navigate(next, { replace: true })} />
+          <AuthForm
+            initialMode={params.get("mode") === "sign-in" ? "sign-in" : "create"}
+            onDone={() => navigate(next, { replace: true })}
+          />
         </div>
       </main>
     </div>

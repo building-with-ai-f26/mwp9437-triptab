@@ -27,9 +27,14 @@ export default function Landing() {
             My trips
           </Button>
         ) : (
-          <Button variant="dark" size="sm" onClick={() => navigate("/sign-in")}>
-            Sign in
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="light" size="sm" className="!border-white/40 !bg-black/30 font-semibold" onClick={() => navigate("/sign-in?mode=sign-in")}>
+              Sign in
+            </Button>
+            <Button variant="dark" size="sm" onClick={() => navigate("/sign-in")}>
+              Create account
+            </Button>
+          </div>
         )}
       </header>
 
@@ -38,26 +43,33 @@ export default function Landing() {
           Plan it. Split it. <br className="sm:hidden" />
           Live it.
         </h1>
-        <p className="mx-auto mb-8 max-w-lg text-base text-white/90 drop-shadow sm:text-lg">
+        <p className="mx-auto mb-8 max-w-lg text-base text-white drop-shadow sm:text-lg">
           One place for the group's plans and who paid what, before, during and after the trip.
         </p>
         <Button size="lg" onClick={start}>
           Start a trip <ArrowRight />
         </Button>
-        {user && (
+        {user ? (
           <Link to="/trips" className="mt-4 text-sm font-medium text-white drop-shadow hover:underline">
             Open my trips
           </Link>
+        ) : (
+          <p className="mt-4 text-sm text-white drop-shadow">
+            Already have an account?{" "}
+            <Link to="/sign-in?mode=sign-in" className="font-semibold underline underline-offset-4">
+              Sign in
+            </Link>
+          </p>
         )}
 
         <ul className="mt-12 grid w-full max-w-3xl grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:gap-4">
           {POINTS.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="glass-card rounded-2xl p-4 sm:p-5">
+            <li key={title} className="glass-card rounded-2xl !bg-black/45 p-4 sm:p-5">
               <span className="mb-3 grid size-10 place-items-center rounded-xl bg-white/20">
                 <Icon className="size-5 text-white" />
               </span>
               <h2 className="mb-1 font-display text-base font-bold text-white drop-shadow">{title}</h2>
-              <p className="text-sm leading-relaxed text-white/85">{text}</p>
+              <p className="text-sm leading-relaxed text-white">{text}</p>
             </li>
           ))}
         </ul>

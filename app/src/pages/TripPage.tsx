@@ -99,7 +99,7 @@ export default function TripPage() {
             <p className="mb-5 text-sm text-muted-foreground">
               {error ?? "It may have been deleted, or you're not on it. Ask someone on the trip for the group link."}
             </p>
-            <Link to="/trips" className="font-medium text-gold-dark underline-offset-4 hover:underline">
+            <Link to="/trips" className="font-semibold text-foreground underline underline-offset-4">
               Back to my trips
             </Link>
           </div>
@@ -188,7 +188,7 @@ export default function TripPage() {
             <FileText /> <span className="hidden md:inline">PDF</span>
           </Button>
           {me && (
-            <span className="hidden rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-gold-dark lg:inline">
+            <span className="hidden rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-gold-dark lg:inline">
               You're {me.role === "owner" ? "an" : "a"} {ROLE_LABEL[me.role]}
             </span>
           )}
@@ -210,7 +210,7 @@ export default function TripPage() {
               aria-selected={tab === key}
               onClick={() => setTab(key)}
               className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-1 py-2 font-display text-[13px] font-semibold transition-all sm:text-sm ${
-                tab === key ? "glass-card text-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
+                tab === key ? "glass-card !bg-white/60 text-foreground shadow-md" : "text-foreground hover:bg-white/25"
               }`}
             >
               <Icon className="hidden size-4 min-[420px]:inline" /> {label}
@@ -226,8 +226,8 @@ export default function TripPage() {
                 <p className="mt-1.5 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-white/45 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">
                   <span className="italic">Suggested is faint</span>
                   <span className="font-medium text-foreground/80">Planned is solid</span>
-                  <span className="inline-flex items-center gap-1 font-medium text-green-700">
-                    Confirmed (paid) <span className="inline-flex items-center rounded-full bg-green-500/20 px-1 text-[10px] font-bold">$<Check className="size-2.5" strokeWidth={3} /></span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-green-900">
+                    Confirmed (paid) <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
                   </span>
                 </p>
               </div>

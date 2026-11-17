@@ -6,7 +6,7 @@ Draft v3, Nov 9, 2026. Your 11/9 review is applied on top of the 11/8 voice note
 
 ## What exists today
 
-- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/). The design reference until the rebuild replaces it (you're keeping the TripTab name and sunsetting this one); its share links have a security gap (runbook step 60).
+- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/). The design reference until the rebuild replaces it (you're keeping the TripTab name and sunsetting this one); its share links have a security gap (the spring app cleanup step on the runbook).
 - **Build 1:** the [Product Page](https://building-with-ai-f26.github.io/mwp9437-triptab/) with PRD v1 and the build log, and a rough prototype in [the class repo](https://github.com/building-with-ai-f26/mwp9437-triptab): create a trip, suggest plans, confirm one with cost, payer and who joined, and see the fewest payments to settle. Eight tests on the money math; plain styling.
 - **Spring archive:** the legacy chat digest, usage export and Lovable's notes, in the course output folder (triptab-spring-archive).
 
@@ -30,6 +30,7 @@ The group chat holds the ideas, Splitwise holds the money, and nobody holds the 
 
 **Help along the way**
 
+- **Import, first (decided 11/16).** Paste a confirmation email, a receipt, flight numbers or a quick summary, or attach a PDF or screenshot; TripTab proposes the plans with their costs and who pays, and nothing is saved until you review them. It never invents a time, price or address that isn't in what you gave it.
 - **Plan with AI,** a button on the itinerary: describe what's already booked and it fills that in, or ask for ideas for empty slots (nothing planned Thursday or Friday night yet), shaped by an optional group survey. It fills gaps only; it never overwrites a plan or makes one up.
 - **See alternatives** on any plan, for when Friday's ramen stops sounding good on Thursday.
 - **Packing list** built from the itinerary and the weather.
@@ -69,12 +70,12 @@ What we're building for Demo Day (12/8) versus the wider product.
 | Owner and Viewer roles, picked from an Add as menu | Privacy controls, like keeping your flights to yourself |
 | Itinerary timeline with stays and morning, day, evening, night, plus a week view | Receipt scanning |
 | Statuses: Suggested, Planned, Confirmed (paid); opt in and out | Entering costs in other currencies at the day's exchange rate (a stretch goal for the course) |
-| Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings from forwarded emails |
+| Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings by forwarding emails to TripTab or from Gmail (paste and upload are in the course) |
 | General expenses not tied to a plan, like a grocery run | Full AI-built itineraries and an in-trip AI concierge |
 | Settle-up in the fewest payments | Post-trip recap |
 | Your own view: your flights, costs and balance, with a tap for everyone's flights | A native phone app |
 | Action items, with who's assigned | Making money: sponsored suggestions and booking fees |
-| AI: Plan with AI, packing list, local tips, suggestions from a group survey, see alternatives |  |
+| AI: import of bookings (emails, receipts, PDFs, flight numbers), Plan with AI, packing list, local tips, suggestions from a group survey, see alternatives |  |
 | PDF itinerary and add to calendar |  |
 | The spring look and feel, phone first with a good desktop view, online for the ski group |  |
 
@@ -86,7 +87,7 @@ You chose the aggressive cut and confirmed it on 11/9: core loop, trip logistics
 | --- | --- | --- |
 | Build 2 (11/16) | Trip, add people directly plus a group link, roles, itinerary timeline with stays, the spring look, PostHog | Events for trip created, person added, plan added |
 | Build 3 (11/23) | Statuses; plans and bookings with cost, payer and split; general expenses; opt in and out; settle-up; your own view and flights | A funnel from suggested to planned to confirmed (paid) |
-| Build 4 (11/30) | Plan with AI, packing list and tips, then survey suggestions and alternatives; action items with who's assigned; PDF and add to calendar; week view | Ten-case evals on the AI features |
+| Build 4 (11/30) | AI import of bookings (started early, 11/16), then Plan with AI, packing list and tips, then survey suggestions and alternatives; action items with who's assigned; PDF and add to calendar; week view | Ten-case evals on the AI features |
 | Build 5 (12/7) | Online, rollback check, two-minute video | The ski group using it from their phones |
 
 ## Does the aggressive cut fit the course?
@@ -104,10 +105,10 @@ Yes, with conditions. No rule caps scope, and the syllabus says size and difficu
 
 - **You pay per request, by length.** Each AI call is billed on the text sent and returned. A packing list or a set of local tips is a short request; on a small, fast model that's a fraction of a cent.
 - **A whole trip is likely a few dollars at most.** Even a few hundred calls stays in that range. These figures are approximate; Claude prices them from the provider's page before Build 4.
-- **A hard cap removes the risk.** The course setup guide suggests a prepaid OpenRouter balance of $10 to $20 with a hard spend cap. The key stays on the server, never in the app or on GitHub.
+- **A hard cap removes the risk.** Your Max plan's $100 monthly Claude API credit is the cap: with no other credits on the account, calls stop when it runs out (decided 11/16; the course setup guide's alternative was a prepaid OpenRouter balance of $10 to $20). The key stays on the server, never in the app or on GitHub.
 - **Every call gets logged with its cost,** which feeds the Sponsor Memo's cost section.
 
-**Who pays, open since 11/9:** you asked whether your Claude subscription can cover these calls, at least for the demo. If it can't, the app sends AI requests to OpenRouter on prepaid credits, and class credits are the fallback to ask about. Claude checks before PRD v2 (runbook step 54).
+**Who pays, decided 11/16:** the Claude API, through the $100 monthly API credit your Max plan includes, instead of OpenRouter (runbook step 54). Cash cost is $0, and the credit doubles as the hard cap. Every call still logs its tokens and list-price cost, since the Sponsor Memo's unit economics can't rest on a subscription perk.
 
 ## Inviting people
 
@@ -186,16 +187,19 @@ You see a real gap in the market and would keep TripTab running after the course
 
 ## Competitive frame
 
-| App | What it does well | TripTab takeaway |
-| --- | --- | --- |
-| Splitwise | Splits and the fewest-payment settle-up | Match the settle-up; win by tying each cost to a plan, and by adding people without waiting on a link |
-| Wanderlog | Collaborative, map-based itineraries | Don't out-map it; plans here are a timeline tied to money |
-| Troupe | Group votes on dates and places | Light polls later |
-| AvoSquado | Bedroom assignments and house details | Who's staying where, in Build 3; bedrooms later |
-| TripIt | Builds an itinerary from forwarded booking emails | Later; manual entry first |
-| FlowTrip | AI group planning, very early | Confirms AI plus groups is a live direction |
+| App | What it does well | Where it's weak (11/16 scan) | TripTab takeaway |
+| --- | --- | --- | --- |
+| Splitwise | Splits in every mode and the fewest-payment settle-up; free item-by-item receipts since Oct 2026 | Free users get 4 expenses a day with ads, which stalls trips; joining needs an account; anyone can edit anything | Match the settle-up; win on no cap, joining by link, and costs tied to plans |
+| Venmo Groups | Up to 30 people, fewest payments, and the money moves in the same app | US only, no currencies found, everyone needs Venmo | The payment rail, not the rival: TripTab says who pays whom, Venmo moves it |
+| Tricount, Splid | Free and simple; Splid needs no account | Tricount balances don't match between members; neither has a web app | Join from a link in the browser, with balances traceable line by line |
+| Wanderlog | Collaborative, map-based itineraries | Forwarded bookings go missing or duplicate; splitting is thin; trial billing (Trustpilot 1.8) | Don't out-map it; plans here are a timeline tied to money |
+| TripIt | Itinerary from forwarded booking emails | Parsing errors; photo and PDF import are Pro; no group splitting | Free AI import with a review step before saving (Build 4) |
+| Lambus | Plans, bookings and expenses in one trip; AI assistants can write into a trip | Few reviews; currencies and to-dos are paid | Per-trip pricing that covers the group ($8.99) is a model to test |
+| Travita (2026) | The closest match: AI day drafts, polls, tasks with owners, splits, PDF | iPhone only, no ratings yet | Watch it; TripTab's edge is the web link and costs per person |
+| Troupe | Group votes on dates and places | Invite links reported broken; one guide reports it discontinued | Light polls later |
+| AvoSquado | Bedroom assignments and house details | 10 ratings, no recent reviews | Who's staying where, in Build 3; bedrooms later |
 
-*From the spring 2026 competitor research in the legacy chat; not re-checked since. The field has likely moved, so a dedicated market research session is on the runbook (step 66).*
+*Updated 11/16 from a scan of 22 trip and expense apps: [TripTab market research](https://claude.ai/artifact/3Tj2RR8JBihagngKniXdRJ). The widest gap across both categories is costs inside a shared plan (each friend's own price next to a split bill, a paid mark, points); import, inviting and a visible plan status come next. Ratings and prices as read 11/16; Reddit was blocked for the scan.*
 
 ## How we'll know it's working
 
@@ -207,6 +211,12 @@ You see a real gap in the market and would keep TripTab running after the course
 - **PostHog tracks** people added, plans confirmed, expenses logged at confirm time, settle-up views, and every AI call with its cost.
 
 ## Questions for you
+
+**Decided 11/16** (from your walkthrough and the market scan)
+
+- **Who pays:** every plan is One bill, split or Everyone pays their own; flights default to their own. Own lines never create debts. Everyone sees who has booked; each price shows only to its owner. A plan is Confirmed once everyone going has booked. Points are a tag on your own line.
+- **The first AI feature is import of bookings,** started 11/16 ahead of Build 4, on the Claude API through your Max plan's monthly credit.
+- **Quick fixes go live before the pod test:** separate Sign in and Create account, readable dropdowns and labels, to-do dates before the trip. Everything else waits until after the pod test.
 
 **Answered in your 11/9 review**
 

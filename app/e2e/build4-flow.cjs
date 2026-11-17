@@ -47,9 +47,10 @@ const h = require('./helpers.cjs');
   const todo = o.locator('section[aria-labelledby="actions-title"]');
   await todo.getByLabel('New action item').fill('Book the Barcelona flight');
   await todo.getByLabel("Who's on it").selectOption({ label: 'Vic' });
-  await todo.getByLabel('Due by').selectOption('2027-02-08');
+  await todo.getByLabel('Due by (optional)').fill('2026-12-01'); // a pre-trip booking: any day from today through the trip's last
   await todo.getByRole('button', { name: 'Add' }).click();
   await todo.getByText('Book the Barcelona flight').waitFor();
+  await todo.getByText('by Tue, Dec 1').waitFor();
   await todo.getByLabel('New action item').fill('Thursday night plans');
   await todo.getByLabel("Who's on it").selectOption({ label: 'Priya' });
   await todo.getByRole('button', { name: 'Add' }).click();

@@ -12,7 +12,7 @@ export function Brand({ light = false }: { light?: boolean }) {
         <span className={`block font-display text-lg font-bold leading-tight sm:text-xl ${light ? "text-white" : "text-foreground"}`}>
           TripTab
         </span>
-        <span className={`label-luxury block leading-tight ${light ? "text-white/75" : "text-muted-foreground"}`}>
+        <span className={`label-luxury block leading-tight ${light ? "text-white" : "text-muted-foreground"}`}>
           Group trips, settled
         </span>
       </span>

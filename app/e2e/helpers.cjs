@@ -66,4 +66,12 @@ async function addPlan(page, day, slot, f) {
   await page.locator(`#day-${day}`).getByText(f.title).first().waitFor();
 }
 
-module.exports = { OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+/** Signs in to an account an earlier signUp(page, name, who) made, through the Sign in tab. */
+async function signIn(page, who) {
+  await page.getByRole('tab', { name: 'Sign in' }).click();
+  await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
+  await page.getByLabel('Password').fill(PW);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+module.exports = { signIn, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

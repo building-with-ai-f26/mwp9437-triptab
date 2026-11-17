@@ -59,7 +59,7 @@ export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active
               on ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "glass hover:bg-primary/15"
             }`}
           >
-            <span className={`font-display text-[11px] font-bold ${on ? "text-white/85" : "text-muted-foreground"}`}>
+            <span className={`font-display text-[11px] font-bold ${on ? "text-white" : "text-foreground"}`}>
               {d.chip.weekday}
             </span>
             <span className="text-sm font-semibold">{d.chip.date}</span>
@@ -166,7 +166,7 @@ function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-white/55 bg-white/10 px-3 text-left text-sm italic text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+      className="flex min-h-11 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-white/55 bg-white/25 px-3 text-left text-sm italic text-foreground transition-colors hover:border-primary/50 hover:text-primary"
     >
       <Plus className="size-4 shrink-0" /> {label}
     </button>
@@ -178,12 +178,12 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
   return (
     <section id={`day-${day.date}`} data-date={day.date} className="scroll-mt-32 py-4 sm:scroll-mt-36" aria-label={longDay(day.date)}>
       <header className="mb-3 flex items-center gap-3">
-        <div className="glass grid size-11 shrink-0 place-items-center rounded-2xl bg-white/25">
-          <span className="font-display text-base font-bold text-primary">{dayChip(day.date).date.split("/")[1]}</span>
+        <div className="glass grid size-11 shrink-0 place-items-center rounded-2xl !bg-white/85">
+          <span className="font-display text-base font-bold text-gold-dark">{dayChip(day.date).date.split("/")[1]}</span>
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-base font-semibold sm:text-lg">{day.title || "Free day"}</h3>
-          <p className="label-luxury text-muted-foreground">{longDay(day.date)}</p>
+          <p className="label-luxury text-foreground">{longDay(day.date)}</p>
         </div>
         {actions.canEdit && (
           <button
@@ -203,7 +203,7 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
           const items = day.parts[part];
           return (
             <div key={part} className="grid grid-cols-[60px_1fr] gap-4 py-1">
-              <div className="label-luxury pt-3.5 text-muted-foreground">{PART_LABEL[part]}</div>
+              <div className="label-luxury pt-3.5 text-foreground">{PART_LABEL[part]}</div>
               <div className="min-w-0 space-y-2">
                 {items.map((item) => (
                   <ItemCard key={item.id} item={item} actions={actions} />

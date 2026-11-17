@@ -28,7 +28,7 @@ export function TopBar({
         )}
         <div className="min-w-0">
           <h1 className="truncate font-display text-base font-bold text-foreground sm:text-lg">{title}</h1>
-          {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="truncate text-xs text-foreground">{subtitle}</p>}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{children}</div>

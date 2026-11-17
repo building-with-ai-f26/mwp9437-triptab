@@ -2,18 +2,24 @@ import { useState, type FormEvent } from "react";
 import { Button, DarkField } from "./ui";
 import { useAuth } from "../lib/auth";
 
-/** Create an account or sign in, on dark glass. Used on the sign-in page and the join page. */
+/**
+ * Create an account or sign in, on dark glass. Used on the sign-in page and the join page.
+ * The two are separate, labeled tabs at the top (11/16 walkthrough: the old small link at the
+ * bottom was easy to miss, so people with an account tried to create a second one).
+ */
 export function AuthForm({
   onDone,
   defaultName = "",
   intro,
+  initialMode = "create",
 }: {
   onDone: () => void;
   defaultName?: string;
   intro?: string;
+  initialMode?: "create" | "sign-in";
 }) {
   const { signUp, signIn } = useAuth();
-  const [mode, setMode] = useState<"create" | "sign-in">("create");
+  const [mode, setMode] = useState<"create" | "sign-in">(initialMode);
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,11 +40,35 @@ export function AuthForm({
 
   return (
     <form onSubmit={submit} noValidate>
+      <div role="tablist" aria-label="Create an account or sign in" className="mb-5 grid grid-cols-2 gap-1 rounded-full bg-white/10 p-1">
+        {(
+          [
+            ["create", "Create account"],
+            ["sign-in", "Sign in"],
+          ] as const
+        ).map(([m, label]) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => {
+              setMode(m);
+              setError(null);
+            }}
+            className={`min-h-10 rounded-full px-3 text-sm font-semibold transition-colors ${
+              mode === m ? "bg-white text-foreground shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <h1 className="mb-1 font-display text-2xl font-bold italic text-white">
         {mode === "create" ? "Create your account" : "Welcome back"}
       </h1>
       <p className="mb-5 text-sm text-white/65">
-        {intro ?? (mode === "create" ? "Takes ten seconds. No email to confirm." : "Sign in to see your trips.")}
+        {intro ?? (mode === "create" ? "New here? Takes ten seconds. No email to confirm." : "Sign in to see your trips.")}
       </p>
 
       {mode === "create" && (
@@ -79,17 +109,17 @@ export function AuthForm({
         {busy ? "One moment..." : mode === "create" ? "Create account" : "Sign in"}
       </Button>
 
-      <p className="mt-4 text-center text-sm text-white/65">
+      <p className="mt-4 text-center text-sm text-white/70">
         {mode === "create" ? "Already have an account? " : "New to TripTab? "}
         <button
           type="button"
-          className="font-semibold text-white underline-offset-4 hover:underline"
+          className="font-semibold text-white underline underline-offset-4"
           onClick={() => {
             setMode(mode === "create" ? "sign-in" : "create");
             setError(null);
           }}
         >
-          {mode === "create" ? "Sign in" : "Create an account"}
+          {mode === "create" ? "Sign in instead" : "Create an account instead"}
         </button>
       </p>
     </form>

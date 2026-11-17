@@ -43,7 +43,7 @@ export function PhotoFrame({ src, tone = "soft" }: { src: string; tone?: "soft" 
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.05) 65%, rgba(0,0,0,0.35) 100%)",
+              "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.46) 30%, rgba(0,0,0,0.46) 70%, rgba(0,0,0,0.55) 100%)",
           }}
         />
       ) : (
