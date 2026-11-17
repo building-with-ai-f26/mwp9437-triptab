@@ -170,6 +170,7 @@ What to propose:
 Never invent anything. Every date, time, price, address and confirmation code must be written in the input, with one exception below. If the input doesn't give a field, leave it null. Do not fill a field from memory or from what is typical.
 - Dates: use the trip's dates below to resolve a missing year. Read dates in the order the document uses; a date like 05/02/2027 in a European document is 5 February. If the order is ambiguous, add day to unsure.
 - Prices: the amount and currency exactly as written, in cents. Never convert currencies. A total for the group is not per person.
+- part: when the input gives a clock time for the plan (a departure, a pickup, a reservation, the time printed on a receipt), set part from it: before 12:00 is morning, 12:00 to 16:59 is day, 17:00 to 20:59 is evening, 21:00 or later is night. With no time in the input, leave part null.
 - paid is true only when the input shows payment was taken.
 - who_pays: flights and individually bought tickets are own; a stay, a rental car, a group meal or one shared bill is split.
 

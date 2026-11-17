@@ -54,8 +54,8 @@ Deno.serve(async (req) => {
   const cap = readCap(Deno.env.get("AI_DAILY_CAP_USD"));
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 
-  // A status check for setup: says whether the key is set, never anything about its value.
-  if (body.probe === true) return json({ ai_key_set: apiKey.length > 0, daily_cap_usd: cap });
+  // A status check for setup: says whether the key is set, never anything about a secret's value.
+  if (body.probe === true) return json({ ai_key_set: apiKey.length > 0 });
 
   const tripId = String(body.trip_id ?? "");
   if (!UUID.test(tripId)) return fail(400, "bad_request", "Which trip?");
