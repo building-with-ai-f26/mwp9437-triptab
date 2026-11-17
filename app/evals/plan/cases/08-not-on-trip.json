@@ -1,0 +1,10 @@
+{
+ "id": "08-not-on-trip",
+ "group": "messy",
+ "what": "A place the trip doesn't go.",
+ "request": "Dinner in Paris on Saturday night.",
+ "expect": {
+  "min": 0,
+  "max": 0
+ }
+}

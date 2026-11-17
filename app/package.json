@@ -10,8 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:rls": "vitest run --config vitest.live.config.ts",
-    "eval:import": "vitest run --config vitest.eval.config.ts",
-    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs && node e2e/settings-flow.cjs && node e2e/live-flow.cjs && node e2e/who-pays-flow.cjs && node e2e/import-flow.cjs && node e2e/span-flow.cjs && node e2e/extend-flow.cjs",
+    "eval:import": "vitest run --config vitest.eval.config.ts evals/import",
+    "eval:plan": "vitest run --config vitest.eval.config.ts evals/plan",
+    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs && node e2e/settings-flow.cjs && node e2e/live-flow.cjs && node e2e/who-pays-flow.cjs && node e2e/import-flow.cjs && node e2e/span-flow.cjs && node e2e/extend-flow.cjs && node e2e/plan-ai-flow.cjs",
     "build:pages": "tsc -b && vite build --mode pages --base=/mwp9437-triptab/app/ --outDir ../docs/app --emptyOutDir"
   },
   "dependencies": {

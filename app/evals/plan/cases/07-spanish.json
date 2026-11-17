@@ -1,0 +1,18 @@
+{
+ "id": "07-spanish",
+ "group": "messy",
+ "what": "A request in Spanish.",
+ "request": "Algo para la noche en Barcelona, tapas o un bar con buen ambiente.",
+ "expect": {
+  "min": 1,
+  "max": 3,
+  "days": [
+   "2027-02-08",
+   "2027-02-09"
+  ],
+  "parts": [
+   "evening",
+   "night"
+  ]
+ }
+}

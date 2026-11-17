@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet, Wand2 } from "lucide-react";
+import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
@@ -67,6 +68,7 @@ export default function TripPage() {
   const [view, setView] = useState<"days" | "week">("days");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [planning, setPlanning] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -173,7 +175,7 @@ export default function TripPage() {
    * Adds a plan, and when it's already paid logs the one bill (split evenly among who's in) or
    * your own line in the same step. Used by Add a plan and by AI import.
    */
-  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import") => {
+  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import" | "ai plan") => {
     const added = await addItem(trip.id, input);
     // Flights are per person: whoever adds one is on it.
     if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
@@ -321,6 +323,9 @@ export default function TripPage() {
               </div>
               {editable && (
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setPlanning(true)}>
+                    <Wand2 /> Plan with AI
+                  </Button>
                   <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setImporting(true)}>
                     <Sparkles /> Import
                   </Button>
@@ -542,6 +547,47 @@ export default function TripPage() {
             track("ai import", {
               plans_proposed: result.plans.length,
               plans_kept: keptCount,
+              cost_usd: result.usage.cost_usd,
+              searches: result.usage.searches,
+              model: result.usage.model,
+              effort: result.usage.effort,
+              latency_ms: result.usage.latency_ms,
+            })
+          }
+        />
+      )}
+      {editable && (
+        <PlanWithAiDialog
+          open={planning}
+          trip={trip}
+          onClose={() => setPlanning(false)}
+          onSave={async (kept) => {
+            // Ideas come in as Suggested, with why and where they were found in the notes.
+            for (const idea of kept) {
+              await createPlan(
+                {
+                  kind: idea.kind,
+                  title: idea.title,
+                  day: idea.day,
+                  part: idea.part,
+                  end_day: null,
+                  location: idea.location,
+                  notes: [idea.why, `Found on: ${idea.source_url}`].filter(Boolean).join("\n"),
+                  status: "suggested",
+                  est_cents: idea.est_cents,
+                  cost_type: idea.est_cents != null ? "per_person" : "total",
+                },
+                undefined,
+                "ai plan",
+              );
+            }
+            await reload();
+          }}
+          onDone={(result, keptCount) =>
+            track("ai plan", {
+              ideas_proposed: result.suggestions.length,
+              ideas_kept: keptCount,
+              dropped_by_code: result.dropped,
               cost_usd: result.usage.cost_usd,
               searches: result.usage.searches,
               model: result.usage.model,

@@ -1,0 +1,22 @@
+{
+ "id": "02-one-dinner-chamonix",
+ "group": "normal",
+ "what": "One dinner in Chamonix.",
+ "request": "One nice dinner in Chamonix, somewhere the whole group fits.",
+ "expect": {
+  "min": 1,
+  "max": 2,
+  "days": [
+   "2027-02-05",
+   "2027-02-06",
+   "2027-02-07"
+  ],
+  "parts": [
+   "evening",
+   "night"
+  ],
+  "kinds": [
+   "meal"
+  ]
+ }
+}
