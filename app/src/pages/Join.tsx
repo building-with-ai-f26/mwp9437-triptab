@@ -100,7 +100,7 @@ export default function Join() {
         <>
           {!pick && (
             <>
-              <h2 className="label-luxury mb-2 text-white/65">Who are you?</h2>
+              <h2 className="label-luxury mb-2 text-white/80">Who are you?</h2>
               <ul className="mb-3 grid grid-cols-2 gap-2">
                 {preview.people.map((p) => (
                   <li key={p.id}>

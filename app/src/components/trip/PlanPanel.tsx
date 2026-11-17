@@ -84,7 +84,7 @@ export function PlanPanel({
   return (
     <div className="mb-4 space-y-3 border-b border-white/10 pb-4">
       <div>
-        <p className="label-luxury mb-1.5 text-white/65">Who pays</p>
+        <p className="label-luxury mb-1.5 text-white/80">Who pays</p>
         {canEdit && !logged ? (
           <Segmented
             label="Who pays"
@@ -209,7 +209,7 @@ export function PlanPanel({
                     />
                   )}
                   {has && !line && !mine && canEdit && (
-                    <p className="text-xs text-white/50">They logged it themselves, so the price is theirs to see and change.</p>
+                    <p className="text-xs text-white/70">They logged it themselves, so the price is theirs to see and change.</p>
                   )}
                 </li>
               );
@@ -224,7 +224,7 @@ export function PlanPanel({
 
       {meId && (
         <div>
-          <p className="label-luxury mb-1.5 text-white/65">{flight ? "Are you on this flight?" : "Are you in?"}</p>
+          <p className="label-luxury mb-1.5 text-white/80">{flight ? "Are you on this flight?" : "Are you in?"}</p>
           <Segmented
             label={flight ? "Are you on this flight?" : "Are you in?"}
             value={meIn ? "in" : "out"}
@@ -238,7 +238,7 @@ export function PlanPanel({
       )}
 
       <div>
-        <p className="label-luxury mb-1.5 text-white/65">
+        <p className="label-luxury mb-1.5 text-white/80">
           {flight ? "On this flight" : "Who's in"} ({going.length} of {travelers.length})
         </p>
         {canEdit ? (
@@ -319,7 +319,7 @@ function OwnLineForm({
   return (
     <form onSubmit={submit} className="mt-2 space-y-2 pb-1">
       <label className="block">
-        <span className="label-luxury mb-1 block text-white/65">
+        <span className="label-luxury mb-1 block text-white/80">
           {points ? "Cash value or fees (optional)" : who === "you" ? "What you paid" : `What ${who} paid`}
         </span>
         <input

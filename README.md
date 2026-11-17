@@ -56,5 +56,5 @@ Already cloned? Run `git pull` in `mwp9437-triptab`, then `npm install` again in
 
 1. Click **Start a trip** and create an account (name, email, password; no email to confirm).
 2. Click **Fill in the ski trip example** (Chamonix, Barcelona, Andorra) and **Start the trip**. You land on a blank itinerary.
-3. Tap a Morning slot to add a plan; leave it Suggested (faint) or make it Planned (solid). Tap **Add where everyone's staying** to add the Airbnb with check-in and check-out.
+3. Tap a Morning slot to add a plan; leave it Suggested (dotted outline) or make it Planned (solid, with a colored stripe). Tap **Add where everyone's staying** to add the Airbnb with check-in and check-out.
 4. In **People**, add a friend as a Viewer. Copy the **Group link**, open it in a private window, pick their name, make an account, and join: they see the trip but can't change it.

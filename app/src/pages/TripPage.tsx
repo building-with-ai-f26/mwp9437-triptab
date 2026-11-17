@@ -9,7 +9,7 @@ import { TripSettingsDialog } from "../components/trip/TripSettings";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { splitEqually } from "../lib/money";
-import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
+import { AddPersonDialog, PeopleCard } from "../components/trip/People";
 import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget } from "../components/trip/Money";
 import { PlanPanel } from "../components/trip/PlanPanel";
 import { ImportDialog } from "../components/trip/Import";
@@ -225,6 +225,16 @@ export default function TripPage() {
         await removeTraveler(t.id);
         await reload();
       }}
+      linkControls={{
+        onChange: async (patch) => {
+          await updateLink(trip.id, patch);
+          await reload();
+        },
+        onReset: async () => {
+          await resetLink(trip.id);
+          await reload();
+        },
+      }}
     />
   );
 
@@ -301,7 +311,7 @@ export default function TripPage() {
               <div>
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
                 <p className="mt-1.5 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-white/45 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">
-                  <span className="italic">Suggested is faint</span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-5 rounded-[4px] border-2 border-dotted border-foreground/55" />Suggested is dotted</span>
                   <span className="font-medium text-foreground/80">Planned is solid</span>
                   <span className="inline-flex items-center gap-1 font-semibold text-green-900">
                     Confirmed (paid) <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
@@ -401,20 +411,6 @@ export default function TripPage() {
             </div>
             <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
             {peopleCard}
-            {editable && link && (
-              <GroupLinkCard
-                trip={trip}
-                link={link}
-                onChange={async (patch) => {
-                  await updateLink(trip.id, patch);
-                  await reload();
-                }}
-                onReset={async () => {
-                  await resetLink(trip.id);
-                  await reload();
-                }}
-              />
-            )}
             {!editable && (
               <section className="glass-card-solid rounded-2xl p-4 text-sm text-muted-foreground">
                 You're a viewer on this trip: you see every plan and who's going, you can opt in or out, and you can log your own cost on plans where everyone pays their own. Ask an owner

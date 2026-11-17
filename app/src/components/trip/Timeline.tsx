@@ -45,7 +45,7 @@ export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active
     <nav
       ref={ref}
       aria-label="Days"
-      className="glass-card sticky top-14 z-30 -mx-4 flex gap-1.5 overflow-x-auto border-x-0 border-t-0 border-b border-white/10 px-4 py-2 sm:top-16 sm:-mx-6 sm:gap-2 sm:px-6"
+      className="glass-bar sticky top-14 z-30 -mx-4 flex gap-1.5 overflow-x-auto border-x-0 border-t-0 border-b border-white/10 px-4 py-2 sm:top-16 sm:-mx-6 sm:gap-2 sm:px-6"
     >
       {days.map((d) => {
         const on = d.date === active;
@@ -86,7 +86,7 @@ function ContinuedCard({ item, label, actions }: { item: Item; label: string | n
     >
       <div className="flex items-center gap-2.5">
         <CornerDownRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
-        <p className={`min-w-0 flex-1 truncate text-sm ${item.status === "suggested" ? "italic text-muted-foreground" : ""}`}>{item.title}</p>
+        <p className={`min-w-0 flex-1 truncate text-sm `}>{item.title}</p>
         {label && <span className="shrink-0 text-[11px] text-foreground/75">{label}</span>}
       </div>
     </button>
@@ -119,11 +119,11 @@ function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; a
       )}
       <div className="flex items-start gap-2.5">
         <Icon
-          className={`mt-0.5 size-4 shrink-0 ${item.status === "suggested" ? "text-primary/50" : "opacity-70"}`}
+          className={`mt-0.5 size-4 shrink-0 ${item.status === "suggested" ? "text-primary" : "opacity-70"}`}
           aria-hidden
         />
         <div className={`min-w-0 flex-1 ${confirmed ? "pr-10" : ""}`}>
-          <p className={`truncate text-sm ${item.status === "suggested" ? "italic text-muted-foreground" : "font-medium"}`}>
+          <p className={`truncate text-sm ${"font-medium"}`}>
             {item.title}
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
@@ -134,12 +134,12 @@ function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; a
               </span>
             )}
             {price && (
-              <span className={item.status === "confirmed" ? "font-semibold text-foreground" : "text-muted-foreground/80"}>
+              <span className={item.status === "confirmed" ? "font-semibold text-foreground" : "text-muted-foreground"}>
                 {price}
               </span>
             )}
             {item.status !== "confirmed" && (
-              <span className="label-luxury text-[9px] text-muted-foreground/70">{STATUS_LABEL[item.status]}</span>
+              <span className="label-luxury text-[9px] text-muted-foreground">{STATUS_LABEL[item.status]}</span>
             )}
             {placed?.label && <span className="text-[11px] font-medium text-foreground/80">{placed.label}</span>}
             {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}
@@ -159,11 +159,11 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
     <button type="button" className="item-card" data-kind="stay" data-status={item.status} onClick={() => actions.onOpen(item)}>
       <div className="flex items-center gap-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10">
-          {suggested ? <Sparkles className="size-4 text-primary/50" /> : <BedDouble className="size-4 text-primary" />}
+          {suggested ? <Sparkles className="size-4 text-primary" /> : <BedDouble className="size-4 text-primary" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="label-luxury text-[9px] text-muted-foreground">{stay.label}</p>
-          <p className={`truncate text-sm ${suggested ? "italic text-muted-foreground" : "font-medium"}`}>{item.title}</p>
+          <p className={`truncate text-sm ${"font-medium"}`}>{item.title}</p>
           {item.location && (
             <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
               <MapPin className="size-3 shrink-0" /> {item.location}
@@ -171,7 +171,7 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
           )}
         </div>
         {!stay.checkout && price && (
-          <span className={`shrink-0 text-xs ${item.status === "confirmed" ? "font-semibold" : "text-muted-foreground/80"}`}>
+          <span className={`shrink-0 text-xs ${item.status === "confirmed" ? "font-semibold" : "text-muted-foreground"}`}>
             {price}
           </span>
         )}

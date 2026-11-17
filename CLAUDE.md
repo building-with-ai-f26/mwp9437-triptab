@@ -30,8 +30,9 @@ Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build th
 ## Design
 
 - The spring app is the reference: liquid glass cards over full-bleed travel photography, Playfair Display headlines with DM Sans body text, the sand, gold and brown palette, brown pill buttons, and the itinerary timeline with day chips. Its code is at github.com/mwp9437/triptab-RETIRED (`src/index.css`, `tailwind.config.ts`, `src/components/`). Port the look, not the data model.
-- Suggested plans are faint on purpose and turn solid when confirmed. Keep that.
-- The pod feedback from 11/10 (less glass, darker text, the popup's position) was about the broken spring app, not this build. Don't act on it until the pod has tried the new build.
+- Text is always dark and easy to read (Mike's call, 11/16). A Suggested plan keeps the same dark text and is marked by a dotted outline, so it still looks different from Planned (solid card, the kind's colored stripe); Confirmed (paid) adds the green "$ ✓" on top. This replaced "faint on purpose" after Mike's own walkthrough.
+- The people on a trip and the group link are one People panel; the link is a section inside it (Mike's call, 11/16).
+- The pod feedback from 11/10 (less glass, darker text, the popup's position) was about the broken spring app; weigh the 11/17 pod's notes on this build instead.
 
 ## Runbook
 

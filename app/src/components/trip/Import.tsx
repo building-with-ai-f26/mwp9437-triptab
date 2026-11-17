@@ -186,12 +186,12 @@ export function ImportDialog({
                   ))}
 
                   <label className="mb-2 block">
-                    <span className="label-luxury mb-1 block text-white/65">What{flag("title")}</span>
+                    <span className="label-luxury mb-1 block text-white/80">What{flag("title")}</span>
                     <input className="field-dark" value={d.title} onChange={(e) => patch(i, { title: e.target.value })} aria-label="What" />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/65">Kind{flag("kind")}</span>
+                      <span className="label-luxury mb-1 block text-white/80">Kind{flag("kind")}</span>
                       <select className="field-dark" value={d.kind} onChange={(e) => patch(i, { kind: e.target.value as ItemKind })} aria-label="Kind">
                         {KINDS.map((k) => (
                           <option key={k} value={k}>
@@ -201,7 +201,7 @@ export function ImportDialog({
                       </select>
                     </label>
                     <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/65">
+                      <span className="label-luxury mb-1 block text-white/80">
                         {d.kind === "stay" ? "Check in" : "Day"}
                         {flag("day")}
                       </span>
@@ -216,7 +216,7 @@ export function ImportDialog({
                     </label>
                     {d.kind === "stay" ? (
                       <label className="mb-2 block">
-                        <span className="label-luxury mb-1 block text-white/65">Check out{flag("end_day")}</span>
+                        <span className="label-luxury mb-1 block text-white/80">Check out{flag("end_day")}</span>
                         <select className="field-dark" value={d.end_day} onChange={(e) => patch(i, { end_day: e.target.value })} aria-label="Check out">
                           <option value="">Pick a day</option>
                           {checkouts.map((day) => (
@@ -228,7 +228,7 @@ export function ImportDialog({
                       </label>
                     ) : (
                       <label className="mb-2 block">
-                        <span className="label-luxury mb-1 block text-white/65">Part of the day{flag("part")}</span>
+                        <span className="label-luxury mb-1 block text-white/80">Part of the day{flag("part")}</span>
                         <select className="field-dark" value={d.part} onChange={(e) => patch(i, { part: e.target.value as Draft["part"] })} aria-label="Part of the day">
                           {PARTS.map((p) => (
                             <option key={p} value={p}>
@@ -239,7 +239,7 @@ export function ImportDialog({
                       </label>
                     )}
                     <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/65">
+                      <span className="label-luxury mb-1 block text-white/80">
                         {d.paid ? "Paid" : "Cost"}
                         {d.perPerson ? " (per person)" : ""}
                         {flag("cost")}
@@ -249,7 +249,7 @@ export function ImportDialog({
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/65">Who pays{flag("who_pays")}</span>
+                      <span className="label-luxury mb-1 block text-white/80">Who pays{flag("who_pays")}</span>
                       <select className="field-dark" value={d.payMode} onChange={(e) => patch(i, { payMode: e.target.value as PayMode })} aria-label="Who pays">
                         <option value="split">{PAY_MODE_LABEL.split}</option>
                         <option value="own">{PAY_MODE_LABEL.own}</option>
@@ -269,7 +269,7 @@ export function ImportDialog({
                     <div className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/75">
                       {d.location && (
                         <p>
-                          <span className="text-white/50">Where: </span>
+                          <span className="text-white/70">Where: </span>
                           {d.location}
                           {flag("location")}
                         </p>
@@ -292,7 +292,7 @@ export function ImportDialog({
             })}
           </ul>
 
-          <p className="mt-3 text-xs text-white/50" data-testid="import-cost">
+          <p className="mt-3 text-xs text-white/70" data-testid="import-cost">
             This import cost {usdCost(result.usage.cost_usd)} at list price
             {result.usage.searches ? `, with ${result.usage.searches} web ${result.usage.searches === 1 ? "search" : "searches"}` : ""}.
           </p>
