@@ -1,0 +1,11 @@
+{
+ "id": "06-cheap",
+ "group": "messy",
+ "what": "A price limit.",
+ "request": "we're on a budget!! cheap stuff only, under $20 a person, any day",
+ "expect": {
+  "min": 1,
+  "max": 6,
+  "max_cents": 2000
+ }
+}

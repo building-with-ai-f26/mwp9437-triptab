@@ -1,0 +1,15 @@
+{
+ "id": "05-keep-tuesday-free",
+ "group": "normal",
+ "what": "A day the group wants left empty.",
+ "request": "Keep Tuesday Feb 9 free, we fly home that evening. Fill the Chamonix days instead.",
+ "expect": {
+  "min": 1,
+  "max": 6,
+  "days": [
+   "2027-02-05",
+   "2027-02-06",
+   "2027-02-07"
+  ]
+ }
+}

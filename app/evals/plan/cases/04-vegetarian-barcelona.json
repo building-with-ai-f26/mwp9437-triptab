@@ -1,0 +1,21 @@
+{
+ "id": "04-vegetarian-barcelona",
+ "group": "normal",
+ "what": "A meal with a constraint, at the second stop.",
+ "request": "A vegetarian-friendly dinner in Barcelona.",
+ "expect": {
+  "min": 1,
+  "max": 2,
+  "days": [
+   "2027-02-08",
+   "2027-02-09"
+  ],
+  "parts": [
+   "evening",
+   "night"
+  ],
+  "kinds": [
+   "meal"
+  ]
+ }
+}

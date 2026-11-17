@@ -470,6 +470,50 @@ export async function deleteTrip(tripId: string) {
  * Owners only; the function checks. Nothing is saved by this call: the review step saves what
  * the Owner keeps. Automated click-throughs mark their calls test_run in the cost log.
  */
+/** One idea from Plan with AI (supabase/functions/plan-with-ai). */
+export interface PlanIdea {
+  kind: "activity" | "meal";
+  title: string;
+  day: string;
+  part: DayPart;
+  location: string | null;
+  est_cents: number | null;
+  why: string;
+  source_url: string;
+}
+export interface PlanAiResult {
+  suggestions: PlanIdea[];
+  note: string | null;
+  dropped: number;
+  call_id: string | null;
+  usage: { cost_usd: number; searches: number; latency_ms: number; model: string; effort: string };
+}
+
+/** Ask Plan with AI for ideas for the trip's empty slots. Nothing is saved until the Owner keeps them. */
+export async function planWithAi(tripId: string, request: string): Promise<PlanAiResult> {
+  let testRun = false;
+  try {
+    testRun = localStorage.getItem("triptab.test_run") === "1";
+  } catch {
+    // storage can be unavailable
+  }
+  const { data, error } = await supabase.functions.invoke("plan-with-ai", { body: { trip_id: tripId, request, test_run: testRun } });
+  if (error) {
+    let message = "Can't reach Plan with AI right now. Check your connection and try again.";
+    const response = (error as { context?: unknown }).context;
+    if (response instanceof Response) {
+      try {
+        const body = (await response.json()) as { error?: string };
+        if (body?.error) message = body.error;
+      } catch {
+        // not JSON; keep the general message
+      }
+    }
+    throw new Error(message);
+  }
+  return data as PlanAiResult;
+}
+
 export async function importBookings(
   tripId: string,
   text: string,

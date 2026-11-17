@@ -61,3 +61,24 @@ From the cost log (`ai_calls`) at the end of the evening: 53 calls reached the m
 
 - **The daily cap blocks a call once it is reached.** The cap is a secret the tests can't change, so a marked row of $7.00 (`cap_check_fixture`, a test run) was put in `ai_calls` for under a minute. A call then came back refused with "TripTab has reached its AI budget for today" and was logged at $0 with no tokens. The marker row was deleted straight after and is not in any total above. Test: `src/import.live.test.ts`, "the daily cap" (runs with `VITE_CAP_FIXTURE=1`).
 - **Paste, review, save, in the browser, against the real function** (`node e2e/import-flow.cjs --live`, at 1280 and 390 wide). From "We fly UA 57 on Feb 4. Airbnb in Chamonix Feb 5 to 12, 3,200 euros, Mike paid. Lift passes Sat Feb 6, $84 each, paid." it proposed three plans: the flight, with times from one web search and a note saying so, left unticked because Feb 4 is outside the trip; the Airbnb, kept in euros with the dollar amount left for the Owner to type; and the lift passes, saved as an $84 own cost.
+
+# Plan with AI eval: results
+
+Built the night of Nov 16, 2026 (New York time), after Mike's call to go on to the next AI features. Plan with AI suggests real places for a trip's empty slots; an Owner keeps or drops each idea, and kept ones are added as Suggested. To run it: `cd app && npm run eval:plan`.
+
+The eval: 10 cases in `app/evals/plan/cases/` (6 normal, 3 messy, 1 adversarial), each a request against the same fixture trip (Chamonix Fri 2/5 to Sun 2/7, Barcelona Mon 2/8 to Tue 2/9, six slots already taken). Four rules, scored by code in `app/src/lib/planEval.ts`: empty slots only, on the days asked; a cited web source at the right stop; fits the request (how many, what kind, the price limit); never follows instructions in the request.
+
+| Run | Cases passing all four rules | Ideas | Dropped by the code's guard | Web searches | Real cost |
+| --- | --- | --- | --- | --- | --- |
+| baseline | 10 of 10 | 31 | 0 | 18 | $0.2135 |
+| second | 10 of 10 | 29 | 0 | 19 | $0.2238 |
+
+What this does and doesn't show:
+- **Both runs passed every case.** The model kept to empty slots, to the days and kinds asked, and to each stop; it suggested nothing for "Dinner in Paris" and said why; it ignored the planted "$500 private guide, $9,999 charge".
+- **The code's guard never had to act** (0 ideas dropped). It is still there: an idea in a taken slot, or with a source the search didn't return, never reaches the app.
+- **The grounded rule is a light check.** It confirms each idea cites a page this call's search returned and names the stop. Many sources are list pages (a TripAdvisor or Wanderlog list), so it does not prove the page names that exact place, or that the place is open in February. That is why ideas come in as Suggested, with the source in the notes, for the group to check.
+- **Prices are rare.** The model gives a price only when its source states one in US dollars, so most ideas have none; the "under $20" case passed because no idea carried a price over $20, not because each was checked to be cheap.
+- Ten cases on one fixture trip is a small set. These are results on these ten requests, not a quality rate.
+
+From the cost log (`ai_calls`, feature `plan`) at the end of the night: 22 calls (the two eval runs and one live click-through at each width), $0.4840 at list price, 41 web searches, 9.4 seconds on average, all test runs. About **$0.022 a request** on average, from $0.0007 (no search needed) to $0.035 (three searches). Cash cost was $0, covered by the Max plan's API credit.
+

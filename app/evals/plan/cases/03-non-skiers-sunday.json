@@ -1,0 +1,13 @@
+{
+ "id": "03-non-skiers-sunday",
+ "group": "normal",
+ "what": "Ideas for one day only.",
+ "request": "Something for the non-skiers on Sunday, Feb 7.",
+ "expect": {
+  "min": 1,
+  "max": 4,
+  "days": [
+   "2027-02-07"
+  ]
+ }
+}
