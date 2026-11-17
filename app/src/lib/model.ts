@@ -131,6 +131,42 @@ export function dueDayOk(day: string, tripEnd: string, today: string = todayIso(
 }
 
 /** Every date from start to end, inclusive. */
+/** How far outside a trip a plan's day may fall and still be offered "add it to the trip" in one
+ *  tap (Mike's call, 11/16: travel spills a day either side). The database allows up to a week. */
+export const EXTEND_LIMIT_DAYS = 7;
+/** Days offered before and after the trip in Add a plan. */
+export const SPILL_DAYS = 2;
+
+/** The trip as it would be with `day` included: unchanged when the day is already inside. */
+export function widenTrip<T extends { start_date: string; end_date: string }>(trip: T, day: string | null | undefined): T {
+  if (!day) return trip;
+  return { ...trip, start_date: day < trip.start_date ? day : trip.start_date, end_date: day > trip.end_date ? day : trip.end_date };
+}
+
+/** Whether a day outside the trip is close enough to extend the trip to it in one tap. */
+export function canExtendTo(trip: { start_date: string; end_date: string }, day: string | null | undefined): boolean {
+  if (!day || (day >= trip.start_date && day <= trip.end_date)) return false;
+  const widened = widenTrip(trip, day);
+  return (
+    day >= addDays(trip.start_date, -EXTEND_LIMIT_DAYS) &&
+    day <= addDays(trip.end_date, EXTEND_LIMIT_DAYS) &&
+    tripDays(widened.start_date, widened.end_date).length <= 61
+  );
+}
+
+/** Plans that new trip dates would leave outside, by the database's rule (update_trip): a plan's
+ *  day must be inside, a stay's check-out or a flight's or transfer's arrival at most a day after
+ *  the end, and an activity's or meal's last day inside. */
+export function plansOutside<T extends Pick<Item, "kind" | "day" | "end_day">>(items: T[], start: string, end: string): T[] {
+  const after = addDays(end, 1);
+  return items.filter(
+    (i) =>
+      i.day < start ||
+      i.day > end ||
+      (i.end_day != null && (i.kind === "stay" || i.kind === "flight" || i.kind === "transport" ? i.end_day > after : i.end_day > end)),
+  );
+}
+
 export function tripDays(start: string, end: string): string[] {
   const days: string[] = [];
   for (let d = start; d <= end && days.length < 400; d = addDays(d, 1)) days.push(d);

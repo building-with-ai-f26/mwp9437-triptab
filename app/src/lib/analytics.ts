@@ -50,6 +50,7 @@ export type EventName =
   | "name claimed"
   | "plan confirmed"
   | "own cost logged"
+  | "trip extended"
   | "ai import"
   | "expense added"
   | "settle up viewed"

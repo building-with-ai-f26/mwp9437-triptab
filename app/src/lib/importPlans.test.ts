@@ -84,7 +84,9 @@ describe("a proposal becomes a draft to review", () => {
     const d = toDraft(proposal({ day: "2027-02-04" }), trip, []);
     expect(d.day).toBe("");
     expect(d.keep).toBe(false);
-    expect(d.warnings[0]).toContain("Thu, Feb 4 is outside the trip's dates");
+    // The day before the trip can be added to it in one tap (11/16); the review says so.
+    expect(d.warnings[0]).toContain("Thu, Feb 4 is before the trip");
+    expect(d.extendTo).toBe("2027-02-04");
     expect(draftProblems({ ...d, keep: true }, trip)).toContain("Pick a day inside the trip.");
   });
   it("a price in another currency is never converted: the cost is left blank with a note", () => {

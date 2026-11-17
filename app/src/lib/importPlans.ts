@@ -3,7 +3,7 @@
  * draft the Owner reviews, spotting likely duplicates, and saying what still blocks saving one.
  * Pure functions, tested offline. Nothing here saves anything: the review step does.
  */
-import { addDays, defaultPayMode, dollars, longDay, type DayPart, type Item, type ItemKind, type PayMode, type Trip } from "./model";
+import { addDays, canExtendTo, defaultPayMode, dollars, longDay, type DayPart, type Item, type ItemKind, type PayMode, type Trip } from "./model";
 
 /** A proposed plan, as the Edge Function returns it (supabase/functions/import-bookings/rules.ts). */
 export interface Proposal {
@@ -65,6 +65,8 @@ export interface Draft {
   warnings: string[];
   /** The title of a plan already on the trip that this looks like. */
   duplicateOf: string | null;
+  /** A day just outside the trip that the trip can be extended to in one tap (the proposal's day). */
+  extendTo: string | null;
   source: Proposal;
 }
 
@@ -111,8 +113,13 @@ const partFromTime = (time: string | null): DayPart | null => {
 export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">, items: Item[]): Draft {
   const warnings: string[] = [];
   const inTrip = Boolean(p.day && p.day >= trip.start_date && p.day <= trip.end_date);
+  const extendTo = p.day && !inTrip && canExtendTo(trip, p.day) ? p.day : null;
   if (!p.day) warnings.push("No day found. Pick one.");
-  else if (!inTrip) {
+  else if (extendTo) {
+    warnings.push(
+      `${longDay(extendTo)} is ${extendTo < trip.start_date ? "before" : "after"} the trip (${longDay(trip.start_date)} to ${longDay(trip.end_date)}). Add that day to the trip, or pick a day in it.`,
+    );
+  } else if (!inTrip) {
     warnings.push(
       `${longDay(p.day)} is outside the trip's dates (${longDay(trip.start_date)} to ${longDay(trip.end_date)}). Pick a day in the trip, or change the trip's dates in settings first.`,
     );
@@ -152,6 +159,7 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     unsure: [...p.unsure],
     warnings,
     duplicateOf: dup?.title ?? null,
+    extendTo,
     source: p,
   };
 }

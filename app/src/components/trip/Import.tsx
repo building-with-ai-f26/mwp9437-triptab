@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { AlertTriangle, Check, ExternalLink, FileUp, Sparkles } from "lucide-react";
+import { AlertTriangle, CalendarPlus, Check, ExternalLink, FileUp, Sparkles } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
 import { draftProblems, toDraft, usdCost, type Draft, type ImportResult } from "../../lib/importPlans";
-import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, tripDays, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
+import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
 
 const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
 const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -31,6 +31,7 @@ export function ImportDialog({
   onClose,
   onSave,
   onDone,
+  onExtend,
 }: {
   open: boolean;
   trip: Trip;
@@ -40,6 +41,8 @@ export function ImportDialog({
   onSave: (kept: Draft[]) => Promise<void>;
   /** Called when a review ends, saved or not, for the usage log. */
   onDone: (result: ImportResult, kept: number) => void;
+  /** Stretches the trip to include a day just outside it; returns once the trip is reloaded. */
+  onExtend?: (day: string) => Promise<void>;
 }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -76,6 +79,28 @@ export function ImportDialog({
       const r = await importBookings(trip.id, text, attached);
       setResult(r);
       setDrafts(r.plans.map((p) => toDraft(p, trip, items)));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  };
+
+  // One tap adds the day to the trip; every proposal that now fits is re-read against the longer
+  // trip and ticked, keeping what the Owner already typed.
+  const extend = async (day: string) => {
+    if (!onExtend) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onExtend(day);
+      const longer = widenTrip(trip, day);
+      setDrafts((all) =>
+        all.map((d) => {
+          if (!d.extendTo || d.extendTo < longer.start_date || d.extendTo > longer.end_date) return d;
+          const fresh = toDraft(d.source, longer, items);
+          return { ...fresh, keep: true, title: d.title, cost: d.cost, perPerson: d.perPerson, payMode: d.payMode, paid: d.paid, location: d.location, notes: d.notes };
+        }),
+      );
     } catch (e) {
       setError((e as Error).message);
     }
@@ -184,6 +209,11 @@ export function ImportDialog({
                       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" /> <span>{w}</span>
                     </p>
                   ))}
+                  {d.extendTo && onExtend && (
+                    <Button size="sm" variant="light" className="mb-2" disabled={busy} onClick={() => extend(d.extendTo!)}>
+                      <CalendarPlus /> Add {longDay(d.extendTo)} to the trip
+                    </Button>
+                  )}
 
                   <label className="mb-2 block">
                     <span className="label-luxury mb-1 block text-white/80">What{flag("title")}</span>
