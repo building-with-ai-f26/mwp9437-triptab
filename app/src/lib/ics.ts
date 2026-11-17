@@ -48,8 +48,20 @@ export function icsForItems(trip: Pick<Trip, "name">, items: Item[], stamp = new
     if (item.kind === "stay") {
       lines.push(`DTSTART;VALUE=DATE:${ymd(item.day)}`, `DTEND;VALUE=DATE:${ymd(item.end_day ?? item.day)}`);
     } else {
-      const [start, end] = PART_TIMES[item.part];
-      lines.push(`DTSTART:${ymd(item.day)}T${start}`, `DTEND:${ymd(item.day)}T${end}`);
+      const hms = (t: string) => t.replace(/:/g, "").padEnd(6, "0").slice(0, 6);
+      const start = item.start_time ? hms(item.start_time) : PART_TIMES[item.part][0];
+      const lastPart = item.end_part ?? item.part;
+      const lastDay = item.end_day && item.end_day > item.day ? item.end_day : item.day;
+      if (item.kind === "flight" || item.kind === "transport") {
+        // One stretch, from leaving to arriving, across midnight if it's a red-eye.
+        const end = item.end_time ? hms(item.end_time) : lastDay > item.day && !item.end_part ? PART_TIMES.morning[0] : PART_TIMES[lastPart][1];
+        lines.push(`DTSTART:${ymd(item.day)}T${start}`, `DTEND:${ymd(lastDay)}T${end}`);
+      } else {
+        // The same hours each day it runs: one event, repeating daily to its last day.
+        const end = item.end_time ? hms(item.end_time) : PART_TIMES[lastPart][1];
+        lines.push(`DTSTART:${ymd(item.day)}T${start}`, `DTEND:${ymd(item.day)}T${end}`);
+        if (lastDay > item.day) lines.push(`RRULE:FREQ=DAILY;UNTIL=${ymd(lastDay)}T235959`);
+      }
     }
     lines.push(`SUMMARY:${icsText(item.kind === "stay" ? `Stay: ${item.title}` : item.title)}`);
     if (item.location) lines.push(`LOCATION:${icsText(item.location)}`);

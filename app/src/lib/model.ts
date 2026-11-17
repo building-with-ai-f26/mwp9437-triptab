@@ -51,8 +51,16 @@ export interface Item {
   /** The day it happens; for a stay, the check-in day. */
   day: string;
   part: DayPart;
-  /** Stays only: the check-out day (after the last night). */
+  /**
+   * A stay's check-out day (after the last night); an activity's or meal's last day, when it
+   * runs over several days; the day a flight or transfer arrives, when that's a later day.
+   */
   end_day: string | null;
+  /** The last part of the day it covers, when it runs past the part it starts in. */
+  end_part: DayPart | null;
+  /** Clock times, local to where it is, as "HH:MM:SS" or "HH:MM": a flight's departure and arrival. */
+  start_time: string | null;
+  end_time: string | null;
   location: string | null;
   notes: string | null;
   status: ItemStatus;
@@ -160,6 +168,18 @@ export function dateRange(start: string, end: string): string {
   return `${sm} ${s.getUTCDate()} to ${em} ${e.getUTCDate()}, ${year}`;
 }
 
+/** "17:05" or "17:05:00" as "5:05 PM". */
+export function clock(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** The part of the day a clock time falls in (the same bands the calendar export uses). */
+export function partOfTime(time: string): DayPart {
+  const h = Number(time.slice(0, 2));
+  return h < 12 ? "morning" : h < 17 ? "day" : h < 21 ? "evening" : "night";
+}
+
 // ---------- Roles ----------
 
 /** Owners change the trip; viewers see it and opt in or out (vision, "Inviting people"). */
@@ -227,6 +247,7 @@ export interface ItemDraft {
   day: string;
   part: DayPart;
   end_day: string | null;
+  end_part?: DayPart | null;
   status: ItemStatus;
   est_cents: number | null;
 }
@@ -241,6 +262,16 @@ export function validateItem(d: ItemDraft, trip: Pick<Trip, "start_date" | "end_
     if (!d.end_day) errors.push("A stay needs a check-out day.");
     else if (d.end_day <= d.day) errors.push("Check-out has to be after check-in.");
     else if (d.end_day > addDays(trip.end_date, 1)) errors.push("Check-out can't be more than a day after the trip ends.");
+  }
+  if (d.kind !== "stay") {
+    const travel = d.kind === "flight" || d.kind === "transport";
+    if (d.end_day && d.end_day < d.day) errors.push(travel ? "It can't arrive before it leaves." : "The last day can't be before the first.");
+    else if (d.end_day && travel && d.end_day > addDays(trip.end_date, 1)) errors.push("It can't arrive more than a day after the trip ends.");
+    else if (d.end_day && !travel && d.end_day > trip.end_date) errors.push("Pick a last day inside the trip.");
+    const sameDay = !d.end_day || d.end_day === d.day;
+    if (d.end_part && (sameDay || !travel) && PARTS.indexOf(d.end_part) < PARTS.indexOf(d.part)) {
+      errors.push(travel ? "On the same day it can't arrive earlier than it leaves." : "It can't end in an earlier part of the day than it starts.");
+    }
   }
   if (d.est_cents != null && (d.est_cents < 0 || !Number.isInteger(d.est_cents))) {
     errors.push("The estimate has to be a positive amount.");

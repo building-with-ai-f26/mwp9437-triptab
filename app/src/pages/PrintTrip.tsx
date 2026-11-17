@@ -88,12 +88,14 @@ export default function PrintTrip() {
                   {PARTS.flatMap((p) =>
                     d.parts[p].map((item, i) => {
                       const going = goingList(item, travelers, itemPeople);
-                      const price = priceLabel(item, exact.get(item.id) ?? null);
+                      const placed = d.placed[p][item.id];
+                      const price = placed && !placed.first ? null : priceLabel(item, exact.get(item.id) ?? null);
                       return (
                         <tr key={item.id} className="align-top">
                           <td className="label-luxury w-20 py-1 pr-2 text-muted-foreground">{i === 0 ? PART_LABEL[p] : ""}</td>
                           <td className="py-1 pr-2">
                             <span className={item.status === "suggested" ? "italic text-muted-foreground" : "font-medium"}>{item.title}</span>
+                            {placed?.label && <span className="text-muted-foreground"> · {placed.label}</span>}
                             {item.location && <span className="text-muted-foreground"> · {item.location}</span>}
                             <span className="block text-xs text-muted-foreground">
                               {STATUS_LABEL[item.status]}

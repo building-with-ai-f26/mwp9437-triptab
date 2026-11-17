@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BedDouble, Bus, Check, MapPin, Palmtree, Plane, Plus, Sparkles, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
   dayChip,
   longDay,
@@ -11,7 +11,7 @@ import {
   type Item,
   type ItemKind,
 } from "../../lib/model";
-import type { TimelineDay, StayOnDay } from "../../lib/timeline";
+import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
 
 export const KIND_ICON: Record<ItemKind, LucideIcon> = {
   activity: Palmtree,
@@ -70,7 +70,30 @@ export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active
   );
 }
 
-function ItemCard({ item, actions }: { item: Item; actions: TimelineActions }) {
+/** A slot a plan runs on into: the same plan, shown lightly, with no price or status of its own. */
+function ContinuedCard({ item, label, actions }: { item: Item; label: string | null; actions: TimelineActions }) {
+  const out = actions.isOut?.(item) ?? false;
+  return (
+    <button
+      type="button"
+      className="item-card !py-2"
+      data-kind={item.kind}
+      data-status={item.status}
+      data-out={out}
+      data-continued="true"
+      onClick={() => actions.onOpen(item)}
+      aria-label={`${item.title}, ${label ?? "continues"}`}
+    >
+      <div className="flex items-center gap-2.5">
+        <CornerDownRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
+        <p className={`min-w-0 flex-1 truncate text-sm ${item.status === "suggested" ? "italic text-muted-foreground" : ""}`}>{item.title}</p>
+        {label && <span className="shrink-0 text-[11px] text-foreground/75">{label}</span>}
+      </div>
+    </button>
+  );
+}
+
+function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; actions: TimelineActions }) {
   const Icon = item.status === "suggested" ? Sparkles : KIND_ICON[item.kind];
   const price = priceLabel(item, actions.exactCents?.(item));
   const out = actions.isOut?.(item) ?? false;
@@ -118,6 +141,7 @@ function ItemCard({ item, actions }: { item: Item; actions: TimelineActions }) {
             {item.status !== "confirmed" && (
               <span className="label-luxury text-[9px] text-muted-foreground/70">{STATUS_LABEL[item.status]}</span>
             )}
+            {placed?.label && <span className="text-[11px] font-medium text-foreground/80">{placed.label}</span>}
             {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}
             {!out && actions.note?.(item) && <span className="text-[11px] text-foreground/75">{actions.note(item)}</span>}
           </div>
@@ -205,9 +229,14 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
             <div key={part} className="grid grid-cols-[60px_1fr] gap-4 py-1">
               <div className="label-luxury pt-3.5 text-foreground">{PART_LABEL[part]}</div>
               <div className="min-w-0 space-y-2">
-                {items.map((item) => (
-                  <ItemCard key={item.id} item={item} actions={actions} />
-                ))}
+                {items.map((item) => {
+                  const placed = day.placed[part][item.id];
+                  return placed && !placed.first ? (
+                    <ContinuedCard key={item.id} item={item} label={placed.label} actions={actions} />
+                  ) : (
+                    <ItemCard key={item.id} item={item} placed={placed} actions={actions} />
+                  );
+                })}
                 {items.length === 0 &&
                   (actions.canEdit ? (
                     <EmptySlot label={`Add to ${PART_LABEL[part].toLowerCase()}`} onClick={() => actions.onAdd(day.date, part)} />
