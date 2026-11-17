@@ -43,9 +43,9 @@ async function signUp(page, name, who) {
 }
 
 /** Signs up as the owner and starts the ski trip example; returns the trip URL. */
-async function startSkiTrip(page) {
+async function startSkiTrip(page, who = 'owner') {
   await page.goto(`${BASE}/sign-in?next=/trips/new`);
-  await signUp(page, 'Mike', 'owner');
+  await signUp(page, 'Mike', who);
   await page.waitForURL(/\/trips\/new/);
   await page.getByRole('button', { name: 'Fill in the ski trip example' }).click();
   await page.getByRole('button', { name: 'Start the trip' }).click();
