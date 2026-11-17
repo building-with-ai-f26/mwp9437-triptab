@@ -449,6 +449,13 @@ export async function updateTrip(tripId: string, name: string, stops: StopDraft[
   if (error) throw new Error(friendly(error));
 }
 
+/** Stretch the trip to include a day up to a week before or after it (the first stop starts earlier
+ *  or the last one ends later). Never shrinks it. Owners only. */
+export async function extendTrip(tripId: string, day: string) {
+  const { error } = await supabase.rpc("extend_trip", { p_trip: tripId, p_day: day });
+  if (error) throw new Error(friendly(error));
+}
+
 /** Delete the whole trip: plans, people, money and all. Owners only. */
 export async function deleteTrip(tripId: string) {
   const { data, error } = await supabase.from("trips").delete().eq("id", tripId).select("id");

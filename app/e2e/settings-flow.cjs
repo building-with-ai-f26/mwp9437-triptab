@@ -17,7 +17,8 @@ const h = require('./helpers.cjs');
   // Ending Andorra on 2/14 would strand the 2/15 plan: refused.
   await d.getByLabel('Stop 3 to').fill('2027-02-14');
   await d.getByRole('button', { name: 'Save' }).click();
-  await d.getByText('Some plans fall outside the new dates').waitFor();
+  await d.getByText(/fall outside the new dates/).waitFor();
+  result.refusalNamesPlan = (await d.getByText(/fall outside the new dates/).innerText()).includes('(');
   result.refused = true;
   // Ending on 2/17 instead works.
   await d.getByLabel('Stop 3 to').fill('2027-02-17');

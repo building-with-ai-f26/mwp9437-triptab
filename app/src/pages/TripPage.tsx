@@ -25,6 +25,7 @@ import {
   logOwnLine,
   deleteAction,
   deleteTrip,
+  extendTrip,
   deleteExpense,
   deleteItem,
   loadTrip,
@@ -42,7 +43,7 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { addDays, canEdit, dateRange, dollars, partOfTime, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
+import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
 import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
@@ -471,6 +472,11 @@ export default function TripPage() {
         }
         onClose={() => setDialog(null)}
         onSave={async (input, existing, paid) => {
+          // A day just outside the trip stretches the trip first (the dialog says so before saving).
+          if (input.day < trip.start_date || input.day > trip.end_date) {
+            await extendTrip(trip.id, input.day);
+            track("trip extended", { via: "plan", kind: input.kind, side: input.day < trip.start_date ? "before" : "after" });
+          }
           if (existing) {
             await updateItem(existing.id, input);
             track("plan updated", { kind: input.kind, status: input.status });
@@ -494,6 +500,11 @@ export default function TripPage() {
           trip={trip}
           items={items}
           onClose={() => setImporting(false)}
+          onExtend={async (day) => {
+            await extendTrip(trip.id, day);
+            track("trip extended", { via: "import", side: day < trip.start_date ? "before" : "after" });
+            await reload();
+          }}
           onSave={async (kept) => {
             for (const d of kept) {
               const cents = draftCents(d);
@@ -582,6 +593,15 @@ export default function TripPage() {
         stops={stops}
         onClose={() => setSettingsOpen(false)}
         onSave={async (name, newStops) => {
+          // Say which plans are in the way, rather than only that some are.
+          const start = newStops.map((s) => s.start_date).sort()[0];
+          const end = newStops.map((s) => s.end_date).sort().reverse()[0];
+          const blocking = start && end ? plansOutside(items, start, end) : [];
+          if (blocking.length > 0) {
+            const named = blocking.slice(0, 4).map((i) => `${i.title} (${longDay(i.day)})`);
+            const more = blocking.length > 4 ? ` and ${blocking.length - 4} more` : "";
+            throw new Error(`These plans fall outside the new dates: ${named.join(", ")}${more}. Move or remove them first, or keep the dates wider.`);
+          }
           await updateTrip(trip.id, name, newStops);
           await reload();
         }}

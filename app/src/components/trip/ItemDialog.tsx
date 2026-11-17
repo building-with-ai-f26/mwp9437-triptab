@@ -11,9 +11,11 @@ import {
   PARTS,
   partOfTime,
   PAY_MODE_LABEL,
+  SPILL_DAYS,
   STATUS_LABEL,
   tripDays,
   validateItem,
+  widenTrip,
   type CostType,
   type DayPart,
   type Item,
@@ -131,8 +133,13 @@ function ItemForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const days = tripDays(trip.start_date, trip.end_date);
-  const checkoutDays = tripDays(addDays(day, 1), addDays(trip.end_date, 1));
+  // A plan may sit a day or two outside the trip (a flight the night before): saving it then
+  // stretches the trip to include that day, in the same tap (Mike's call, 11/16).
+  const days = tripDays(addDays(trip.start_date, -SPILL_DAYS), addDays(trip.end_date, SPILL_DAYS));
+  const outside = day < trip.start_date || day > trip.end_date;
+  const tripNow = widenTrip(trip, day);
+  const dayLabel = (d: string) => (d < trip.start_date || d > trip.end_date ? `${longDay(d)} (adds it to the trip)` : longDay(d));
+  const checkoutDays = tripDays(addDays(day, 1), addDays(tripNow.end_date, 1));
   const typed = estimate.trim() === "" ? null : parseDollars(estimate);
   const estCents = typed == null || Number.isNaN(typed) ? null : toCents(typed);
   const isStay = kind === "stay";
@@ -142,7 +149,7 @@ function ItemForm({
   // The last part only matters when it differs from where the plan starts, or it ends on another day.
   const spanEndPart = isStay || !endPart || (!spanLastDay && endPart === part) ? null : endPart;
   // A flight or transfer may arrive the day after the trip ends; an activity stays inside it.
-  const lastDays = tripDays(addDays(day, 1), travel ? addDays(trip.end_date, 1) : trip.end_date).slice(0, travel ? 3 : 60);
+  const lastDays = tripDays(addDays(day, 1), travel ? addDays(tripNow.end_date, 1) : tripNow.end_date).slice(0, travel ? 3 : 60);
   const paidNow = !it && paid;
   const paidTyped = paidAmount.trim() === "" ? (payMode === "own" && points ? 0 : NaN) : parseDollars(paidAmount);
   const paidBad = Number.isNaN(paidTyped) || paidTyped < 0;
@@ -169,7 +176,7 @@ function ItemForm({
     ...(it ? {} : { pay_mode: payMode }),
   };
   const problems = [
-    ...validateItem(input, trip),
+    ...validateItem(input, tripNow),
     ...(!paidNow && typed != null && Number.isNaN(typed) ? ["Type the estimate as a number, like 45 or $45."] : []),
     ...(paidNow && paidBad ? ["Enter what it cost, like 120 or $120."] : []),
     ...(paidNow && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
@@ -252,6 +259,7 @@ function ItemForm({
       </DarkField>
 
       {isStay ? (
+        <>
         <div className="grid grid-cols-2 gap-2">
           <DarkField label="Check in">
             <select
@@ -264,7 +272,7 @@ function ItemForm({
             >
               {days.map((d) => (
                 <option key={d} value={d}>
-                  {longDay(d)}
+                  {dayLabel(d)}
                 </option>
               ))}
             </select>
@@ -279,6 +287,12 @@ function ItemForm({
             </select>
           </DarkField>
         </div>
+        {outside && (
+          <p className="-mt-1 mb-3 rounded-xl bg-white/10 px-3 py-2 text-xs text-white/85" data-testid="extends-trip">
+            {longDay(day)} is {day < trip.start_date ? "before" : "after"} the trip. Saving adds it, so the trip {day < trip.start_date ? "starts" : "ends"} {longDay(day)}.
+          </p>
+        )}
+        </>
       ) : (
         <>
           <DarkField label="Day">
@@ -292,11 +306,16 @@ function ItemForm({
             >
               {days.map((d) => (
                 <option key={d} value={d}>
-                  {longDay(d)}
+                  {dayLabel(d)}
                 </option>
               ))}
             </select>
           </DarkField>
+          {outside && (
+            <p className="-mt-1 mb-3 rounded-xl bg-white/10 px-3 py-2 text-xs text-white/85" data-testid="extends-trip">
+              {longDay(day)} is {day < trip.start_date ? "before" : "after"} the trip. Saving adds it, so the trip {day < trip.start_date ? "starts" : "ends"} {longDay(day)}.
+            </p>
+          )}
           <DarkField label={travel ? (flight ? "Departs in the" : "Leaves in the") : "Part of the day"} group>
             <Segmented label="Part of the day" value={part} onChange={setPart} options={PARTS.map((p) => ({ value: p, label: PART_LABEL[p] }))} />
           </DarkField>
