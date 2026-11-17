@@ -4,11 +4,29 @@ Draft v3, Nov 9, 2026. Your 11/9 review is applied on top of the 11/8 voice note
 
 **TripTab is an AI-powered group trip and expense manager: one place to plan a trip, run it, and settle it, before, during and after.** Anyone can start a trip and pull the group in. Plans, bookings and who paid what live together, and the tab settles itself. It must never become a chore for whoever organizes it or for anyone else on the trip.
 
-## What exists today
+## What exists today (Nov 17)
 
-- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/). The design reference until the rebuild replaces it (you're keeping the TripTab name and sunsetting this one); its share links have a security gap (the spring app cleanup step on the runbook).
-- **Build 1:** the [Product Page](https://building-with-ai-f26.github.io/mwp9437-triptab/) with PRD v1 and the build log, and a rough prototype in [the class repo](https://github.com/building-with-ai-f26/mwp9437-triptab): create a trip, suggest plans, confirm one with cost, payer and who joined, and see the fewest payments to settle. Eight tests on the money math; plain styling.
+- **TripTab, online since 11/16:** [the app](https://building-with-ai-f26.github.io/mwp9437-triptab/app/), on a real backend (Supabase), in the spring look, on a phone or a laptop. What it does, and what's left, is in the next section.
+- **The Product Page:** [PRD and weekly build log](https://building-with-ai-f26.github.io/mwp9437-triptab/), with Builds 1 and 2 submitted, and the code in [the class repo](https://github.com/building-with-ai-f26/mwp9437-triptab).
+- **Spring app, still live:** [triptabai.lovable.app](https://triptabai.lovable.app/), the design reference, being sunset (you're keeping the TripTab name); its share links have a security gap (the spring app cleanup step on the runbook).
 - **Spring archive:** the legacy chat digest, usage export and Lovable's notes, in the course output folder (triptab-spring-archive).
+
+## Built so far, and what's left
+
+As of Nov 17. Everything in the Built column is live and checked by automated tests and click-throughs at laptop and phone width; no friend has used it on a real trip yet.
+
+| Area | Built (live) | Still to build |
+| --- | --- | --- |
+| Trips and people | Start a trip with dates and stops; change its dates, or extend it in one tap when a plan falls a day outside; add people by name, email or phone, or share one group link where they pick their name; Owner and Viewer roles; the group link inside People | Confirming your email and resetting a password (needs an email sender, your call); TripTab sending invites itself (beyond the course) |
+| Itinerary | Day by day, morning to night, with where everyone's staying; a week view; Suggested (dotted), Planned (solid) and Confirmed (paid, the green $ ✓); opting in or out; one plan across several parts or days (skiing all week); flights with an arrival day and time | Place autocomplete when typing a town (from your 11/16 walkthrough) |
+| Money | Confirm a plan with its cost, payer and split (even, shares, percent or exact); Who pays: one bill, or everyone pays their own, with private prices and paid with points; general expenses like a grocery run; your own view and balance; Settle up in the fewest payments | Costs in other currencies at the day's rate (stretch goal); one person buying for part of the group (a general expense for now) |
+| AI | Import of bookings: paste an email or summary, or attach a PDF or photo, with flight times looked up and a review before saving; Plan with AI: real places for empty slots, each with its source, added as Suggested. Both capped at $7 a day, logged with their cost, and scored by 10-case evals | Packing list; local tips; see alternatives; suggestions from a group survey; import by forwarding an email or from Gmail (both your calls) |
+| Getting it done | Action items with who's on it and due dates before the trip; a PDF itinerary; add to calendar | Nothing in the course plan |
+| Running it | Online on GitHub Pages; PostHog, with test runs left out; the spring look, phone first | Rollback check, a hosting decision and the two-minute video (Build 5, due 12/7); the ski group using it; the Sponsor Memo (12/14) |
+
+**Ahead of the course plan.** Builds 3 and 4's features are live early, so Build 3 (due 11/23) is mostly evidence: the funnel from suggested to planned to confirmed, and the build log, once its brief is posted. The trim check after today's class has nothing to move right yet.
+
+**Not started, on purpose (beyond the course):** date polls, bedroom assignments, keeping your flights private, receipt scanning, full AI-built itineraries and an in-trip concierge, a post-trip recap, a native app, and making money.
 
 ## Who it's for
 
