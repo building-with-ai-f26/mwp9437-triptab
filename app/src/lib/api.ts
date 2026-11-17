@@ -27,6 +27,8 @@ export function friendly(error: PostgrestError | Error | null | undefined): stri
   if (msg.includes("Failed to fetch")) return "Can't reach TripTab. Check your connection and try again.";
   const known = [
     "Pick a day inside the trip",
+    "It can't arrive more than a day after the trip ends",
+    "Pick a last day inside the trip",
     "Check-out can't be more than a day after the trip ends",
     "A trip needs at least one owner",
     "That name was already claimed",
@@ -296,6 +298,10 @@ export interface ItemInput {
   cost_type: CostType;
   /** Left out, the database picks by kind: flights are their own, the rest one bill. */
   pay_mode?: PayMode;
+  /** Plans that span time: the last part covered, and a flight's departure and arrival times ("HH:MM"). */
+  end_part?: DayPart | null;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 export async function addItem(tripId: string, input: ItemInput): Promise<Item> {

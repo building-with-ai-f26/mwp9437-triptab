@@ -13,7 +13,7 @@ import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/P
 import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget } from "../components/trip/Money";
 import { PlanPanel } from "../components/trip/PlanPanel";
 import { ImportDialog } from "../components/trip/Import";
-import { draftCents } from "../lib/importPlans";
+import { draftCents, type Draft } from "../lib/importPlans";
 import type { ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
 import {
@@ -42,7 +42,7 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { canEdit, dateRange, dollars, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
+import { addDays, canEdit, dateRange, dollars, partOfTime, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
 import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
@@ -196,6 +196,17 @@ export default function TripPage() {
       trackOwn(added, meId, paid.cents, paid.withPoints, "planned", after);
     }
     return added;
+  };
+
+  const travelKind = (kind: Item["kind"]) => kind === "flight" || kind === "transport";
+  /** An imported plan's last day (a flight's arrival day, an activity's last day), when it fits the trip and the day wasn't changed in review. */
+  const spanEnd = (d: Draft): string | null => {
+    const end = d.source.end_day;
+    if (!end || d.day !== d.source.day || end <= d.day) return null;
+    // A rental car's return day isn't an arrival: only a transfer with an arrival time runs on.
+    if (d.kind === "transport" && !d.source.arrive_time) return null;
+    const limit = travelKind(d.kind) ? addDays(trip.end_date, 1) : trip.end_date;
+    return end <= limit ? end : null;
   };
 
   const peopleCard = (
@@ -503,7 +514,10 @@ export default function TripPage() {
                   title: d.title.trim(),
                   day: d.day,
                   part: stay ? "night" : d.part,
-                  end_day: stay ? d.end_day : null,
+                  end_day: stay ? d.end_day : spanEnd(d),
+                  end_part: !stay && travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null,
+                  start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
+                  end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
                   location: d.location.trim() || null,
                   notes: d.notes.trim() || null,
                   status: "planned",

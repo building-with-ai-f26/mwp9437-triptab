@@ -12,8 +12,8 @@
 - **Install dependencies:** `cd app && npm install`
 - **Run locally:** `cd app && npm run dev`, then open http://localhost:5173, click **Start a trip**, create an account, and use **Fill in the ski trip example**.
 - **Run deterministic tests:** `cd app && npm test` (money math, data model, timeline; offline).
-- **Run the database security tests:** `cd app && npm run test:rls` (87 tests of row-level security, the money rules, who can write and read own costs, and who can call AI import against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
-- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates and who pays; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
+- **Run the database security tests:** `cd app && npm run test:rls` (94 tests of row-level security, the money rules, who can write and read own costs, who can call AI import, and plans that span time against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
+- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates, who pays, AI import with a canned reply, and plans that span time; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
 - **Check text contrast:** with `npm run dev` running, `cd app && node e2e/contrast-check.cjs` measures every text run against the photo or glass behind it at 1280 and 390 wide and lists anything under 4.5:1 (3:1 for large text). Plan cards are counted apart until the pod has tested how Suggested and Planned look.
 - **Check PostHog events:** start a dev server with a dummy key (`VITE_POSTHOG_KEY=phc_dummy npx vite --port 5174`), then `node e2e/posthog-check.cjs`. PostHog calls are intercepted; nothing is sent.
 - **Build:** `cd app && npm run build` (type-checks, then bundles).
@@ -31,7 +31,7 @@ app/                      the web app (Vite)
   src/components/trip/    Timeline (day chips, days, item cards, stays), ItemDialog, PlanPanel (who pays, cost, own lines, in/out),
                           Money (confirm/expense dialog, money card, settle up, flights), People (people, group link)
   src/lib/model.ts        types that mirror the tables, date helpers, validation, price labels
-  src/lib/timeline.ts     lays a trip out day by day: morning, day, evening, night, and stays
+  src/lib/timeline.ts     lays a trip out day by day: morning, day, evening, night, and stays; a plan shows in every slot it covers
   src/lib/money.ts        even split and the fewest-payments settle-up, in cents
   src/lib/split.ts        splits by shares, percent or exact amounts
   src/lib/ledger.ts       who's going, balances, settle-up, own lines and your own numbers

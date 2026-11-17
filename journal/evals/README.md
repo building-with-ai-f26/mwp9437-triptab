@@ -42,7 +42,7 @@ Because a messy case was missed at low effort, the three messy cases were run ag
 
 A flight lookup costs about twelve times a plain import: one cent for the search itself, plus the tokens of the results the model reads.
 
-From the cost log (`ai_calls`) at the end of the evening: 53 calls reached the model, $0.1351 in total at list price, 7 web searches, 5.6 seconds on average, 50 returned plans, 3 correctly returned none, and none failed. All 53 were test runs (the eval and the click-through); no person has used import yet. Cash cost was $0, covered by the Max plan's API credit.
+From the cost log (`ai_calls`) at the end of the evening: 53 calls reached the model, $0.1351 in total at list price, 7 web searches, 5.6 seconds on average, 50 returned plans, 3 correctly returned none, and none failed. All 53 were test runs (the eval and the click-through); no person has used import yet. Two more test calls followed later that evening, from a click-through step that has since been removed, which brought the log to 55 calls and $0.1599. Cash cost was $0, covered by the Max plan's API credit.
 
 ## Other live checks that evening
 

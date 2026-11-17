@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { PART_LABEL, PARTS, priceLabel, type Item } from "../../lib/model";
-import { weeks, type TimelineDay } from "../../lib/timeline";
+import { weeks, type Placement, type TimelineDay } from "../../lib/timeline";
 import type { TimelineActions } from "./Timeline";
 
 /**
@@ -17,9 +17,10 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
   // on hover and in the plan's dialog). On a phone the grid scrolls sideways inside its card.
   const cols = { gridTemplateColumns: `64px repeat(${week.length}, minmax(86px, 1fr))`, minWidth: `${64 + week.length * 86}px` };
 
-  const chip = (item: Item) => {
+  const chip = (item: Item, placed?: Placement) => {
     const out = actions.isOut?.(item) ?? false;
-    const price = priceLabel(item, actions.exactCents?.(item));
+    // One plan, one cost: the price shows where the plan starts, not in every slot it covers.
+    const price = placed && !placed.first ? null : priceLabel(item, actions.exactCents?.(item));
     return (
       <button
         key={item.id}
@@ -28,6 +29,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
         data-kind={item.kind}
         data-status={item.status}
         data-out={out}
+        data-continued={placed && !placed.first ? "true" : undefined}
         onClick={() => actions.onOpen(item)}
         title={item.title}
       >
@@ -37,6 +39,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
           {item.title}
         </span>
         {price && <span className="block truncate text-[10px] text-muted-foreground">{price}</span>}
+        {placed?.label && <span className="block truncate text-[10px] text-foreground/75">{placed.label}</span>}
       </button>
     );
   };
@@ -86,7 +89,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
               <div className="label-luxury border-b border-white/30 px-2 pt-2.5 text-foreground">{PART_LABEL[part]}</div>
               {week.map((d) => (
                 <div key={d.date + part} className="min-h-16 min-w-0 space-y-1 border-b border-l border-white/30 p-1">
-                  {d.parts[part].map(chip)}
+                  {d.parts[part].map((item) => chip(item, d.placed[part][item.id]))}
                   {d.parts[part].length === 0 && actions.canEdit && (
                     <button
                       type="button"

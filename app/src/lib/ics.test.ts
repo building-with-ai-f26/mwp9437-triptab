@@ -16,6 +16,9 @@ const base: Item = {
   est_cents: null,
   cost_type: "total",
   pay_mode: "split",
+  end_part: null,
+  start_time: null,
+  end_time: null,
   created_by: null,
   created_at: "",
 };

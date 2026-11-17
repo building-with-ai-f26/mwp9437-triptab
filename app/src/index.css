@@ -216,6 +216,11 @@
     border-left-color: color-mix(in oklab, var(--color-muted-foreground) 30%, transparent);
     box-shadow: none;
   }
+  /* A slot a plan runs on into (a red-eye's morning, day 2 of skiing): the same plan, lighter. */
+  .item-card[data-continued="true"] {
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: none;
+  }
   .item-card[data-out="true"] {
     opacity: 0.5;
   }

@@ -9,6 +9,7 @@ import {
   longDay,
   PART_LABEL,
   PARTS,
+  partOfTime,
   PAY_MODE_LABEL,
   STATUS_LABEL,
   tripDays,
@@ -24,6 +25,7 @@ import {
 } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import type { ItemInput } from "../../lib/api";
+import { whenText } from "../../lib/timeline";
 
 export interface ItemDialogState {
   /** The item being edited, or null for a new one. */
@@ -107,7 +109,12 @@ function ItemForm({
   const [title, setTitle] = useState(it?.title ?? "");
   const [day, setDay] = useState(it?.day ?? state.day);
   const [part, setPart] = useState<DayPart>(it?.part ?? state.part);
-  const [endDay, setEndDay] = useState(it?.end_day ?? addDays(it?.day ?? state.day, 1));
+  const [endDay, setEndDay] = useState(it?.kind === "stay" && it.end_day ? it.end_day : addDays(it?.day ?? state.day, 1));
+  // Plans that span time (not stays): the last day and last part covered, and a flight's or transfer's times.
+  const [lastDay, setLastDay] = useState(it && it.kind !== "stay" && it.end_day && it.end_day > it.day ? it.end_day : "");
+  const [endPart, setEndPart] = useState<DayPart | "">(it?.end_part ?? "");
+  const [startTime, setStartTime] = useState(it?.start_time?.slice(0, 5) ?? "");
+  const [endTime, setEndTime] = useState(it?.end_time?.slice(0, 5) ?? "");
   const [status, setStatus] = useState<ItemStatus>(it?.status === "confirmed" ? "confirmed" : (it?.status ?? "suggested"));
   const [estimate, setEstimate] = useState(it?.est_cents != null ? String(it.est_cents / 100) : "");
   const [costType, setCostType] = useState<CostType>(it?.cost_type ?? "total");
@@ -129,6 +136,13 @@ function ItemForm({
   const typed = estimate.trim() === "" ? null : parseDollars(estimate);
   const estCents = typed == null || Number.isNaN(typed) ? null : toCents(typed);
   const isStay = kind === "stay";
+  const travel = kind === "flight" || kind === "transport";
+  const flight = kind === "flight";
+  const spanLastDay = !isStay && lastDay > day ? lastDay : null;
+  // The last part only matters when it differs from where the plan starts, or it ends on another day.
+  const spanEndPart = isStay || !endPart || (!spanLastDay && endPart === part) ? null : endPart;
+  // A flight or transfer may arrive the day after the trip ends; an activity stays inside it.
+  const lastDays = tripDays(addDays(day, 1), travel ? addDays(trip.end_date, 1) : trip.end_date).slice(0, travel ? 3 : 60);
   const paidNow = !it && paid;
   const paidTyped = paidAmount.trim() === "" ? (payMode === "own" && points ? 0 : NaN) : parseDollars(paidAmount);
   const paidBad = Number.isNaN(paidTyped) || paidTyped < 0;
@@ -143,7 +157,10 @@ function ItemForm({
     title: title.trim(),
     day,
     part: isStay ? "night" : part,
-    end_day: isStay ? endDay : null,
+    end_day: isStay ? endDay : spanLastDay,
+    end_part: spanEndPart,
+    start_time: travel && startTime ? startTime : null,
+    end_time: travel && endTime ? endTime : null,
     location: location.trim() || null,
     notes: notes.trim() || null,
     status: paidNow ? "planned" : status,
@@ -163,7 +180,7 @@ function ItemForm({
       <div className="space-y-3 text-sm text-white/85">
         <p>
           <span className="label-luxury block text-white/55">When</span>
-          {isStay ? `${longDay(it.day)} to ${longDay(it.end_day ?? it.day)}` : `${longDay(it.day)}, ${PART_LABEL[it.part].toLowerCase()}`}
+          {whenText(it)}
         </p>
         <p>
           <span className="label-luxury block text-white/55">Status</span>
@@ -265,7 +282,14 @@ function ItemForm({
       ) : (
         <>
           <DarkField label="Day">
-            <select className="field-dark" value={day} onChange={(e) => setDay(e.target.value)}>
+            <select
+              className="field-dark"
+              value={day}
+              onChange={(e) => {
+                setDay(e.target.value);
+                if (lastDay && lastDay <= e.target.value) setLastDay("");
+              }}
+            >
               {days.map((d) => (
                 <option key={d} value={d}>
                   {longDay(d)}
@@ -273,9 +297,86 @@ function ItemForm({
               ))}
             </select>
           </DarkField>
-          <DarkField label="Part of the day" group>
+          <DarkField label={travel ? (flight ? "Departs in the" : "Leaves in the") : "Part of the day"} group>
             <Segmented label="Part of the day" value={part} onChange={setPart} options={PARTS.map((p) => ({ value: p, label: PART_LABEL[p] }))} />
           </DarkField>
+
+          {travel ? (
+            <div className="grid grid-cols-2 gap-x-2">
+              <DarkField label={flight ? "Departs at (optional)" : "Leaves at (optional)"}>
+                <input
+                  type="time"
+                  className="field-dark"
+                  value={startTime}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    if (e.target.value) setPart(partOfTime(e.target.value));
+                  }}
+                />
+              </DarkField>
+              <DarkField label={flight ? "Lands at (optional)" : "Arrives at (optional)"}>
+                <input
+                  type="time"
+                  className="field-dark"
+                  value={endTime}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    if (e.target.value) setEndPart(partOfTime(e.target.value));
+                  }}
+                />
+              </DarkField>
+              <DarkField label={flight ? "Lands on" : "Arrives on"}>
+                <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
+                  <option value="">The same day</option>
+                  {lastDays.map((d) => (
+                    <option key={d} value={d}>
+                      {longDay(d)}
+                    </option>
+                  ))}
+                </select>
+              </DarkField>
+              <DarkField label={flight ? "Lands in the" : "Arrives in the"}>
+                <select className="field-dark" value={endPart} onChange={(e) => setEndPart(e.target.value as DayPart | "")}>
+                  <option value="">{spanLastDay ? "Morning" : "Same part of the day"}</option>
+                  {PARTS.filter((p) => spanLastDay || PARTS.indexOf(p) > PARTS.indexOf(part)).map((p) => (
+                    <option key={p} value={p}>
+                      {PART_LABEL[p]}
+                    </option>
+                  ))}
+                </select>
+              </DarkField>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-2">
+              <DarkField label="Runs through the">
+                <select className="field-dark" value={endPart && PARTS.indexOf(endPart) > PARTS.indexOf(part) ? endPart : ""} onChange={(e) => setEndPart(e.target.value as DayPart | "")}>
+                  <option value="">Just the {PART_LABEL[part].toLowerCase()}</option>
+                  {PARTS.filter((p) => PARTS.indexOf(p) > PARTS.indexOf(part)).map((p) => (
+                    <option key={p} value={p}>
+                      {PART_LABEL[p]}
+                    </option>
+                  ))}
+                </select>
+              </DarkField>
+              <DarkField label="Every day through">
+                <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
+                  <option value="">Just this day</option>
+                  {lastDays.map((d) => (
+                    <option key={d} value={d}>
+                      {longDay(d)}
+                    </option>
+                  ))}
+                </select>
+              </DarkField>
+            </div>
+          )}
+          {(spanLastDay || spanEndPart) && (
+            <p className="-mt-1 mb-3 text-xs text-white/60">
+              {travel
+                ? "It shows in every part of the day from leaving to arriving."
+                : "One plan with one cost, shown in every slot it covers. Use this for skiing every day of a stop, not a plan per day."}
+            </p>
+          )}
         </>
       )}
 
