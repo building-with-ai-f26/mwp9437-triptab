@@ -8,6 +8,7 @@ import { ActionsCard } from "../components/trip/Actions";
 import { TripSettingsDialog } from "../components/trip/TripSettings";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
+import { splitEqually } from "../lib/money";
 import { AddPersonDialog, GroupLinkCard, PeopleCard } from "../components/trip/People";
 import { ExpenseDialog, FlightsCard, MoneyCard, SettleDialog, type ExpenseTarget } from "../components/trip/Money";
 import { PlanPanel } from "../components/trip/PlanPanel";
@@ -15,7 +16,9 @@ import {
   addItem,
   addAction,
   addTraveler,
+  clearOwnLine,
   confirmItem,
+  logOwnLine,
   deleteAction,
   deleteTrip,
   deleteExpense,
@@ -35,8 +38,8 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { canEdit, dateRange, dollars, ROLE_LABEL } from "../lib/model";
-import { goingList, isGoing, myShareOf, settle } from "../lib/ledger";
+import { canEdit, dateRange, dollars, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
+import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
 import { subscribeToTrip } from "../lib/live";
@@ -108,12 +111,13 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link, expenses, itemPeople, items, actions: todos } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, ownMarks, items, actions: todos } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
   const photo = photoFor(`${stops.map((s) => s.name).join(" ")} ${trip.name}`);
-  const expenseByItem = new Map(expenses.filter((e) => e.item_id).map((e) => [e.item_id as string, e]));
+  // A plan's one bill. Own lines are kept apart: several per plan, and only some are readable.
+  const expenseByItem = new Map(expenses.filter((e) => e.item_id && !e.own).map((e) => [e.item_id as string, e]));
   const { balances, transfers } = settle(expenses, travelers);
   const openItem = dialog?.item ? (items.find((i) => i.id === dialog.item!.id) ?? dialog.item) : null;
 
@@ -121,15 +125,42 @@ export default function TripPage() {
     canEdit: editable,
     onAdd: (day, part, kind = "activity") => setDialog({ item: null, day, part, kind }),
     onOpen: (item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind }),
-    exactCents: (item) => expenseByItem.get(item.id)?.total_cents ?? null,
+    exactCents: (item) =>
+      item.pay_mode === "own"
+        ? (ownLineOf(expenses, item.id, meId)?.total_cents ?? null)
+        : (expenseByItem.get(item.id)?.total_cents ?? null),
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
     note: (item) => {
+      if (item.pay_mode === "own") {
+        // Everyone pays their own: "Planned, 2 of 5 booked" until everyone going has logged theirs.
+        const p = ownProgress(item, travelers, itemPeople, ownMarks);
+        const mine = ownLineOf(expenses, item.id, meId);
+        if (item.status === "confirmed") return mine ? "Your own price · everyone's booked" : "Everyone's booked";
+        if (item.status === "planned" || p.booked.size > 0) {
+          return `${bookedLabel(p)}${mine ? ` · yours ${dollars(mine.total_cents)}` : ""}`;
+        }
+      }
       const share = myShareOf(expenseByItem.get(item.id), meId);
       if (item.status === "confirmed" && share != null) return `Your share ${dollars(share)}`;
       const n = goingList(item, travelers, itemPeople).length;
       if (item.kind === "flight") return `${n} on it`;
       return n < travelers.length ? `${n} of ${travelers.length} in` : null;
     },
+  };
+
+  /** PostHog: an own line was logged; and the plan's status, which follows the lines, if it moved. */
+  const trackOwn = (item: Item, travelerId: string, cents: number, withPoints: boolean, before: ItemStatus, after: ItemStatus) => {
+    track("own cost logged", {
+      kind: item.kind,
+      for_self: travelerId === meId,
+      with_points: withPoints,
+      has_amount: cents > 0,
+      plan_status: after,
+    });
+    if (after !== before) {
+      track("plan status changed", { kind: item.kind, from: before, to: after, who_pays: "own" });
+      if (after === "confirmed") track("plan confirmed", { kind: item.kind, who_pays: "own", from_status: before });
+    }
   };
 
   const peopleCard = (
@@ -335,7 +366,7 @@ export default function TripPage() {
             )}
             {!editable && (
               <section className="glass-card-solid rounded-2xl p-4 text-sm text-muted-foreground">
-                You're a viewer on this trip: you see every plan and who's going, and you can opt in or out. Ask an owner
+                You're a viewer on this trip: you see every plan and who's going, you can opt in or out, and you can log your own cost on plans where everyone pays their own. Ask an owner
                 if you need to add or change something.
               </section>
             )}
@@ -347,6 +378,8 @@ export default function TripPage() {
       <ItemDialog
         state={dialog}
         trip={trip}
+        travelers={travelers}
+        meId={meId}
         canEdit={editable}
         extras={
           openItem && (
@@ -357,7 +390,26 @@ export default function TripPage() {
               itemPeople={itemPeople}
               meId={meId}
               expense={expenseByItem.get(openItem.id)}
+              expenses={expenses}
+              ownMarks={ownMarks}
               canEdit={editable}
+              onPayMode={async (mode) => {
+                await updateItem(openItem.id, { pay_mode: mode });
+                track("plan updated", { kind: openItem.kind, status: openItem.status, who_pays: mode });
+                await reload();
+              }}
+              onLogOwn={async (travelerId, cents, withPoints) => {
+                const after = await logOwnLine(openItem.id, travelerId, cents, withPoints);
+                trackOwn(openItem, travelerId, cents, withPoints, openItem.status, after);
+                await reload();
+              }}
+              onClearOwn={async (travelerId) => {
+                const after = await clearOwnLine(openItem.id, travelerId);
+                if (after !== openItem.status) {
+                  track("plan status changed", { kind: openItem.kind, from: openItem.status, to: after, who_pays: "own" });
+                }
+                await reload();
+              }}
               onGoing={async (travelerId, going) => {
                 await setGoing(openItem.id, travelerId, going);
                 if (travelerId === meId) track(going ? "opted in" : "opted out", { kind: openItem.kind });
@@ -371,7 +423,7 @@ export default function TripPage() {
           )
         }
         onClose={() => setDialog(null)}
-        onSave={async (input, existing) => {
+        onSave={async (input, existing, paid) => {
           if (existing) {
             await updateItem(existing.id, input);
             track("plan updated", { kind: input.kind, status: input.status });
@@ -382,7 +434,25 @@ export default function TripPage() {
             const added = await addItem(trip.id, input);
             // Flights are per person: whoever adds one is on it.
             if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
-            track("plan added", { kind: input.kind, status: input.status, part: input.part, has_estimate: input.est_cents != null });
+            track("plan added", {
+              kind: input.kind,
+              status: input.status,
+              part: input.part,
+              has_estimate: input.est_cents != null,
+              who_pays: added.pay_mode,
+              already_paid: Boolean(paid),
+            });
+            // "Already booked and paid?": log the one bill, or your own line, in the same step.
+            if (paid?.mode === "split") {
+              const inIds = added.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
+              const parts = splitEqually(paid.totalCents, inIds);
+              await confirmItem(added.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
+              track("plan confirmed", { kind: added.kind, split: "even", people: inIds.length, from_status: "new", who_pays: "split" });
+              track("plan status changed", { kind: added.kind, from: "planned", to: "confirmed", who_pays: "split" });
+            } else if (paid?.mode === "own" && meId) {
+              const after = await logOwnLine(added.id, meId, paid.cents, paid.withPoints);
+              trackOwn(added, meId, paid.cents, paid.withPoints, "planned", after);
+            }
           }
           await reload();
         }}
@@ -406,7 +476,11 @@ export default function TripPage() {
               split: input.mode,
               people: input.shares.length,
               from_status: target.item.status,
+              who_pays: "split",
             });
+            if (!target.expense) {
+              track("plan status changed", { kind: target.item.kind, from: target.item.status, to: "confirmed", who_pays: "split" });
+            }
           } else {
             await saveExpense(trip.id, target.expense?.id ?? null, input.description, input.day, input.total, input.paidBy, input.mode, input.shares);
             if (!target.expense) track("expense added", { split: input.mode, people: input.shares.length });
@@ -415,6 +489,7 @@ export default function TripPage() {
         }}
         onUndo={async (item) => {
           await unconfirmItem(item.id);
+          track("plan status changed", { kind: item.kind, from: "confirmed", to: "planned", who_pays: "split" });
           await reload();
         }}
         onDelete={async (e) => {

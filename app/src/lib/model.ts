@@ -9,6 +9,8 @@ export type ItemStatus = "suggested" | "planned" | "confirmed";
 export type ItemKind = "activity" | "meal" | "transport" | "flight" | "stay";
 export type DayPart = "morning" | "day" | "evening" | "night";
 export type CostType = "total" | "per_person";
+/** Who pays for a plan: one bill that gets split, or each person going pays their own price. */
+export type PayMode = "split" | "own";
 
 export interface Trip {
   id: string;
@@ -57,6 +59,7 @@ export interface Item {
   /** Rough cost while suggested or planned. */
   est_cents: number | null;
   cost_type: CostType;
+  pay_mode: PayMode;
   created_by: string | null;
   created_at: string;
 }
@@ -82,6 +85,9 @@ export const STATUS_LABEL: Record<ItemStatus, string> = {
   planned: "Planned",
   confirmed: "Confirmed",
 };
+export const PAY_MODE_LABEL: Record<PayMode, string> = { split: "One bill, split", own: "Everyone pays their own" };
+/** Flights are bought one by one; stays, transport, meals and activities are usually one bill. */
+export const defaultPayMode = (kind: ItemKind): PayMode => (kind === "flight" ? "own" : "split");
 export const ROLE_LABEL: Record<Role, string> = { owner: "Owner", viewer: "Viewer" };
 
 // ---------- Dates ----------

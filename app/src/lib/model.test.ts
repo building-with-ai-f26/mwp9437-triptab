@@ -43,6 +43,7 @@ const item = (over: Partial<Item>): Item => ({
   status: "suggested",
   est_cents: null,
   cost_type: "total",
+  pay_mode: "split",
   created_by: null,
   created_at: `2026-11-12T00:00:${String(n).padStart(2, "0")}Z`,
   ...over,

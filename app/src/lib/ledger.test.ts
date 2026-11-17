@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goingList, isGoing, myNumbers, myShareOf, settle } from "./ledger";
+import { bookedLabel, goingList, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle } from "./ledger";
 import type { ExpenseRow, ItemPerson } from "./api";
 import type { Traveler } from "./model";
 
@@ -25,6 +25,8 @@ const expense = (id: string, paid_by: string, total: number, shares: [string, nu
   total_cents: total,
   paid_by,
   split_mode: "even",
+  own: false,
+  with_points: false,
   created_at: "",
   expense_shares: shares.map(([traveler_id, amount_cents]) => ({ traveler_id, amount_cents, weight: null })),
 });
@@ -67,9 +69,99 @@ describe("the tab", () => {
   });
 
   it("your own numbers: what you paid, your share, and what you're owed", () => {
-    expect(myNumbers(expenses, "mike")).toEqual({ tripTotal: 20400, paid: 12000, share: 8200, balance: 3800 });
+    expect(myNumbers(expenses, "mike")).toEqual({ tripTotal: 20400, paid: 12000, share: 8200, balance: 3800, own: 0 });
     expect(myNumbers(expenses, "priya").balance).toBe(-6100);
     expect(myShareOf(expenses[1], "vic")).toBe(2100);
     expect(myShareOf(expenses[0], "nobody")).toBeNull();
+  });
+});
+
+/** An own line: one person's own price on a plan, where the payer is the only share. */
+const ownLine = (item_id: string, who: string, cents: number, with_points = false): ExpenseRow => ({
+  ...expense(`${item_id}-${who}`, who, cents, [[who, cents]], item_id),
+  own: true,
+  with_points,
+});
+
+describe("everyone pays their own", () => {
+  const dinner = expense("dinner", "mike", 12000, [["mike", 4000], ["vic", 4000], ["priya", 4000]], "dinner");
+  const groceries = expense("groceries", "vic", 6001, [["mike", 2001], ["vic", 2000], ["priya", 2000]]);
+  const shared = [dinner, groceries];
+  const lines = [ownLine("flight", "mike", 42000), ownLine("flight", "vic", 61550), ownLine("flight", "priya", 0, true)];
+
+  it("own lines never move a balance", () => {
+    const before = settle(shared, people);
+    const after = settle([...shared, ...lines], people);
+    expect(after.balances).toEqual(before.balances);
+  });
+
+  it("own lines never appear in settle up", () => {
+    expect(settle([...shared, ...lines], people).transfers).toEqual(settle(shared, people).transfers);
+    expect(settle(lines, people).transfers).toEqual([]);
+    expect(settle(lines, people).balances).toEqual({ mike: 0, vic: 0, priya: 0 });
+  });
+
+  it("holds for any mix of amounts, including zero and a points line", () => {
+    for (const amounts of [[1, 2, 3], [99999, 0, 1], [33333, 33333, 33334], [0, 0, 0]]) {
+      const mixed = [...shared, ...amounts.map((c, i) => ownLine(`plan${i}`, people[i].id, c, c === 0))];
+      expect(settle(mixed, people)).toEqual(settle(shared, people));
+    }
+  });
+
+  it("an own line counts in that person's own spend and trip total, and nobody else's", () => {
+    // Mike's view: the database returns only his own line (and any he entered).
+    const mine = myNumbers([...shared, lines[0]], "mike");
+    expect(mine.own).toBe(42000);
+    expect(mine.tripTotal).toBe(12000 + 6001 + 42000);
+    expect(mine.paid).toBe(12000 + 42000);
+    expect(mine.share).toBe(4000 + 2001 + 42000);
+    expect(mine.balance).toBe(myNumbers(shared, "mike").balance);
+  });
+
+  it("a line you entered for someone else isn't your spend", () => {
+    // Mike, an owner, logged Vic's flight: he can read it, but it's Vic's number.
+    const withVics = myNumbers([...shared, lines[0], lines[1]], "mike");
+    expect(withVics).toEqual(myNumbers([...shared, lines[0]], "mike"));
+  });
+
+  it("the group's tab leaves own lines out", () => {
+    expect(groupExpenses([...shared, ...lines])).toEqual(shared);
+  });
+
+  it("finds a person's own line on a plan", () => {
+    expect(ownLineOf(lines, "flight", "vic")?.total_cents).toBe(61550);
+    expect(ownLineOf(lines, "flight", "nobody")).toBeUndefined();
+    expect(ownLineOf(shared, "dinner", "mike")).toBeUndefined(); // a shared bill is not an own line
+  });
+
+  it("counts who has booked among the people going", () => {
+    const lift = { id: "lift", kind: "activity" as const };
+    const marks = [{ item_id: "lift", traveler_id: "mike" }, { item_id: "lift", traveler_id: "vic" }, { item_id: "other", traveler_id: "priya" }];
+    const p = ownProgress(lift, people, [], marks);
+    expect(bookedLabel(p)).toBe("2 of 3 booked");
+    expect(p.complete).toBe(false);
+  });
+
+  it("opting out removes that person from the count", () => {
+    const lift = { id: "lift", kind: "activity" as const };
+    const marks = [{ item_id: "lift", traveler_id: "mike" }, { item_id: "lift", traveler_id: "vic" }];
+    const p = ownProgress(lift, people, [{ item_id: "lift", traveler_id: "priya", going: false }], marks);
+    expect(bookedLabel(p)).toBe("2 of 2 booked");
+    expect(p.complete).toBe(true);
+  });
+
+  it("someone who booked and then opted out isn't counted as booked", () => {
+    const lift = { id: "lift", kind: "activity" as const };
+    const marks = [{ item_id: "lift", traveler_id: "vic" }];
+    const p = ownProgress(lift, people, [{ item_id: "lift", traveler_id: "vic", going: false }], marks);
+    expect(bookedLabel(p)).toBe("0 of 2 booked");
+  });
+
+  it("a flight counts only the people on it, and nobody going is never complete", () => {
+    const flight = { id: "f", kind: "flight" as const };
+    expect(ownProgress(flight, people, [], []).complete).toBe(false);
+    const p = ownProgress(flight, people, [{ item_id: "f", traveler_id: "mike", going: true }], [{ item_id: "f", traveler_id: "mike" }]);
+    expect(bookedLabel(p)).toBe("1 of 1 booked");
+    expect(p.complete).toBe(true);
   });
 });

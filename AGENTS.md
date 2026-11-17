@@ -3,17 +3,17 @@
 > Give this file to your coding agent and check that it is using these instructions. Keep the stack, commands, and ground rules current.
 
 ## 1. Project Overview
-- **What this repo builds:** TripTab, a group-trip tool: anyone starts a trip with dates and stops, pulls the group in (added directly, or one group link where people pick their name), and plans live on a day-by-day timeline. Confirming a plan logs who paid and who joined, and a settle-up view shows the fewest payments that square everyone.
+- **What this repo builds:** TripTab, a group-trip tool: anyone starts a trip with dates and stops, pulls the group in (added directly, or one group link where people pick their name), and plans live on a day-by-day timeline. Every plan says who pays: one bill that gets split (confirming it logs who paid and who joined), or everyone pays their own (each person logs their own private price, and the plan is Confirmed once everyone going has booked). A settle-up view shows the fewest payments that square everyone; own costs never enter it.
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`] and the scope in `docs/PRODUCT_VISION.md`.
-- **Tech stack:** React 19 + TypeScript + Vite in `app/`, styled with Tailwind CSS v4 (the spring look, `docs/DESIGN.md`), lucide-react icons, react-router. Backend is **Supabase** (project "TripTab", free plan, us-east-1): Postgres with row-level security on every table, a few Postgres functions (`create_trip`, `join_preview`, `join_trip`, `reset_group_link`), Supabase Auth (email + password), and one Edge Function (`sign-up`). Analytics: PostHog (`posthog-js`). Tests: Vitest; click-throughs with Playwright. Money is stored in whole cents. Product Page is plain HTML in `docs/` (GitHub Pages).
-- **Roles:** Owner and Viewer, stored in `travelers.role` and enforced by the database. Owners change the trip and its money; Viewers read it and opt themselves in or out.
+- **Tech stack:** React 19 + TypeScript + Vite in `app/`, styled with Tailwind CSS v4 (the spring look, `docs/DESIGN.md`), lucide-react icons, react-router. Backend is **Supabase** (project "TripTab", free plan, us-east-1): Postgres with row-level security on every table, Postgres functions (`create_trip`, `join_preview`, `join_trip`, `reset_group_link`, `confirm_item`, `log_own_line`, `clear_own_line`, `own_marks` and others), Supabase Auth (email + password), and one Edge Function (`sign-up`). Analytics: PostHog (`posthog-js`). Tests: Vitest; click-throughs with Playwright. Money is stored in whole cents. Product Page is plain HTML in `docs/` (GitHub Pages).
+- **Roles:** Owner and Viewer, stored in `travelers.role` and enforced by the database. Owners change the trip and its money; Viewers read it, opt themselves in or out, and log their own cost on plans where everyone pays their own.
 
 ## 2. Commands
 - **Install dependencies:** `cd app && npm install`
 - **Run locally:** `cd app && npm run dev`, then open http://localhost:5173, click **Start a trip**, create an account, and use **Fill in the ski trip example**.
 - **Run deterministic tests:** `cd app && npm test` (money math, data model, timeline; offline).
-- **Run the database security tests:** `cd app && npm run test:rls` (52 tests of row-level security and the money rules against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
-- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, then the Build 3 money flow; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
+- **Run the database security tests:** `cd app && npm run test:rls` (76 tests of row-level security, the money rules and who can write and read own costs against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
+- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates and who pays; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
 - **Check text contrast:** with `npm run dev` running, `cd app && node e2e/contrast-check.cjs` measures every text run against the photo or glass behind it at 1280 and 390 wide and lists anything under 4.5:1 (3:1 for large text). Plan cards are counted apart until the pod has tested how Suggested and Planned look.
 - **Check PostHog events:** start a dev server with a dummy key (`VITE_POSTHOG_KEY=phc_dummy npx vite --port 5174`), then `node e2e/posthog-check.cjs`. PostHog calls are intercepted; nothing is sent.
 - **Build:** `cd app && npm run build` (type-checks, then bundles).
@@ -27,13 +27,13 @@ app/                      the web app (Vite)
   src/main.tsx            routes: / , /sign-in, /trips, /trips/new, /trips/:id, /join/:token
   src/pages/              one file per screen (Landing, SignIn, Trips, NewTrip, TripPage, Join)
   src/components/         ui.tsx (button, dialog, fields), TopBar, Brand, AuthForm
-  src/components/trip/    Timeline (day chips, days, item cards, stays), ItemDialog, PlanPanel (cost, in/out),
+  src/components/trip/    Timeline (day chips, days, item cards, stays), ItemDialog, PlanPanel (who pays, cost, own lines, in/out),
                           Money (confirm/expense dialog, money card, settle up, flights), People (people, group link)
   src/lib/model.ts        types that mirror the tables, date helpers, validation, price labels
   src/lib/timeline.ts     lays a trip out day by day: morning, day, evening, night, and stays
   src/lib/money.ts        even split and the fewest-payments settle-up, in cents
   src/lib/split.ts        splits by shares, percent or exact amounts
-  src/lib/ledger.ts       who's going, balances, settle-up and your own numbers
+  src/lib/ledger.ts       who's going, balances, settle-up, own lines and your own numbers
   src/lib/api.ts          every Supabase read and write the app makes
   src/lib/auth.tsx        sign-up (via the Edge Function), sign-in, session
   src/lib/analytics.ts    PostHog: track() and identify(); a no-op without a key

@@ -43,7 +43,7 @@ export default function PrintTrip() {
 
   const { trip, stops, travelers, expenses, itemPeople, actions } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
-  const exact = new Map(expenses.filter((e) => e.item_id).map((e) => [e.item_id as string, e.total_cents]));
+  const exact = new Map(expenses.filter((e) => e.item_id && !e.own).map((e) => [e.item_id as string, e.total_cents]));
   const { balances, transfers } = settle(expenses, travelers);
   const mine = myNumbers(expenses, me?.id ?? null);
   const name = (tid: string | null) => travelers.find((t) => t.id === tid)?.name ?? "Nobody yet";
