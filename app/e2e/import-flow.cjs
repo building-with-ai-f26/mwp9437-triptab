@@ -11,6 +11,9 @@
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 const LIVE = process.argv.includes('--live');
+// Screenshots from the real function are import-*.jpg; the canned run's are import-screens-*.jpg,
+// so a routine run never replaces evidence from the model with pictures of a canned reply.
+const SHOTS = LIVE ? 'import' : 'import-screens';
 
 const PASTED = 'We fly UA 57 on Feb 4. Airbnb in Chamonix Feb 5 to 12, 3,200 euros, Mike paid. Lift passes Sat Feb 6, $84 each, paid.';
 const plan = (over) => ({
@@ -42,15 +45,8 @@ async function run(browser, label, opts, result) {
   // A plan already on the trip, so the import has a duplicate to catch.
   await h.addPlan(p, '2027-02-06', 'Add to evening', { title: 'Fondue at La Caleche', kind: 'Meal', status: 'Planned' });
 
-  // Before the key is set, the real function answers with a clear message and nothing breaks.
+  // The canned run never calls the real function, so it costs nothing.
   if (!LIVE) {
-    await p.getByRole('button', { name: 'Import' }).click();
-    await h.dlg(p).getByLabel('Paste it here').fill('We fly UA 57 on Feb 4.');
-    await h.dlg(p).getByRole('button', { name: 'Find the plans' }).click();
-    const said = h.dlg(p).getByRole('alert');
-    const got = await Promise.race([said.waitFor({ timeout: 70000 }).then(() => 'message'), h.dlg(p).getByTestId('import-summary').waitFor({ timeout: 70000 }).then(() => 'plans')]);
-    r.realFunctionSaid = got === 'message' ? (await said.innerText()).trim() : 'returned plans (the key is set)';
-    await h.dlg(p).getByRole('button', { name: got === 'message' ? 'Cancel' : 'Discard' }).click();
     await p.route('**/functions/v1/import-bookings', (route) =>
       route.request().method() === 'POST'
         ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(CANNED) })
@@ -60,14 +56,14 @@ async function run(browser, label, opts, result) {
 
   await p.getByRole('button', { name: 'Import' }).click();
   await h.dlg(p).getByLabel('Paste it here').fill(PASTED);
-  await h.shot(p, `import-paste-${label}`);
+  await h.shot(p, `${SHOTS}-paste-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Find the plans' }).click();
   await h.dlg(p).getByTestId('import-summary').waitFor({ timeout: 70000 });
   r.summary = (await h.dlg(p).getByTestId('import-summary').innerText()).trim();
   r.cost = (await h.dlg(p).getByTestId('import-cost').innerText()).trim();
   const cards = h.dlg(p).getByTestId('proposal');
   r.proposed = await cards.count();
-  await h.shot(p, `import-review-${label}`);
+  await h.shot(p, `${SHOTS}-review-${label}`);
 
   if (!LIVE) {
     const keep = (i) => cards.nth(i).getByLabel('Keep this one');
@@ -87,7 +83,7 @@ async function run(browser, label, opts, result) {
     await cards.nth(1).getByLabel('Cost').fill('3460');
     await cards.nth(1).getByLabel(/Already paid/).check();
     await cards.nth(1).scrollIntoViewIfNeeded();
-    await h.shot(p, `import-review-edited-${label}`);
+    await h.shot(p, `${SHOTS}-review-edited-${label}`);
     await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
     await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 }).catch(() => {});
     if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});
@@ -111,7 +107,7 @@ async function run(browser, label, opts, result) {
   }
   r.overflow = await h.overflowX(p);
   await p.locator('#day-2027-02-05').scrollIntoViewIfNeeded().catch(() => {});
-  await h.shot(p, `import-saved-${label}`);
+  await h.shot(p, `${SHOTS}-saved-${label}`);
 }
 
 (async () => {
