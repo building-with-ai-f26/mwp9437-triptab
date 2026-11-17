@@ -171,6 +171,7 @@ Never invent anything. Every date, time, price, address and confirmation code mu
 - Dates: use the trip's dates below to resolve a missing year. Read dates in the order the document uses; a date like 05/02/2027 in a European document is 5 February. If the order is ambiguous, add day to unsure.
 - Prices: the amount and currency exactly as written, in cents. Never convert currencies. A total for the group is not per person.
 - part: when the input gives a clock time for the plan (a departure, a pickup, a reservation, the time printed on a receipt), set part from it: before 12:00 is morning, 12:00 to 16:59 is day, 17:00 to 20:59 is evening, 21:00 or later is night. With no time in the input, leave part null.
+- location: only an address or place written in the input, in its words. Do not add airport codes, city names or anything else it doesn't say.
 - paid is true only when the input shows payment was taken.
 - who_pays: flights and individually bought tickets are own; a stay, a rental car, a group meal or one shared bill is split.
 
@@ -188,15 +189,21 @@ const realDate = (v: unknown): string | null => {
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? null : v;
 };
 
+/** The words of a text, lower case, without accents, three letters or digits and up. */
+const wordsOf = (s: string): string[] => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z0-9]{3,}/g) ?? [];
+
 /**
  * Checks and tidies the model's proposals before they reach the app. Anything malformed is
  * dropped or blanked, never trusted. Looked-up flight times survive only when their source is a
  * page the web search actually returned in this call: that is what keeps the model from filling
  * times from memory and calling it a lookup.
  */
-export function checkProposals(raw: unknown, searchUrls: string[]): { plans: Proposal[]; note: string | null } | null {
+export function checkProposals(raw: unknown, searchUrls: string[], inputText = ""): { plans: Proposal[]; note: string | null } | null {
   if (!raw || typeof raw !== "object" || !Array.isArray((raw as { plans?: unknown }).plans)) return null;
   const urls = new Set(searchUrls);
+  // For pasted text the input can be checked word for word (a PDF or photo can't be, here).
+  const inputWords = new Set(wordsOf(inputText));
+  const inInput = (value: string | null) => value == null || inputWords.size === 0 || wordsOf(value).every((w) => inputWords.has(w));
   const plans: Proposal[] = [];
   for (const p of (raw as { plans: Record<string, unknown>[] }).plans.slice(0, 20)) {
     if (!p || typeof p !== "object") continue;
@@ -232,8 +239,10 @@ export function checkProposals(raw: unknown, searchUrls: string[]): { plans: Pro
       arrive_time: arrive,
       times_from: from,
       source_url: source,
-      location: text(p.location, 200),
-      confirmation_code: text(p.confirmation_code, 40),
+      // An address or a code with a word that isn't in the pasted text was not read from it
+      // (airport codes added to "Newark to Geneva", say): leave it blank rather than pass it on.
+      location: inInput(text(p.location, 200)) ? text(p.location, 200) : null,
+      confirmation_code: inInput(text(p.confirmation_code, 40)) ? text(p.confirmation_code, 40) : null,
       cost_cents: cents,
       currency,
       cost_is_per_person: p.cost_is_per_person === true,

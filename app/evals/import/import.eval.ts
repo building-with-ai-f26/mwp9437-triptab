@@ -7,6 +7,7 @@
  *   npm run eval:import                       all 10 cases, label "run"
  *   EVAL_LABEL=baseline npm run eval:import   name the run
  *   EVAL_ONLY=06,07 npm run eval:import       only the cases whose id starts with 06 or 07
+ *   EVAL_EFFORT=medium npm run eval:import    medium effort instead of the default, to compare
  *
  * It refuses to start when the run could cost more than $1, and prints the real cost at the end.
  */
@@ -21,6 +22,8 @@ import { WORST_CASE_CALL_USD } from "../../../supabase/functions/import-bookings
 const MAX_RUN_USD = 1;
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const label = (process.env.EVAL_LABEL ?? "run").replace(/[^a-z0-9-]/gi, "-");
+// EVAL_EFFORT=medium runs the cases at medium effort instead of the default (low), for comparison.
+const effort = process.env.EVAL_EFFORT === "medium" ? "medium" : undefined;
 const only = (process.env.EVAL_ONLY ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 const cases: EvalCase[] = readdirSync(here("./cases"))
@@ -65,7 +68,7 @@ it(`AI import eval: ${cases.length} cases`, async () => {
   try {
     for (const c of cases) {
       const file = c.file ? { media_type: c.media_type, data: readFileSync(here(`./cases/${c.file}`)).toString("base64") } : null;
-      const r = await call({ trip_id: tripId, text: c.text ?? "", file, test_run: true });
+      const r = await call({ trip_id: tripId, text: c.text ?? "", file, test_run: true, effort });
       const result = r.status === 200 ? (r.body as unknown as ImportResult) : null;
       // "No plans found" (422 no_plans) is a valid answer for a case that expects none.
       const plans = result?.plans ?? [];

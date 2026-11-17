@@ -78,9 +78,11 @@ Deno.serve(async (req) => {
 
   const inputKind = file ? (fileType === "application/pdf" ? "pdf" : "image") : "text";
   const testRun = body.test_run === true;
+  // The eval may ask for medium effort, to compare it with the default. Nothing else can.
+  const effort = testRun && body.effort === "medium" ? "medium" : EFFORT;
   const log = (result: string, usage: Usage | null, ms: number | null, plans: number | null) =>
     admin.from("ai_calls").insert({
-      trip_id: tripId, user_id: user.id, feature: "import", model: MODEL, effort: EFFORT, input_kind: inputKind,
+      trip_id: tripId, user_id: user.id, feature: "import", model: MODEL, effort, input_kind: inputKind,
       input_chars: text.length, input_tokens: usage?.input_tokens ?? 0, output_tokens: usage?.output_tokens ?? 0,
       cache_read_tokens: usage?.cache_read_tokens ?? 0, cache_write_tokens: usage?.cache_write_tokens ?? 0,
       searches: usage?.searches ?? 0, cost_usd: usage ? costUsd(usage) : 0, latency_ms: ms, result, plans_proposed: plans, test_run: testRun,
@@ -134,7 +136,7 @@ Deno.serve(async (req) => {
         {
           model: MODEL,
           max_tokens: MAX_TOKENS,
-          output_config: { effort: EFFORT },
+          output_config: { effort },
           system: SYSTEM_PROMPT,
           tools: [
             { type: "web_search_20250305", name: "web_search", max_uses: MAX_SEARCHES },
@@ -187,7 +189,7 @@ Deno.serve(async (req) => {
     await log("refused", usage, ms, null);
     return fail(422, "refused", "The AI declined to read that. Add the plan by hand.");
   }
-  const checked = proposed === undefined ? null : checkProposals(proposed, searchUrls);
+  const checked = proposed === undefined ? null : checkProposals(proposed, searchUrls, file ? "" : text);
   if (!checked) {
     await log(proposed === undefined ? "no_plans" : "invalid_output", usage, ms, 0);
     return fail(422, "no_plans", "The AI couldn't find plans in that. Try pasting the confirmation itself, or add the plan by hand.");
@@ -197,6 +199,6 @@ Deno.serve(async (req) => {
     plans: checked.plans,
     note: checked.note,
     call_id: row?.id ?? null,
-    usage: { ...usage, cost_usd: cost, latency_ms: ms, model: MODEL, effort: EFFORT },
+    usage: { ...usage, cost_usd: cost, latency_ms: ms, model: MODEL, effort },
   });
 });

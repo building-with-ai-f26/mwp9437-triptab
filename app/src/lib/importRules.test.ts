@@ -106,6 +106,19 @@ describe("checking what the model returned", () => {
   it("keeps the currency as written, never converted", () => {
     expect(checkProposals({ plans: [plan({ cost_cents: 320000, currency: "eur" })], note: null }, [])?.plans[0]).toMatchObject({ cost_cents: 320000, currency: "EUR" });
   });
+  it("for pasted text, a location or code with words that aren't in the input is left blank", () => {
+    const input = "We fly UA 956 from Newark to Geneva on Feb 4. Ref QK7RWD. Dinner at 8 rue du Lyret, Chamonix.";
+    const check = (over: Record<string, unknown>) => checkProposals({ plans: [plan(over)], note: null }, [], input)?.plans[0];
+    expect(check({ location: "Newark (EWR) to Geneva (GVA)" })?.location).toBeNull();
+    expect(check({ location: "8 rue du Lyret, Chamonix" })?.location).toBe("8 rue du Lyret, Chamonix");
+    expect(check({ location: "8 Rue du Lýret, CHAMONIX" })?.location).toBe("8 Rue du Lýret, CHAMONIX"); // case and accents don't count as a difference
+    expect(check({ location: "Newark to Genève" })?.location).toBeNull(); // a different spelling is a different word
+    expect(check({ confirmation_code: "ZZZ999" })?.confirmation_code).toBeNull();
+    expect(check({ confirmation_code: "QK7RWD" })?.confirmation_code).toBe("QK7RWD");
+  });
+  it("for a PDF or photo there is no text to check against, so the location is kept", () => {
+    expect(checkProposals({ plans: [plan({ location: "Les Praz" })], note: null }, [])?.plans[0].location).toBe("Les Praz");
+  });
   it("refuses anything that isn't a list of plans, and caps the list at 20", () => {
     expect(checkProposals(null, [])).toBeNull();
     expect(checkProposals({ plans: "all of them" }, [])).toBeNull();
