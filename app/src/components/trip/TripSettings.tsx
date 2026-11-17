@@ -78,7 +78,7 @@ function SettingsForm({
       </DarkField>
 
       <fieldset className="mb-3">
-        <legend className="label-luxury mb-1.5 text-white/65">Stops</legend>
+        <legend className="label-luxury mb-1.5 text-white/80">Stops</legend>
         <ol className="space-y-2">
           {stops.map((s, i) => (
             <li key={i} className="rounded-2xl border border-white/10 p-2.5">

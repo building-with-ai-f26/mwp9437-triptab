@@ -101,7 +101,7 @@ From `Dashboard.tsx` (the item card and the stay row) and `EditablePrice.tsx`.
 
 **Rebuild:** three statuses instead of two (the vision: Suggested, Planned, Confirmed, and Confirmed means paid).
 
-- **Suggested:** spring's faint style, unchanged.
+- **Suggested:** changed 11/16 (Mike's walkthrough: faint text was hard to read). The same glass and dark text as Planned, marked by a 2px dotted outline in the text color at 55% and no kind stripe, with the brown sparkle icon. The price keeps `~` and "est.".
 - **Planned:** new. Solid glass and the kind's stripe, so it reads as decided, but the price keeps `~` and "est." and there is no badge yet.
 - **Confirmed (paid):** spring's confirmed style with both badges together as the green "$ ✓", since confirming and logging the expense are now one step.
 - Opted out stays at 50% opacity.

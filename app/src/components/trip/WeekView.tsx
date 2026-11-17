@@ -34,7 +34,7 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
         title={item.title}
       >
         <span
-          className={`line-clamp-2 text-[11px] leading-snug ${item.status === "suggested" ? "italic text-muted-foreground" : "font-medium"}`}
+          className={`line-clamp-2 text-[11px] leading-snug ${"font-medium"}`}
         >
           {item.title}
         </span>

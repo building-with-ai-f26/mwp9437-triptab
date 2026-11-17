@@ -135,17 +135,17 @@ export function DarkField({
   if (group) {
     return (
       <fieldset className="mb-3 block min-w-0">
-        <legend className="label-luxury mb-1.5 block text-white/65">{label}</legend>
+        <legend className="label-luxury mb-1.5 block text-white/80">{label}</legend>
         {children}
-        {hint && <span className="mt-1 block text-xs text-white/50">{hint}</span>}
+        {hint && <span className="mt-1 block text-xs text-white/70">{hint}</span>}
       </fieldset>
     );
   }
   return (
     <label className="mb-3 block">
-      <span className="label-luxury mb-1.5 block text-white/65">{label}</span>
+      <span className="label-luxury mb-1.5 block text-white/80">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-white/50">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-white/70">{hint}</span>}
     </label>
   );
 }

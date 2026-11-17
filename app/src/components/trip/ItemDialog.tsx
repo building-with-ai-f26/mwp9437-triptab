@@ -203,7 +203,7 @@ function ItemForm({
             {it.notes}
           </p>
         )}
-        <p className="text-xs text-white/50">Only the trip's owners can change plans.</p>
+        <p className="text-xs text-white/70">Only the trip's owners can change plans.</p>
       </div>
     );
   }
@@ -462,7 +462,7 @@ function ItemForm({
       )}
 
       {paidNow ? null : status !== "confirmed" ? (
-        <DarkField group label="Status" hint="Suggested looks faint until the group decides. Confirm it with the real cost from the button above once it's saved.">
+        <DarkField group label="Status" hint="Suggested has a dotted outline until the group decides. Confirm it with the real cost from the button above once it's saved.">
           <Segmented
             label="Status"
             value={status}

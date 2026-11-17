@@ -243,7 +243,7 @@ function ExpenseForm({
       </DarkField>
 
       <fieldset className="mb-3">
-        <legend className="label-luxury mb-1.5 text-white/65">Who's in</legend>
+        <legend className="label-luxury mb-1.5 text-white/80">Who's in</legend>
         <ul className="divide-y divide-white/10 rounded-2xl border border-white/10">
           {travelers.map((t) => {
             const on = inIds.includes(t.id);
@@ -461,7 +461,7 @@ export function SettleDialog({
               {transfers.map((t, i) => (
                 <li key={i} className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-3 text-white">
                   <span className="font-semibold">{name(t.from)}</span>
-                  <ArrowRight className="size-4 text-white/50" />
+                  <ArrowRight className="size-4 text-white/70" />
                   <span className="min-w-0 flex-1 truncate font-semibold">{name(t.to)}</span>
                   <span className="font-display text-lg font-bold tabular-nums">{dollars(t.amountCents)}</span>
                 </li>
@@ -537,7 +537,7 @@ export function FlightsCard({
                       </p>
                     ))
                   ) : (
-                    <p className="text-sm italic text-white/50">No flight added yet</p>
+                    <p className="text-sm italic text-white/70">No flight added yet</p>
                   )}
                 </li>
               );

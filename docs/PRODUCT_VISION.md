@@ -56,7 +56,7 @@ You said the spring timeline was close visually; the rebuild brings that look in
 - **Luxury travel photography.** A destination photo behind every trip, a golden-hour beach behind the landing page.
 - **Editorial type and a warm palette.** Serif italic headlines ("Plan it. Split it. Live it."), small uppercase labels, sand and brown tones, brown pill buttons.
 - **The itinerary as a timeline.** Sticky day chips across the top showing the actual day (Thu 2/5) rather than Day 1. Within a day, morning, day, evening and night run down the left of the activity chips, so the day reads at a glance without timestamps, with where you're staying. A toggle switches to a week view like an Outlook calendar: seven days side by side, morning to night.
-- **State you can see.** Suggested plans are faint with "\~$25 est."; confirmed plans are solid with the exact price and a green "$ ✓" badge. Activities you've opted out of fade, so your own day stands out.
+- **State you can see.** Text is always dark and easy to read. Suggested plans have a dotted outline and "\~$25 est."; Planned ones are solid; confirmed plans show the exact price and a green "$ ✓" badge on top (Mike's call, 11/16). Activities you've opted out of fade, so your own day stands out.
 - **Money beside the plan.** A glass sidebar with your spending, your share, what you owe or are owed, the group's balances and Settle up.
 
 ## In the course vs beyond it

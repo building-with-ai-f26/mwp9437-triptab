@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import { inviteUrl, type PersonDraft } from "../../lib/api";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
@@ -50,6 +50,7 @@ export function PeopleCard({
   onAdd,
   onRole,
   onRemove,
+  linkControls,
 }: {
   trip: Trip;
   travelers: Traveler[];
@@ -59,6 +60,11 @@ export function PeopleCard({
   onAdd: () => void;
   onRole: (t: Traveler, role: Role) => Promise<void>;
   onRemove: (t: Traveler) => Promise<void>;
+  /** Owners only: the group link lives inside People (Mike's call, 11/16). Viewers never get it. */
+  linkControls?: {
+    onChange: (patch: Partial<Pick<GroupLink, "default_role" | "enabled">>) => Promise<void>;
+    onReset: () => Promise<void>;
+  };
 }) {
   const [copied, copy] = useCopy();
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +96,10 @@ export function PeopleCard({
           </Button>
         )}
       </div>
+
+      {canEdit && link && linkControls && (
+        <GroupLinkSection trip={trip} link={link} onChange={linkControls.onChange} onReset={linkControls.onReset} />
+      )}
 
       <ul className="divide-y divide-foreground/10">
         {travelers.map((t) => {
@@ -192,7 +202,9 @@ export function PeopleCard({
   );
 }
 
-export function GroupLinkCard({
+/** The group link, as a section of the People panel: the link and Copy and Text up front, the
+ *  role it gives and turning it off or renewing it under Link settings. */
+function GroupLinkSection({
   trip,
   link,
   onChange,
@@ -205,6 +217,7 @@ export function GroupLinkCard({
 }) {
   const [copied, copy] = useCopy();
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState(false);
   const url = inviteUrl(link.token);
 
   const run = async (fn: () => Promise<void>) => {
@@ -217,11 +230,21 @@ export function GroupLinkCard({
   };
 
   return (
-    <section className="glass-card-solid rounded-2xl p-4" aria-labelledby="link-title">
-      <h2 id="link-title" className="flex items-center gap-2 font-display text-lg font-bold">
-        <Link2 className="size-4 text-primary" /> Group link
-      </h2>
-      <p className="mb-3 text-xs text-muted-foreground">
+    <section className="mb-3 rounded-xl border border-white/50 bg-white/40 p-3" aria-labelledby="link-title">
+      <div className="flex items-center justify-between gap-2">
+        <h3 id="link-title" className="flex items-center gap-1.5 text-sm font-semibold">
+          <Link2 className="size-4 text-primary" /> Group link
+        </h3>
+        <button
+          type="button"
+          aria-expanded={settings}
+          onClick={() => setSettings((v) => !v)}
+          className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-foreground hover:bg-white/50"
+        >
+          <Settings2 className="size-3.5" /> Link settings
+        </button>
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">
         Drop it in the group chat. People pick their name and they're on the trip.
       </p>
 
@@ -241,15 +264,17 @@ export function GroupLinkCard({
           </div>
           <a
             href={`sms:?&body=${encodeURIComponent(inviteText(trip, url))}`}
-            className="mb-3 inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-3 text-xs hover:bg-white/50"
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-3 text-xs hover:bg-white/50"
           >
             <MessageSquare className="size-3" /> Text it to the group
           </a>
         </>
       ) : (
-        <p className="mb-3 rounded-xl bg-white/30 px-3 py-2 text-sm">The link is off. Nobody new can join with it.</p>
+        <p className="rounded-xl bg-white/30 px-3 py-2 text-sm">The link is off. Nobody new can join with it.</p>
       )}
 
+      {settings && (
+        <div className="mt-3 border-t border-foreground/10 pt-3">
       <p className="label-luxury mb-1.5 text-muted-foreground">People who join with it are</p>
       <Segmented
         dark={false}
@@ -276,6 +301,8 @@ export function GroupLinkCard({
           <RefreshCw /> New link
         </Button>
       </div>
+        </div>
+      )}
       {error && (
         <p role="alert" className="mt-2 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}

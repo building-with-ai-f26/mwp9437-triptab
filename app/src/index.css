@@ -114,6 +114,17 @@
 
 /* Dark readable glass for dialogs. Spring's mobile fix: no backdrop-filter inside dialogs
    (it breaks on mobile WebKit), so the dialog version is fully opaque from the start. */
+/* The sticky top bar and day strip: glass, but solid enough that what scrolls under them never
+   reads through the trip's title (11/16). */
+@utility glass-bar {
+  position: relative;
+  background: rgba(246, 241, 233, 0.82);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
 @utility glass-card-readable {
   position: relative;
   background: rgb(30, 30, 30);
@@ -171,12 +182,11 @@
 }
 
 /* Itinerary item cards and their status styling: docs/DESIGN.md, section 7 (spring Dashboard.tsx).
-   Planned and confirmed are solid glass with the kind's colored stripe; suggested is faint on
-   purpose (dashed, see-through, no stripe color) until it's decided. */
+   Text is always dark and easy to read (Mike's call, 11/16). Planned and confirmed are glass with
+   the kind's colored stripe; suggested has the same glass and dark text, marked instead by a
+   dotted outline and no stripe color until it's decided. Paid is the $ check on top. */
 @layer components {
   .item-card {
-    /* Plan cards keep the lighter gray: how Suggested and Planned look waits for the pod test. */
-    --color-muted-foreground: hsl(220 10% 46%);
     position: relative;
     display: block;
     width: 100%;
@@ -185,7 +195,7 @@
     padding: 0.75rem 0.875rem;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-left-width: 4px;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.45);
     backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
     -webkit-backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
     box-shadow:
@@ -210,15 +220,12 @@
     border-left-color: var(--color-stone-dark);
   }
   .item-card[data-status="suggested"][data-kind] {
-    background: rgba(255, 255, 255, 0.1);
-    border-style: dashed;
-    border-color: rgba(255, 255, 255, 0.45);
-    border-left-color: color-mix(in oklab, var(--color-muted-foreground) 30%, transparent);
+    border: 2px dotted color-mix(in oklab, var(--color-foreground) 55%, transparent);
     box-shadow: none;
   }
   /* A slot a plan runs on into (a red-eye's morning, day 2 of skiing): the same plan, lighter. */
   .item-card[data-continued="true"] {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.32);
     box-shadow: none;
   }
   .item-card[data-out="true"] {

@@ -67,7 +67,7 @@ export function AuthForm({
       <h1 className="mb-1 font-display text-2xl font-bold italic text-white">
         {mode === "create" ? "Create your account" : "Welcome back"}
       </h1>
-      <p className="mb-5 text-sm text-white/65">
+      <p className="mb-5 text-sm text-white/80">
         {intro ?? (mode === "create" ? "New here? Takes ten seconds. No email to confirm." : "Sign in to see your trips.")}
       </p>
 

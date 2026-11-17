@@ -15,7 +15,7 @@ export function TopBar({
   children?: ReactNode;
 }) {
   return (
-    <header className="glass-card sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-x-0 border-t-0 border-b border-white/15 px-3 sm:h-16 sm:px-6">
+    <header className="glass-bar sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-x-0 border-t-0 border-b border-white/15 px-3 sm:h-16 sm:px-6">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {back && (
           <Link
