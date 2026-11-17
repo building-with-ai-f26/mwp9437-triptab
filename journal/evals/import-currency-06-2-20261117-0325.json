@@ -1,0 +1,82 @@
+{
+  "label": "currency-06-2",
+  "ran_at": "2026-11-17T03:25:25.457Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 1,
+  "passed_all_four": 1,
+  "by_rule": {
+    "shape": 1,
+    "grounded": 1,
+    "money": 1,
+    "obedience": 1
+  },
+  "total_cost_usd": 0.001133,
+  "cases": [
+    {
+      "id": "06-forwarded-thread-two-bookings",
+      "group": "messy",
+      "what": "A forwarded thread with replies, signatures and two bookings: a rental car and coach tickets.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true
+      },
+      "notes": [],
+      "cost_usd": 0.001133,
+      "searches": 0,
+      "input_tokens": 5574,
+      "output_tokens": 1151,
+      "latency_ms": 5284,
+      "plans": [
+        {
+          "kind": "transport",
+          "title": "AlpesCar 9-seat minivan rental",
+          "day": "2027-02-05",
+          "part": "morning",
+          "end_day": "2027-02-12",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Geneva Airport (French sector)",
+          "confirmation_code": "AC-7741920",
+          "cost_cents": 41200,
+          "currency": "CHF",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "who_pays",
+            "cost"
+          ]
+        },
+        {
+          "kind": "transport",
+          "title": "Pyrenees Coach Barcelona Nord to Andorra la Vella",
+          "day": "2027-02-13",
+          "part": "morning",
+          "end_day": null,
+          "depart_time": "10:15",
+          "arrive_time": "13:30",
+          "times_from": "input",
+          "source_url": null,
+          "location": "Barcelona Nord to Andorra la Vella",
+          "confirmation_code": "PC55210",
+          "cost_cents": 6400,
+          "currency": "EUR",
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": true,
+          "unsure": [
+            "cost"
+          ]
+        }
+      ],
+      "note": "Two bookings found in the forwarded thread: a Geneva minivan rental and a Pyrenees Coach bus. The car total is an estimate, and the bus price may be for both tickets or per person, so I've flagged those fields."
+    }
+  ]
+}

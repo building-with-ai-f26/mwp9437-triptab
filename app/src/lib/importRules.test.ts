@@ -13,6 +13,7 @@ import {
   PROPOSE_TOOL,
   readCap,
   USER_DAILY_IMPORTS,
+  currencyNear,
 } from "../../../supabase/functions/import-bookings/rules.ts";
 
 const usage = (over: Partial<Parameters<typeof costUsd>[0]>) => ({
@@ -132,5 +133,31 @@ describe("checking what the model returned", () => {
     expect(PROPOSE_TOOL.strict).toBe(true);
     expect(item.additionalProperties).toBe(false);
     expect([...item.required].sort()).toEqual(Object.keys(item.properties).sort());
+  });
+});
+
+describe("a price the model left without a currency", () => {
+  it("takes the currency written right beside that exact amount", () => {
+    expect(currencyNear(6400, "2 x Adult     EUR 64.00\nPaid by card.")).toBe("EUR");
+    expect(currencyNear(41200, "Estimated total: CHF 412.00, payable at pickup.")).toBe("CHF");
+    expect(currencyNear(8400, "Lift passes Sat Feb 6, $84 each, paid.")).toBe("USD");
+    expect(currencyNear(320000, "Airbnb in Chamonix, 3,200 euros, Mike paid.")).toBe("EUR");
+    expect(currencyNear(2550, "dinner was 25,50 € all in")).toBe("EUR");
+  });
+  it("never guesses: no marker, another amount, or two currencies give nothing", () => {
+    expect(currencyNear(6400, "2 x Adult 64.00, paid")).toBeNull();
+    expect(currencyNear(6400, "EUR 164.00 total")).toBeNull();
+    expect(currencyNear(6400, "EUR 64.50 total")).toBeNull();
+    expect(currencyNear(6400, "EUR 64.00 or USD 64.00")).toBeNull();
+    expect(currencyNear(6400, "")).toBeNull();
+  });
+  it("fills the proposal's currency from the pasted text, and only then", () => {
+    const raw = { plans: [{ kind: "transport", title: "Coach to Andorra", day: "2027-02-13", cost_cents: 6400, currency: null, unsure: [] }], note: null };
+    const withText = checkProposals(raw, [], "Barcelona Nord to Andorra la Vella\n2 x Adult     EUR 64.00")!.plans[0];
+    expect(withText.currency).toBe("EUR");
+    expect(withText.unsure).not.toContain("cost");
+    const noText = checkProposals(raw, [], "")!.plans[0];
+    expect(noText.currency).toBeNull();
+    expect(noText.unsure).toContain("cost");
   });
 });

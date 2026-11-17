@@ -192,6 +192,34 @@ const realDate = (v: unknown): string | null => {
 /** The words of a text, lower case, without accents, three letters or digits and up. */
 const wordsOf = (s: string): string[] => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z0-9]{3,}/g) ?? [];
 
+const CURRENCY_WORDS: Record<string, string> = {
+  $: "USD", "€": "EUR", "£": "GBP", "¥": "JPY", USD: "USD", EUR: "EUR", GBP: "GBP", CHF: "CHF", CAD: "CAD", AUD: "AUD",
+  JPY: "JPY", SEK: "SEK", NOK: "NOK", DKK: "DKK", MXN: "MXN", EUROS: "EUR", EURO: "EUR", DOLLARS: "USD",
+};
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** The currency written right beside this exact amount in the pasted text ("EUR 64.00", "€64",
+ *  "3,200 euros"), when there is exactly one. Never a guess: no match, or two different ones, is null. */
+export function currencyNear(cents: number, inputText: string): string | null {
+  if (!inputText) return null;
+  const whole = Math.floor(cents / 100);
+  const frac = String(cents % 100).padStart(2, "0");
+  const grouped = whole.toLocaleString("en-US");
+  const forms = new Set([`${whole}.${frac}`, `${grouped}.${frac}`, `${whole},${frac}`, `${grouped.replace(/,/g, ".")},${frac}`]);
+  if (frac === "00") [String(whole), grouped].forEach((f) => forms.add(f));
+  const words = Object.keys(CURRENCY_WORDS).map(escapeRe).join("|");
+  const found = new Set<string>();
+  for (const f of forms) {
+    const amount = `(?<![\\d.,])${escapeRe(f)}(?![\\d]|[.,]\\d)`;
+    const re = new RegExp(`(?:(${words})\\s?${amount})|(?:${amount}\\s?(${words})(?![a-z]))`, "gi");
+    for (const m of inputText.matchAll(re)) {
+      const code = CURRENCY_WORDS[(m[1] ?? m[2]).toUpperCase()] ?? CURRENCY_WORDS[m[1] ?? m[2]];
+      if (code) found.add(code);
+    }
+  }
+  return found.size === 1 ? [...found][0] : null;
+}
+
 /**
  * Checks and tidies the model's proposals before they reach the app. Anything malformed is
  * dropped or blanked, never trusted. Looked-up flight times survive only when their source is a
@@ -227,7 +255,10 @@ export function checkProposals(raw: unknown, searchUrls: string[], inputText = "
     if (!depart && !arrive) from = null;
     else if (!from) from = "input";
     const cents = typeof p.cost_cents === "number" && Number.isInteger(p.cost_cents) && p.cost_cents >= 0 && p.cost_cents <= 100_000_000 ? p.cost_cents : null;
-    const currency = cents == null ? null : (text(p.currency, 3)?.toUpperCase() ?? null);
+    let currency = cents == null ? null : (text(p.currency, 3)?.toUpperCase() ?? null);
+    // The model sometimes drops a currency that sits right beside the amount (eval case 06):
+    // take it from the pasted text, only when that text shows exactly one.
+    if (cents != null && !currency) currency = currencyNear(cents, inputText);
     if (cents != null && !currency) unsure.add("cost");
     plans.push({
       kind,
