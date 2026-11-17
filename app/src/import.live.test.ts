@@ -104,11 +104,23 @@ describe("the cost log", () => {
     expect((await stranger.from("ai_calls").select("id").eq("trip_id", tripId)).data).toEqual([]);
   });
 
-  it("the setup check says whether the key is set, and nothing about it", async () => {
-    const r = await call(owner, { probe: true });
-    expect(r.status).toBe(200);
-    expect(Object.keys(r.body).sort()).toEqual(["ai_key_set", "daily_cap_usd"]);
-    expect(typeof r.body.ai_key_set).toBe("boolean");
-    console.log("AI key set:", r.body.ai_key_set, "daily cap:", r.body.daily_cap_usd);
+  it("the status check says which secrets exist, by name only, never a value", async () => {
+    const token = (await owner.auth.getSession()).data.session?.access_token;
+    const res = await fetch(`${url}/functions/v1/ai-status`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { exists: Record<string, unknown> };
+    expect(Object.keys(body)).toEqual(["exists"]);
+    expect(Object.keys(body.exists).sort()).toEqual(["AI_DAILY_CAP_USD", "ANTHROPIC_API_KEY"]);
+    for (const v of Object.values(body.exists)) expect(typeof v).toBe("boolean");
+    console.log("Secrets that exist, by name:", JSON.stringify(body.exists));
+  });
+
+  it("the status check needs a signed-in caller", async () => {
+    const res = await fetch(`${url}/functions/v1/ai-status`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}` }, body: "{}" });
+    expect(res.status).toBe(401);
   });
 });
