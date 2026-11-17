@@ -19,6 +19,19 @@ What this does and doesn't show:
 - **The last miss is not fixed.** A price with no currency reaches the review screen marked "check this", with a warning to confirm it is in US dollars.
 - Ten cases is a small set. These are results on these ten inputs, not an accuracy rate for real bookings.
 
+## After the currency fix (Nov 16, about 10:25 PM New York)
+
+The third run's miss (the coach ticket's price came back with no currency, although the email says "EUR 64.00") is now handled in code. When a price comes back without a currency, the function looks for that exact amount in the pasted text with a currency written right beside it ("EUR 64.00", "€64", "3,200 euros"), and fills it in only if exactly one currency appears there. Nothing is guessed: no match, or two different currencies, leaves it blank and marked "check this", as before. Unit tests: `currencyNear` in `src/lib/importRules.test.ts`. Deployed as `import-bookings` version 7.
+
+| Run | Cases passing all four rules | Real cost |
+| --- | --- | --- |
+| Case 06 alone, three times | 3 of 3 | $0.0011 each |
+| after-currency, all ten | 10 of 10 | $0.0330 |
+
+- The full run is the first with no miss. One run of ten cases is not proof that misses are gone; the earlier runs each missed a different case.
+- The three case 06 passes don't show whether the code filled the currency or the model gave it this time (the function returns the checked result). The unit tests show the code path.
+- The full run cost more than the earlier ones ($0.0207) because case 05, the bare flight number, used two web searches instead of one ($0.0243 for that case alone).
+
 ## Low or medium effort, on the messy cases
 
 Because a messy case was missed at low effort, the three messy cases were run again three times at low and three times at medium.
