@@ -203,6 +203,8 @@ export default function TripPage() {
   const spanEnd = (d: Draft): string | null => {
     const end = d.source.end_day;
     if (!end || d.day !== d.source.day || end <= d.day) return null;
+    // A rental car's return day isn't an arrival: only a transfer with an arrival time runs on.
+    if (d.kind === "transport" && !d.source.arrive_time) return null;
     const limit = travelKind(d.kind) ? addDays(trip.end_date, 1) : trip.end_date;
     return end <= limit ? end : null;
   };
