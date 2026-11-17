@@ -5,20 +5,21 @@
 ## 1. Project Overview
 - **What this repo builds:** TripTab, a group-trip tool: anyone starts a trip with dates and stops, pulls the group in (added directly, or one group link where people pick their name), and plans live on a day-by-day timeline. Every plan says who pays: one bill that gets split (confirming it logs who paid and who joined), or everyone pays their own (each person logs their own private price, and the plan is Confirmed once everyone going has booked). A settle-up view shows the fewest payments that square everyone; own costs never enter it.
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`] and the scope in `docs/PRODUCT_VISION.md`.
-- **Tech stack:** React 19 + TypeScript + Vite in `app/`, styled with Tailwind CSS v4 (the spring look, `docs/DESIGN.md`), lucide-react icons, react-router. Backend is **Supabase** (project "TripTab", free plan, us-east-1): Postgres with row-level security on every table, Postgres functions (`create_trip`, `join_preview`, `join_trip`, `reset_group_link`, `confirm_item`, `log_own_line`, `clear_own_line`, `own_marks` and others), Supabase Auth (email + password), and one Edge Function (`sign-up`). Analytics: PostHog (`posthog-js`). Tests: Vitest; click-throughs with Playwright. Money is stored in whole cents. Product Page is plain HTML in `docs/` (GitHub Pages).
+- **Tech stack:** React 19 + TypeScript + Vite in `app/`, styled with Tailwind CSS v4 (the spring look, `docs/DESIGN.md`), lucide-react icons, react-router. Backend is **Supabase** (project "TripTab", free plan, us-east-1): Postgres with row-level security on every table, Postgres functions (`create_trip`, `join_preview`, `join_trip`, `reset_group_link`, `confirm_item`, `log_own_line`, `clear_own_line`, `own_marks` and others), Supabase Auth (email + password), and three Edge Functions (`sign-up`; `import-bookings`, which calls the Claude API for AI import; and `ai-status`, which says which AI secrets exist, by name only). Analytics: PostHog (`posthog-js`). Tests: Vitest; click-throughs with Playwright. Money is stored in whole cents. Product Page is plain HTML in `docs/` (GitHub Pages).
 - **Roles:** Owner and Viewer, stored in `travelers.role` and enforced by the database. Owners change the trip and its money; Viewers read it, opt themselves in or out, and log their own cost on plans where everyone pays their own.
 
 ## 2. Commands
 - **Install dependencies:** `cd app && npm install`
 - **Run locally:** `cd app && npm run dev`, then open http://localhost:5173, click **Start a trip**, create an account, and use **Fill in the ski trip example**.
 - **Run deterministic tests:** `cd app && npm test` (money math, data model, timeline; offline).
-- **Run the database security tests:** `cd app && npm run test:rls` (76 tests of row-level security, the money rules and who can write and read own costs against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
+- **Run the database security tests:** `cd app && npm run test:rls` (87 tests of row-level security, the money rules, who can write and read own costs, and who can call AI import against the live Supabase project; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
 - **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates and who pays; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
 - **Check text contrast:** with `npm run dev` running, `cd app && node e2e/contrast-check.cjs` measures every text run against the photo or glass behind it at 1280 and 390 wide and lists anything under 4.5:1 (3:1 for large text). Plan cards are counted apart until the pod has tested how Suggested and Planned look.
 - **Check PostHog events:** start a dev server with a dummy key (`VITE_POSTHOG_KEY=phc_dummy npx vite --port 5174`), then `node e2e/posthog-check.cjs`. PostHog calls are intercepted; nothing is sent.
 - **Build:** `cd app && npm run build` (type-checks, then bundles).
 - **Publish online:** `cd app && npm run build:pages`, then commit `docs/app` and merge to `main`; GitHub Pages serves it at https://building-with-ai-f26.github.io/mwp9437-triptab/app/ (hash routes). The build carries only public values from `app/.env.local`. Check it with `node e2e/online-flow.cjs` (live) or against a local copy of the Pages layout.
-- **Run model evals:** none yet (no AI model in the product until Build 4).
+- **Run model evals:** `cd app && npm run eval:import` runs the 10 import cases in `app/evals/import/cases/` through the deployed `import-bookings` function and scores four rubric rules in code (`src/lib/importEval.ts`). It makes real calls (logged in `ai_calls` as test runs), refuses to start if the run could cost over $1, prints the real cost, and saves results to `journal/evals/`. `EVAL_LABEL=baseline` names a run; `EVAL_ONLY=06,07` runs some cases. It needs the `ANTHROPIC_API_KEY` secret in Supabase and stops with a message if it's missing.
+- **Click through AI import:** `node e2e/import-flow.cjs` checks the screens with a canned reply (no cost); add `--live` to call the real function (about a cent a run). Results so far are in `journal/evals/README.md`.
 
 ## Project structure
 
@@ -36,11 +37,14 @@ app/                      the web app (Vite)
   src/lib/ledger.ts       who's going, balances, settle-up, own lines and your own numbers
   src/lib/api.ts          every Supabase read and write the app makes
   src/lib/auth.tsx        sign-up (via the Edge Function), sign-in, session
+  src/lib/importPlans.ts  AI import on the app's side: proposals to review drafts, duplicates, what blocks saving
+  src/lib/importEval.ts   scoring for the import eval (four rubric rules, in code)
   src/lib/analytics.ts    PostHog: track() and identify(); a no-op without a key
   src/*.test.ts           unit tests (npm test); src/*.live.test.ts runs only with npm run test:rls
   e2e/                    Playwright click-throughs and the PostHog check
 supabase/migrations/      the database: tables, row-level security, functions (applied in order)
-supabase/functions/       Edge Functions (sign-up)
+supabase/functions/       Edge Functions: sign-up; import-bookings (index.ts calls Claude, rules.ts holds prices, caps and output checks)
+app/evals/import/         the AI import eval: 10 cases, a scanned-PDF fixture and the runner
 docs/                     Product Page (index.html), PRODUCT_VISION.md, DESIGN.md, screenshots/
 ```
 

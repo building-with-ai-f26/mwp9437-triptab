@@ -1,0 +1,26 @@
+{
+  "id": "04-restaurant-receipt",
+  "group": "normal",
+  "what": "A group dinner receipt in euros.",
+  "text": "LA CABANE DU PELERIN\nRestaurant savoyard, 8 rue du Lyret, Chamonix\nTable 12   Couverts: 8   06/02/2027 20:45\n\n4 Fondue savoyarde (2 pers)      176.00\n2 Raclette (2 pers)               92.00\n3 Vin de Savoie 75cl              81.00\n8 Dessert du jour                 56.00\nSous-total                       405.00\nRemise groupe                    -21.00\nTOTAL TTC EUR                    384.00\nCarte bancaire MASTERCARD ****2208   384.00\nService compris. Merci de votre visite.\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": "2027-02-06",
+        "part": [
+          "evening",
+          "night"
+        ],
+        "cost_cents": 38400,
+        "currency": "EUR",
+        "who_pays": [
+          "split"
+        ],
+        "paid": true
+      }
+    ]
+  }
+}

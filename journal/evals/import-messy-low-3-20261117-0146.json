@@ -1,0 +1,189 @@
+{
+  "label": "messy-low-3",
+  "ran_at": "2026-11-17T01:46:29.735Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 3,
+  "passed_all_four": 3,
+  "by_rule": {
+    "shape": 3,
+    "grounded": 3,
+    "money": 3,
+    "obedience": 3
+  },
+  "total_cost_usd": 0.00344,
+  "cases": [
+    {
+      "id": "06-forwarded-thread-two-bookings",
+      "group": "messy",
+      "what": "A forwarded thread with replies, signatures and two bookings: a rental car and coach tickets.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true
+      },
+      "notes": [],
+      "cost_usd": 0.001194,
+      "searches": 0,
+      "input_tokens": 5574,
+      "output_tokens": 1273,
+      "latency_ms": 5918,
+      "plans": [
+        {
+          "kind": "transport",
+          "title": "AlpesCar 9-seat minivan rental (AC-7741920)",
+          "day": "2027-02-05",
+          "part": "morning",
+          "end_day": "2027-02-12",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Geneva Airport (French sector)",
+          "confirmation_code": "AC-7741920",
+          "cost_cents": 41200,
+          "currency": "CHF",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "who_pays",
+            "end_day",
+            "depart_time"
+          ]
+        },
+        {
+          "kind": "transport",
+          "title": "Pyrenees Coach Barcelona Nord to Andorra la Vella (PC55210)",
+          "day": "2027-02-13",
+          "part": "morning",
+          "end_day": null,
+          "depart_time": "10:15",
+          "arrive_time": "13:30",
+          "times_from": "input",
+          "source_url": null,
+          "location": "Barcelona Nord to Andorra la Vella",
+          "confirmation_code": "PC55210",
+          "cost_cents": 6400,
+          "currency": "EUR",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": true,
+          "unsure": [
+            "cost",
+            "who_pays",
+            "location"
+          ]
+        }
+      ],
+      "note": "Two bookings found in the forwarded thread: a Geneva minivan rental and a Pyrenees Coach bus to Andorra. Please check the bus cost and who pays, since the email is ambiguous on both."
+    },
+    {
+      "id": "07-scanned-pdf-lift-pass",
+      "group": "messy",
+      "what": "A scanned receipt (an image-only PDF, slightly skewed and noisy) for a 6-day lift pass, dates written day first.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true
+      },
+      "notes": [],
+      "cost_usd": 0.001155,
+      "searches": 0,
+      "input_tokens": 6593,
+      "output_tokens": 991,
+      "latency_ms": 5226,
+      "plans": [
+        {
+          "kind": "activity",
+          "title": "Forfait Massif Unlimited 6 jours (1 adult)",
+          "day": "2027-02-06",
+          "part": null,
+          "end_day": "2027-02-11",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Caisse 3 - Les Praz",
+          "confirmation_code": "2027-0206-00318",
+          "cost_cents": 39000,
+          "currency": "EUR",
+          "cost_is_per_person": true,
+          "who_pays": "own",
+          "paid": true,
+          "unsure": []
+        }
+      ],
+      "note": "The input is a single ski lift pass receipt for Chamonix, so I proposed it as one activity plan."
+    },
+    {
+      "id": "08-dates-day-first",
+      "group": "messy",
+      "what": "A hotel booking and a dinner reservation with dates written day first (05/02/2027 is 5 February).",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true
+      },
+      "notes": [],
+      "cost_usd": 0.001091,
+      "searches": 0,
+      "input_tokens": 5231,
+      "output_tokens": 1136,
+      "latency_ms": 5525,
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Hotel Placa Rouredа, Andorra la Vella (conf. 88213-AND)",
+          "day": "2027-02-13",
+          "part": null,
+          "end_day": "2027-02-16",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Carrer de la Unio 14, Andorra la Vella",
+          "confirmation_code": "88213-AND",
+          "cost_cents": 114000,
+          "currency": "EUR",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": []
+        },
+        {
+          "kind": "meal",
+          "title": "Brasserie du Mole dinner for 8 (Chamonix)",
+          "day": "2027-02-05",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": "20:00",
+          "times_from": "input",
+          "source_url": null,
+          "location": "Brasserie du Mole in Chamonix",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "confirmation_code",
+            "cost"
+          ]
+        }
+      ],
+      "note": "Two bookings found: the Andorra hotel stay (pay at hotel, so unpaid) and a Chamonix dinner reservation mentioned in a postscript."
+    }
+  ]
+}

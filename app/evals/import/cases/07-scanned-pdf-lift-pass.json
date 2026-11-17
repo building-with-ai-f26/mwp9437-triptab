@@ -1,0 +1,24 @@
+{
+  "id": "07-scanned-pdf-lift-pass",
+  "group": "messy",
+  "what": "A scanned receipt (an image-only PDF, slightly skewed and noisy) for a 6-day lift pass, dates written day first.",
+  "file": "fixtures/07-scanned-lift-pass.pdf",
+  "media_type": "application/pdf",
+  "source_text": "COMPAGNIE DES REMONTEES DU MASSIF\nCaisse 3 - Les Praz\n\nFORFAIT MASSIF UNLIMITED 6 JOURS\n1 ADULTE\nValable du 06/02/2027 au 11/02/2027\n\nPrix TTC            390,00 EUR\nPaye CB VISA ****4417\nRecu no 2027-0206-00318\nNon remboursable. Conservez ce recu.",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": "2027-02-06",
+        "cost_cents": 39000,
+        "currency": "EUR",
+        "who_pays": [
+          "own"
+        ],
+        "paid": true
+      }
+    ]
+  }
+}

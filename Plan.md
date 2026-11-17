@@ -27,7 +27,7 @@ Working draft for PRD v2. PRD v2 and the Build 2 log go on `docs/index.html`; th
 - **How one action flows (adding a plan):** the owner taps a Morning slot and saves "Ski school" → the React app calls `supabase.from('items').insert(...)` with the signed-in user's token → Supabase checks the `items` insert policy (is this user an Owner on this trip?) → the row is stored with status `suggested` → the app re-reads the trip and draws the item faint in the Morning row → PostHog records `plan added`.
 - **Local run command:** `cd app && npm install && npm run dev`
 - **Local URL (Build 2):** http://localhost:5173
-- **Models used (via OpenRouter or provider):** none in Builds 2 and 3. The AI features (Plan with AI, packing list, tips, alternatives) come in Build 4, behind a prepaid OpenRouter balance with a hard cap, called from a Supabase Edge Function so the key never reaches the browser.
+- **Models used (via OpenRouter or provider):** none in Builds 2 and 3. From Build 4: **Claude Haiku 5.5** on the Claude API (Mike's call, 11/16: the $100 monthly API credit his Max plan includes, instead of OpenRouter), called only from the `import-bookings` Supabase Edge Function so the key never reaches the browser. Prices, limits and caps are in section 5.
 
 ### Stack call: Tailwind yes, shadcn/ui no
 
@@ -58,3 +58,25 @@ The spring app used Tailwind and shadcn/ui. The rebuild takes **Tailwind** (one 
 - [x] Spending limits or alerts are configured where the provider supports them: Supabase is on the free plan (no card, no overage); PostHog free tier. OpenRouter gets a prepaid balance with a hard cap before its first call (Build 4).
 - [x] Least-privilege permissions on any external data/APIs: row-level security on every table; Owners change the trip, Viewers only read and opt in or out; the group link is a random token that grants only the role the owner set on the server; joiners can't edit a claimed name or another person's row; column privileges stop anyone setting `user_id` directly. Checked by `npm run test:rls` and Supabase's security advisor.
 - [x] Git save point for undoing a broken local change: small commits on `main`, one per verified piece; Build 5 adds a cloud rollback path.
+
+## 5. AI import: model, prices and limits
+
+The first AI feature (Mike's call, 11/16) is import of bookings: paste a confirmation, a receipt, flight numbers or a summary, or attach a PDF or photo; TripTab proposes plans, and nothing is saved until an Owner reviews them.
+
+**Prices, read from the provider's own pages on Nov 16, 2026** ([pricing](https://platform.claude.com/docs/en/about-claude/pricing), [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)):
+
+| What | List price |
+| :--- | :--- |
+| Claude Haiku 5.5, input (prompts up to 100,000 tokens) | $0.10 per million tokens |
+| Claude Haiku 5.5, output (prompts up to 100,000 tokens) | $0.50 per million tokens |
+| Claude Haiku 5.5, prompts over 100,000 tokens | $0.50 in and $2.50 out per million tokens |
+| Cache reads and 5-minute cache writes (not used yet) | $0.01 and $0.125 per million tokens |
+| Web search tool | $10 per 1,000 searches ($0.01 each), plus the tokens of the results it reads; a search that fails is not billed |
+
+- **How it's called:** one Supabase Edge Function, `import-bookings`. It checks the caller is an Owner on the trip, sends the input to Claude Haiku 5.5 with effort set to low and output capped at 4,000 tokens, and gets the proposals back through a strict tool (a fixed schema), which the function checks again before the app sees them. Web search is allowed for one thing only, a bare flight number's schedule, at most 3 searches an import.
+- **Nothing invented:** the prompt forbids any time, price or address that isn't in the input. Looked-up flight times are kept only when their source is a page the search returned in that same call; otherwise the times are blanked and the review screen says "add times". Other currencies are never converted.
+- **Everything in the input is data:** instructions inside an email or PDF are not followed (two of the ten eval cases test this).
+- **Runaway protection, on the server:** a daily dollar cap for the whole app, summed from the `ai_calls` table and read from the Edge Function secret `AI_DAILY_CAP_USD` on every call ($7 a day to start; 0 turns AI off); 20 imports a person a day; pasted text up to 20,000 characters and files up to 3 MB; a 60-second timeout; one automatic retry at most. On top of that, the Console workspace has a $100 monthly spend limit and only Haiku 5.5 enabled.
+- **Cost log from the first call:** every call writes its model, effort, input and output tokens, searches, list-price cost, latency and result to `ai_calls`. The input text is never stored. Owners can read their own trip's rows.
+- **Cash cost:** $0 while the Max plan's credit covers it. The log still records list price, since the Sponsor Memo's unit economics can't rest on a subscription perk.
+- **Cost per import, measured (Nov 16, 2026):** about **$0.0010** at list price for a pasted confirmation, a PDF or a photo (37 calls, $0.0006 to $0.0012), and about **$0.0122** when a bare flight number needs one web search (3 calls). At those rates the $7 daily cap is roughly 7,000 plain imports or 570 lookups, and a ten-person trip with 30 imports costs about 3 to 37 cents. First evening in total: 53 calls, $0.1351, all test runs. Details and the eval results are in `journal/evals/README.md`.

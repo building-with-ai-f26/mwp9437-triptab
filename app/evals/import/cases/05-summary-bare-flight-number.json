@@ -1,0 +1,25 @@
+{
+  "id": "05-summary-bare-flight-number",
+  "group": "normal",
+  "what": "A typed summary with a bare flight number and date: times must come from a cited lookup or stay blank.",
+  "text": "Booked it! We fly UA 956 from Newark to Geneva on Feb 4. Haven't looked at seats yet.",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "flight"
+        ],
+        "day": "2027-02-04",
+        "cost_cents": null,
+        "who_pays": [
+          "own"
+        ],
+        "paid": false,
+        "times": "lookup_or_blank",
+        "title_has": [
+          "956"
+        ]
+      }
+    ]
+  }
+}

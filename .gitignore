@@ -29,3 +29,6 @@ build/
 out/
 .DS_Store
 *.log
+
+# Real emails or receipts used to try AI import by hand. Never committed: the repo is public.
+app/evals/import/private/

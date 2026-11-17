@@ -1,0 +1,58 @@
+{
+  "label": "smoke",
+  "ran_at": "2026-11-17T00:52:41.532Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 1,
+  "passed_all_four": 1,
+  "by_rule": {
+    "shape": 1,
+    "grounded": 1,
+    "money": 1,
+    "obedience": 1
+  },
+  "total_cost_usd": 0.0009,
+  "cases": [
+    {
+      "id": "01-airline-confirmation",
+      "group": "normal",
+      "what": "An airline confirmation email with times, a total and a confirmation code.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true
+      },
+      "notes": [],
+      "cost_usd": 0.0009,
+      "searches": 0,
+      "input_tokens": 5144,
+      "output_tokens": 771,
+      "latency_ms": 8923,
+      "plans": [
+        {
+          "kind": "flight",
+          "title": "SK 57 Newark to Geneva",
+          "day": "2027-02-04",
+          "part": "evening",
+          "end_day": "2027-02-05",
+          "depart_time": "17:05",
+          "arrive_time": "07:10",
+          "times_from": "input",
+          "source_url": null,
+          "location": "Newark (EWR) to Geneva (GVA)",
+          "confirmation_code": "QK7RWD",
+          "cost_cents": 61550,
+          "currency": "USD",
+          "cost_is_per_person": true,
+          "who_pays": "own",
+          "paid": true,
+          "unsure": []
+        }
+      ],
+      "note": "One flight found (Skyline Air SK 57, Newark to Geneva); the return leg is not in this email."
+    }
+  ]
+}
