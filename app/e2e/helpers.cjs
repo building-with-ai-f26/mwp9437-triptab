@@ -62,6 +62,8 @@ async function addPlan(page, day, slot, f) {
   if (f.kind) await d.getByRole('radio', { name: f.kind }).click();
   if (f.checkout) await d.getByLabel('Check out').selectOption(f.checkout);
   if (f.status) await d.getByRole('radio', { name: f.status }).click();
+  // Cost starts folded (11/17): open it only when the plan has one.
+  if (f.est || f.perPerson) await d.getByRole('button', { name: /^Cost/ }).click();
   if (f.est) await d.getByLabel(/Estimated/).fill(f.est);
   if (f.perPerson) await d.getByRole('radio', { name: 'Per person' }).click();
   await d.getByRole('button', { name: 'Add to trip' }).click();

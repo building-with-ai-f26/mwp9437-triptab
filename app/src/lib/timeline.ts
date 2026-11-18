@@ -75,9 +75,18 @@ export function placement(item: Item, slot: Slot): Placement {
   const days = item.end_day && item.end_day > item.day ? tripDays(item.day, item.end_day) : [item.day];
   const dayNo = days.indexOf(slot.day) + 1;
   const firstOfDay = slot.part === item.part;
-  if (days.length > 1 && firstOfDay) return { first, label: `Day ${dayNo} of ${days.length}` };
+  const times = hours(item);
+  if (days.length > 1 && firstOfDay) return { first, label: [`Day ${dayNo} of ${days.length}`, times].filter(Boolean).join(" · ") };
   if (!first) return { first, label: "continues" };
-  return { first, label: null };
+  return { first, label: times };
+}
+
+/** An activity's or a meal's hours, the same each day it runs: "9:00 AM to 4:00 PM", "From 7:30 PM". */
+export function hours(item: Pick<Item, "start_time" | "end_time">): string | null {
+  if (item.start_time && item.end_time) return `${clock(item.start_time)} to ${clock(item.end_time)}`;
+  if (item.start_time) return `From ${clock(item.start_time)}`;
+  if (item.end_time) return `Until ${clock(item.end_time)}`;
+  return null;
 }
 
 /** When a plan is, in one line: "Sat, Feb 6 to Thu, Feb 11, morning to day" or "Thu, Feb 4, evening. Departs 5:05 PM, lands Fri 7:10 AM". */
@@ -90,7 +99,7 @@ export function whenText(item: Item): string {
     const arrives = lastDay && !item.end_time ? ` ${item.kind === "flight" ? "Lands" : "Arrives"} ${longDay(lastDay)}${item.end_part ? `, ${PART_LABEL[item.end_part].toLowerCase()}` : ""}.` : "";
     return `${longDay(item.day)}, ${part}.${label ? ` ${label}.` : ""}${arrives}`.replace(/\.$/, "");
   }
-  const parts = item.end_part && item.end_part !== item.part ? `${part} to ${PART_LABEL[item.end_part].toLowerCase()}` : part;
+  const parts = hours(item) ?? (item.end_part && item.end_part !== item.part ? `${part} to ${PART_LABEL[item.end_part].toLowerCase()}` : part);
   return lastDay ? `${longDay(item.day)} to ${longDay(lastDay)}, ${parts} each day` : `${longDay(item.day)}, ${parts}`;
 }
 

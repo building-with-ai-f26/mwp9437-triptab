@@ -1,6 +1,6 @@
 /** Plans that span time: one plan, shown in every slot it covers, with one cost. */
 import { describe, expect, it } from "vitest";
-import { buildTimeline, itemSlots, placement, spansTime } from "./timeline";
+import { buildTimeline, itemSlots, placement, spansTime, whenText } from "./timeline";
 import { clock, partOfTime, validateItem, type Item } from "./model";
 
 const trip = { start_date: "2027-02-04", end_date: "2027-02-16" };
@@ -74,6 +74,15 @@ describe("how a plan reads in each slot", () => {
   });
   it("each day says which day it is; later parts say it continues", () => {
     expect(itemSlots(ski).map((s) => placement(ski, s).label)).toEqual(["Day 1 of 3", "continues", "Day 2 of 3", "continues", "Day 3 of 3", "continues"]);
+  });
+  it("skiing 9 to 4 every day shows its hours on each day's first slot", () => {
+    const timed = item({ end_day: "2027-02-07", end_part: "day", start_time: "09:00:00", end_time: "16:00:00" });
+    expect(itemSlots(timed).map((s) => placement(timed, s).label)).toEqual(["Day 1 of 2 · 9:00 AM to 4:00 PM", "continues", "Day 2 of 2 · 9:00 AM to 4:00 PM", "continues"]);
+    expect(whenText(timed)).toBe("Sat, Feb 6 to Sun, Feb 7, 9:00 AM to 4:00 PM each day");
+  });
+  it("a dinner at 7:30 shows its time where it starts", () => {
+    const dinner = item({ kind: "meal", part: "evening", start_time: "19:30:00" });
+    expect(placement(dinner, { day: dinner.day, part: "evening" }).label).toBe("From 7:30 PM");
   });
   it("a single-day plan over two parts has no label where it starts", () => {
     const lunch = item({ kind: "meal", part: "day", end_part: "evening" });
