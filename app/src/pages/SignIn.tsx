@@ -23,6 +23,7 @@ export default function SignIn() {
           <AuthForm
             initialMode={params.get("mode") === "sign-in" ? "sign-in" : "create"}
             onDone={() => navigate(next, { replace: true })}
+            googleReturn={`/sign-in?next=${encodeURIComponent(next)}`}
           />
         </div>
       </main>

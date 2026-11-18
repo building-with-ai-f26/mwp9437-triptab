@@ -12,7 +12,7 @@
     "test:rls": "vitest run --config vitest.live.config.ts",
     "eval:import": "vitest run --config vitest.eval.config.ts evals/import",
     "eval:plan": "vitest run --config vitest.eval.config.ts evals/plan",
-    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs && node e2e/settings-flow.cjs && node e2e/live-flow.cjs && node e2e/who-pays-flow.cjs && node e2e/import-flow.cjs && node e2e/span-flow.cjs && node e2e/extend-flow.cjs && node e2e/plan-ai-flow.cjs && node e2e/taken-spot-flow.cjs",
+    "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs && node e2e/settings-flow.cjs && node e2e/live-flow.cjs && node e2e/who-pays-flow.cjs && node e2e/import-flow.cjs && node e2e/span-flow.cjs && node e2e/extend-flow.cjs && node e2e/plan-ai-flow.cjs && node e2e/taken-spot-flow.cjs && node e2e/google-flow.cjs",
     "build:pages": "echo 'Retired 11/18: the app deploys to triptab.org from GitHub Actions on every merge to main (AGENTS.md, Shipping).' && exit 1"
   },
   "dependencies": {

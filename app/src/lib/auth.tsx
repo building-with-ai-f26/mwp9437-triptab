@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { isConfigured, supabase } from "./supabase";
+import { arrivedFromOAuth, isConfigured, supabase, supabaseKey, supabaseUrl } from "./supabase";
 import { identify, track } from "./analytics";
 
 interface AuthState {
@@ -8,6 +8,10 @@ interface AuthState {
   ready: boolean;
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
+  /** Whether this project has Google sign-in turned on (Supabase, Sign In / Providers). */
+  googleEnabled: boolean;
+  /** Leaves for Google; the browser comes back to `returnPath` on this site, signed in. */
+  signInWithGoogle: (returnPath: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -22,6 +26,16 @@ export function nameOf(user: User | null): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!isConfigured);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  // Google sign-in shows only where it is turned on, so a project without it never shows a dead button.
+  useEffect(() => {
+    if (!isConfigured) return;
+    fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabaseKey } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => setGoogleEnabled(Boolean(s?.external?.google)))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -29,6 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       identify(data.session?.user.id ?? null);
       setReady(true);
+      // Back from Google: count it like any sign-in, or as a sign-up when the account is brand new.
+      const u = data.session?.user;
+      if (arrivedFromOAuth && u) {
+        const isNew = Date.now() - new Date(u.created_at).getTime() < 2 * 60_000;
+        track(isNew ? "signed up" : "signed in", { method: "google" });
+      }
     });
     const { data } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
@@ -68,12 +88,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return err;
   };
 
+  const signInWithGoogle = async (returnPath: string) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}${returnPath}` },
+    });
+    return error ? "Couldn't reach Google. Try again, or use your email." : null;
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user: session?.user ?? null, ready, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user: session?.user ?? null, ready, signUp, signIn, googleEnabled, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
