@@ -1,7 +1,7 @@
 {
   // TripTab on Cloudflare Workers (Build 3, Advanced lane). Static files only: no Worker code runs.
-  // `npm run build` writes the app to dist/; GitHub Actions (.github/workflows/ci.yml) deploys it to
-  // triptab.org on every merge to main once the tests pass, and gives each pull request a Preview.
+  // Cloudflare's Workers Builds runs app/scripts/cloudflare-build.sh (the tests, then the build into
+  // dist/) and deploys main to triptab.org only once the tests pass; other branches get a Preview.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "triptab",
   "compatibility_date": "2026-11-18",
