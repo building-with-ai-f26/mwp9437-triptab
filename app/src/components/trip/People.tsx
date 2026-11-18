@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import { inviteUrl, sendInviteEmail, type PersonDraft } from "../../lib/api";
+import { inviteUrl, sendInviteEmail, venmoLooksRight, type PersonDraft } from "../../lib/api";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
 
@@ -366,7 +366,7 @@ function AddPersonForm({
   onClose: () => void;
   onAdd: (p: PersonDraft) => Promise<void>;
 }) {
-  const [p, setP] = useState<PersonDraft>({ name: "", email: "", phone: "", role: defaultRole });
+  const [p, setP] = useState<PersonDraft>({ name: "", email: "", phone: "", venmo: "", role: defaultRole });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
@@ -380,12 +380,16 @@ function AddPersonForm({
       setError("That email doesn't look right.");
       return;
     }
+    if (!venmoLooksRight(p.venmo ?? "")) {
+      setError("A Venmo username is 5 to 30 letters, numbers, - or _.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await onAdd(p);
       setAdded((a) => [...a, p.name.trim()]);
-      setP({ name: "", email: "", phone: "", role: p.role });
+      setP({ name: "", email: "", phone: "", venmo: "", role: p.role });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -431,6 +435,16 @@ function AddPersonForm({
           />
         </DarkField>
       </div>
+      <DarkField label="Venmo (optional)" hint="So the group can pay them from Settle up.">
+        <input
+          className="field-dark"
+          value={p.venmo ?? ""}
+          onChange={(e) => setP({ ...p, venmo: e.target.value })}
+          placeholder="@username"
+          autoCapitalize="none"
+          autoCorrect="off"
+        />
+      </DarkField>
       <DarkField group label="Add as" hint={ROLE_HELP[p.role]}>
         <Segmented label="Add as" value={p.role} onChange={(role) => setP({ ...p, role })} options={ROLE_OPTIONS} />
       </DarkField>
