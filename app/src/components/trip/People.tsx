@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import { inviteUrl, type PersonDraft } from "../../lib/api";
+import { inviteUrl, sendInviteEmail, type PersonDraft } from "../../lib/api";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
 
@@ -68,6 +68,25 @@ export function PeopleCard({
 }) {
   const [copied, copy] = useCopy();
   const [error, setError] = useState<string | null>(null);
+  // Invite emails: who is being emailed now, who was emailed, and why one didn't go.
+  const [emailing, setEmailing] = useState<string | null>(null);
+  const [emailed, setEmailed] = useState<Record<string, boolean>>({});
+  const [emailNote, setEmailNote] = useState<Record<string, string>>({});
+  const emailInvite = async (t: Traveler, url: string) => {
+    setEmailing(t.id);
+    setEmailNote((n) => ({ ...n, [t.id]: "" }));
+    const r = await sendInviteEmail(trip.id, t.id);
+    setEmailing(null);
+    if (r.ok) {
+      setEmailed((e) => ({ ...e, [t.id]: true }));
+      track("invite emailed");
+    } else if (r.code === "not_set_up") {
+      // No email key in this project yet: open the Owner's own mail app, as before.
+      window.location.href = `mailto:${t.email}?subject=${encodeURIComponent(`${trip.name} on TripTab`)}&body=${encodeURIComponent(inviteText(trip, url, t.name))}`;
+    } else {
+      setEmailNote((n) => ({ ...n, [t.id]: r.error }));
+    }
+  };
   const joined = travelers.filter((t) => t.user_id).length;
 
   const run = async (fn: () => Promise<void>) => {
@@ -168,12 +187,14 @@ export function PeopleCard({
                         <MessageSquare className="size-3" /> Text
                       </a>
                       {t.email && (
-                        <a
-                          className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
-                          href={`mailto:${t.email}?subject=${encodeURIComponent(`${trip.name} on TripTab`)}&body=${encodeURIComponent(inviteText(trip, url, t.name))}`}
+                        <button
+                          className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50 disabled:opacity-60"
+                          disabled={emailing === t.id || emailed[t.id]}
+                          onClick={() => emailInvite(t, url)}
                         >
-                          <Mail className="size-3" /> Email
-                        </a>
+                          {emailed[t.id] ? <Check className="size-3" /> : <Mail className="size-3" />}
+                          {emailing === t.id ? "Sending..." : emailed[t.id] ? "Emailed" : "Email"}
+                        </button>
                       )}
                     </>
                   ) : (
@@ -188,6 +209,11 @@ export function PeopleCard({
                     <Trash2 className="size-3" /> Remove
                   </button>
                 </div>
+              )}
+              {canEdit && emailNote[t.id] && (
+                <p role="alert" className="mt-1.5 pl-11 text-xs font-medium text-red-900">
+                  {emailNote[t.id]}
+                </p>
               )}
             </li>
           );

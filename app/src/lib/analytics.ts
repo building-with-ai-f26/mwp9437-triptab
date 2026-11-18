@@ -46,6 +46,7 @@ export type EventName =
   | "pdf opened"
   | "calendar downloaded"
   | "group link copied"
+  | "invite emailed"
   | "group link opened"
   | "name claimed"
   | "plan confirmed"
