@@ -2,7 +2,8 @@
 // 1. parts of the day are select all that apply, and a run has no gaps;
 // 2. any plan can have a start and end time, which pick its parts for you;
 // 3. the cost starts folded, saying what's in it;
-// 4. skiing 9 AM to 4 PM every day shows its hours on the itinerary, and reopens as it was saved.
+// 4. skiing 9 AM to 4 PM every day shows its hours on the itinerary, and reopens as it was saved;
+// 5. plans save as you go: an edit saves itself, closing a new plan any way keeps it, Discard doesn't.
 // Run with `npm run dev` going.
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
@@ -32,7 +33,9 @@ async function run(browser, label, opts, result) {
   r.costSummary = (await cost.innerText()).replace(/\s+/g, ' ');
   r.estimateHidden = (await d.getByLabel(/Estimated/).count()) === 0;
   await h.shot(p, `plan-dialog-folded-${label}`);
-  await d.getByRole('button', { name: 'Cancel' }).click();
+  // A new plan with no name closes without a trace.
+  await d.getByRole('button', { name: 'Close' }).click();
+  await d.waitFor({ state: 'detached' });
 
   // 2 and 4. Ski school, 9 to 4, three days, about $60 a person.
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
@@ -58,11 +61,38 @@ async function run(browser, label, opts, result) {
   // Reopens as saved.
   await sat.first().click();
   r.reopened = [await pressed(d), await d.getByLabel('Starts at (optional)').inputValue(), await d.getByLabel('Ends at (optional)').inputValue()];
-  // Ending before it starts is caught.
+  // 5. An edit saves itself: rename it, wait, close with the X.
+  await d.getByLabel('What').fill('Ski school, group lesson');
+  await d.getByRole('status').filter({ hasText: 'Saved' }).waitFor();
+  r.saveNote = (await d.getByRole('status').innerText()).trim();
+  await h.shot(p, `plan-dialog-saved-${label}`);
+  // Ending before it starts is caught: not saved, the first Done shows why, the second closes and
+  // keeps the last saved version.
   await d.getByLabel('Ends at (optional)').fill('08:00');
-  await d.getByRole('button', { name: 'Save' }).click();
+  r.notSavedNote = (await d.getByRole('status').innerText()).trim();
+  await d.getByRole('button', { name: 'Done' }).click();
   r.endBeforeStart = (await d.getByRole('alert').innerText()).trim();
-  await d.getByRole('button', { name: 'Cancel' }).click();
+  await d.getByRole('button', { name: 'Done' }).click();
+  await d.waitFor({ state: 'detached' });
+  const renamed = p.locator('#day-2027-02-06 .item-card').filter({ hasText: 'Ski school, group lesson' });
+  r.renamedOnCard = await renamed.count();
+  await renamed.first().click();
+  r.keptTimes = [await d.getByLabel('Starts at (optional)').inputValue(), await d.getByLabel('Ends at (optional)').inputValue()].join('-');
+  await d.getByRole('button', { name: 'Close' }).click();
+  await d.waitFor({ state: 'detached' });
+
+  // A new plan closed with the X is kept; one discarded isn't.
+  await p.locator('#day-2027-02-09').getByRole('button', { name: 'Add to evening' }).click();
+  await d.getByLabel('What').fill('Fondue night');
+  await d.getByRole('button', { name: 'Close' }).click();
+  await p.locator('#day-2027-02-09 .item-card').filter({ hasText: 'Fondue night' }).waitFor();
+  r.keptOnClose = true;
+  await p.locator('#day-2027-02-10').getByRole('button', { name: 'Add to evening' }).click();
+  await d.getByLabel('What').fill('Not this one');
+  await d.getByRole('button', { name: 'Discard' }).click();
+  await d.waitFor({ state: 'detached' });
+  await p.waitForTimeout(800);
+  r.discarded = (await p.locator('.item-card').filter({ hasText: 'Not this one' }).count()) === 0;
   r.overflow = await h.overflowX(p);
 }
 
@@ -79,7 +109,8 @@ async function run(browser, label, opts, result) {
         r.timesPickParts === 'Morning, Day' && r.costSummaryOpen.includes('about $60 a person') &&
         r.satCards.some((t) => t.includes('Day 1 of 3 · 9:00 AM to 4:00 PM')) && r.slots === 6 &&
         r.reopened.join('|') === 'Morning, Day|09:00|16:00' && r.endBeforeStart.includes('It has to end after it starts.') &&
-        r.overflow <= 0;
+        r.saveNote === 'Saved' && r.notSavedNote.startsWith('Not saved yet') && r.renamedOnCard === 2 && r.keptTimes === '09:00-16:00' &&
+        r.keptOnClose && r.discarded && r.overflow <= 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }
   } catch (e) {

@@ -131,7 +131,7 @@ async function addPlan(page, day, slot, f) {
   await op.locator('dialog[open]').waitFor();
   await op.waitForTimeout(400);
   await shot(op, 'plan-dialog-phone');
-  await op.locator('dialog[open]').getByRole('button', { name: 'Cancel' }).click();
+  await op.locator('dialog[open]').getByRole('button', { name: 'Done' }).click();
   await op.getByRole('tab', { name: /People/ }).click();
   await op.waitForTimeout(500);
   await shot(op, 'people-phone');

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
@@ -72,18 +72,32 @@ export function ItemDialog({
   /** Shown above the form for an existing plan: its cost, your in or out, who's going (Build 3). */
   extras?: ReactNode;
   onClose: () => void;
-  onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow) => Promise<void>;
+  /** `patch`, on an existing plan: only the fields changed since it was last saved. */
+  onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
   onDelete: (item: Item) => Promise<void>;
 }) {
+  // Closing (Done, the X, Escape or a tap outside) asks the form first: it saves what's pending,
+  // or keeps the dialog open once to show what needs fixing.
+  const closer = useRef<(() => Promise<boolean>) | null>(null);
+  const requestClose = async () => {
+    if (!closer.current || (await closer.current())) onClose();
+  };
   return (
     <Dialog
       open={state !== null}
-      onClose={onClose}
+      onClose={requestClose}
       title={state?.item ? (canEdit ? "Edit plan" : state.item.title) : state?.kind === "stay" ? "Add a stay" : "Add a plan"}
     >
       {state?.item && extras}
       {state && (
-        <ItemForm key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`} {...{ state, trip, travelers, meId, canEdit, onClose, onSave, onDelete }} />
+        <ItemForm
+          key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
+          {...{ state, trip, travelers, meId, canEdit, onClose, onSave, onDelete }}
+          onRequestClose={requestClose}
+          registerClose={(fn) => {
+            closer.current = fn;
+          }}
+        />
       )}
     </Dialog>
   );
@@ -98,6 +112,8 @@ function ItemForm({
   onClose,
   onSave,
   onDelete,
+  onRequestClose,
+  registerClose,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -105,8 +121,10 @@ function ItemForm({
   meId: string | null;
   canEdit: boolean;
   onClose: () => void;
-  onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow) => Promise<void>;
+  onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
   onDelete: (item: Item) => Promise<void>;
+  onRequestClose: () => void;
+  registerClose: (fn: (() => Promise<boolean>) | null) => void;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -193,6 +211,81 @@ function ItemForm({
     setPart(PARTS[from]);
     setEndPart(to > from ? PARTS[to] : "");
   };
+  // Plans save as you go (11/17 pod feedback). An existing plan saves each change after a short
+  // pause, sending only the fields that changed, so a status set elsewhere (logging costs, say)
+  // isn't overwritten by this dialog's older copy. A new plan is added when the dialog closes,
+  // however it's closed, once it has a name; Discard throws it away.
+  const snapshot = JSON.stringify(input);
+  const [savedSnap, setSavedSnap] = useState(snapshot);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const chain = useRef<Promise<boolean>>(Promise.resolve(true));
+  const closed = useRef(false);
+  const warned = useRef(false);
+  const dirty = Boolean(it) && snapshot !== savedSnap;
+  const valid = problems.length === 0;
+
+  const saveChanges = (snap: string, full: ItemInput, before: string) => {
+    const was = JSON.parse(before) as ItemInput;
+    const patch = Object.fromEntries(
+      Object.entries(full).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(was[k as keyof ItemInput])),
+    ) as Partial<ItemInput>;
+    setSaveState("saving");
+    chain.current = chain.current
+      .then(() => onSave(full, it, undefined, patch))
+      .then(
+        () => {
+          setSavedSnap(snap);
+          setSaveState("saved");
+          setError(null);
+          return true;
+        },
+        (e: Error) => {
+          setSaveState("idle");
+          setError(e.message);
+          return false;
+        },
+      );
+    return chain.current;
+  };
+
+  useEffect(() => {
+    if (!it || !dirty || !valid || !canEdit) return;
+    const timer = window.setTimeout(() => saveChanges(snapshot, input, savedSnap), 800);
+    return () => window.clearTimeout(timer);
+    // Runs when what's typed changes; the rest is read from that same render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot]);
+
+  const closeFn = async (): Promise<boolean> => {
+    if (closed.current || !canEdit) return true;
+    if (it ? !dirty : !title.trim()) {
+      await chain.current;
+      return (closed.current = true);
+    }
+    if (!valid) {
+      // The first try shows what needs fixing; a second closes anyway, keeping the last saved version.
+      if (warned.current) return (closed.current = true);
+      warned.current = true;
+      setTried(true);
+      if (costProblems.length) setCostOpen(true);
+      return false;
+    }
+    if (it) return (closed.current = await saveChanges(snapshot, input, savedSnap));
+    setBusy(true);
+    try {
+      await onSave(input, null, paidInput);
+      return (closed.current = true);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+      return false;
+    }
+  };
+  useEffect(() => {
+    registerClose(closeFn);
+    return () => registerClose(null);
+  });
+
   const costSummary = paidNow
     ? "paid, logging it now"
     : estCents != null
@@ -240,6 +333,7 @@ function ItemForm({
     setError(null);
     try {
       await onSave(input, it, paidInput);
+      closed.current = true;
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -251,7 +345,10 @@ function ItemForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        save();
+        // Enter in a field: a new plan is added; an existing one saves now and stays open.
+        if (!it) save();
+        else if (dirty && valid) saveChanges(snapshot, input, savedSnap);
+        else setTried(true);
       }}
     >
       <DarkField label="What">
@@ -648,15 +745,39 @@ function ItemForm({
             <Trash2 /> Remove
           </Button>
         ) : (
-          <span />
+          <Button
+            type="button"
+            variant="light"
+            size="sm"
+            onClick={() => {
+              closed.current = true;
+              onClose();
+            }}
+          >
+            Discard
+          </Button>
         )}
-        <div className="flex gap-2">
-          <Button type="button" variant="light" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {busy ? "Saving..." : it ? "Save" : "Add to trip"}
-          </Button>
+        <div className="flex items-center gap-3">
+          {it && (
+            <span className="text-xs text-white/70" role="status" aria-live="polite">
+              {saveState === "saving" || (dirty && valid)
+                ? "Saving..."
+                : dirty
+                  ? "Not saved yet: check the fields"
+                  : saveState === "saved"
+                    ? "Saved"
+                    : "Changes save as you go"}
+            </span>
+          )}
+          {it ? (
+            <Button type="button" onClick={onRequestClose}>
+              Done
+            </Button>
+          ) : (
+            <Button type="submit" disabled={busy}>
+              {busy ? "Adding..." : "Add to trip"}
+            </Button>
+          )}
         </div>
       </div>
     </form>
