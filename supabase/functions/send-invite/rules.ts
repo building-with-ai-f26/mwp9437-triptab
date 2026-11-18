@@ -1,6 +1,7 @@
 // The rules of invite emails that don't need the network: the rate limits, which address a link
-// may point at, and the email itself. No imports, so the app's unit tests
-// (app/src/lib/inviteRules.test.ts) run this same file.
+// may point at, and the email itself. Its only import is the shared email layout (import-free), so
+// the app's unit tests (app/src/lib/inviteRules.test.ts) run this same file.
+import { emailHtml } from "../_shared/email.ts";
 
 // ---------- Rate limits, over the last 24 hours, counted from the invite_emails log ----------
 // Resend's free plan sends 100 emails a day for the whole domain: invites take up to 65, leaving
@@ -44,23 +45,20 @@ export function inviteDecision(sent: SentRow[], tripId: string, travelerId: stri
 
 // ---------- Where a link in an email may point ----------
 export const DEFAULT_APP_URL = "https://triptab.org";
-const ALLOWED = new Set(["https://triptab.org", "http://localhost:5173"]);
+const ALLOWED_ON_DEV = new Set(["http://localhost:5173"]);
 /** This repo's pull request Previews on Cloudflare: <name>-triptab.<account>.workers.dev. */
 const PREVIEW = /^https:\/\/[a-z0-9-]+-triptab\.[a-z0-9-]+\.workers\.dev$/;
 
 /**
- * The site an invite links to. The caller's Origin header is used only when it is TripTab itself
- * (production, a local run or a Preview), so nobody can make TripTab email a link to their own site.
+ * The site an invite links to. Production always links to triptab.org. TripTab dev, which local
+ * runs and Previews use, links back to a local run or a Preview when that's where the Owner is, so
+ * nobody can make TripTab email a link to their own site.
  */
-export function pickAppUrl(origin: string | null | undefined): string {
-  if (!origin) return DEFAULT_APP_URL;
+export function pickAppUrl(origin: string | null | undefined, dev = false): string {
+  if (!origin || !dev) return DEFAULT_APP_URL;
   const o = origin.replace(/\/+$/, "").toLowerCase();
-  return ALLOWED.has(o) || PREVIEW.test(o) ? o : DEFAULT_APP_URL;
+  return ALLOWED_ON_DEV.has(o) || PREVIEW.test(o) ? o : DEFAULT_APP_URL;
 }
-
-// ---------- The email ----------
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 export interface InviteParts {
   inviter: string;
@@ -84,14 +82,14 @@ export function buildInvite(p: InviteParts): { subject: string; text: string; ht
     "",
     "Reply to this email to reach " + p.inviter + ".",
   ].join("\n");
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f4ede3;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#2b2118">
-<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px">
-<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#6b4a2b">TripTab</p>
-<h1 style="margin:0 0 12px;font-family:Georgia,serif;font-style:italic;font-size:26px">${escapeHtml(p.tripName)}</h1>
-<p style="margin:0 0 16px;font-size:14px;color:#5c4a3a">${escapeHtml(p.dates)}${escapeHtml(where)}</p>
-<p style="margin:0 0 20px;font-size:16px;line-height:1.5">Hi ${escapeHtml(p.person)}, ${escapeHtml(p.inviter)} added you to the trip. TripTab is where the group plans it and splits what it costs.</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(p.url)}" style="display:inline-block;background:#6b4a2b;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">See the plan</a></p>
-<p style="margin:0;font-size:13px;color:#5c4a3a">Reply to this email to reach ${escapeHtml(p.inviter)}.</p>
-</div></body></html>`;
+  const html = emailHtml({
+    preview: `${p.inviter} added you to ${p.tripName}.`,
+    label: "You're invited",
+    title: p.tripName,
+    meta: `${p.dates}${where}`.replace(/^ · /, ""),
+    paragraphs: [`Hi ${p.person}, ${p.inviter} added you to the trip. TripTab is where the group plans it and splits what it costs.`],
+    button: { text: "See the plan", url: p.url },
+    footnote: `Reply to this email to reach ${p.inviter}.`,
+  });
   return { subject, text, html };
 }

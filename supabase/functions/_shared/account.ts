@@ -1,7 +1,8 @@
 // Rules shared by sign-up and confirm-email that don't need the network: sign-up rate limits,
 // confirm-email limits, which addresses are never emailed, which site a link may point at, the
-// token's hash, and the email itself. No imports, so the app's unit tests
-// (app/src/lib/accountRules.test.ts) run this same file.
+// token's hash, and the email itself. Its only import is the email layout (also import-free), so
+// the app's unit tests (app/src/lib/accountRules.test.ts) run this same file.
+import { emailHtml } from "./email.ts";
 
 // ---------- Rate limits ----------
 // Sign-ups, per caller address and in all, over the last hour. Roomy on production, since a group
@@ -53,14 +54,20 @@ export function isReservedEmail(email: string): boolean {
 
 // ---------- Where a link in an email may point ----------
 export const DEFAULT_APP_URL = "https://triptab.org";
-const ALLOWED = new Set(["https://triptab.org", "http://localhost:5173"]);
+const ALLOWED_ON_DEV = new Set(["http://localhost:5173"]);
 /** This repo's pull request Previews on Cloudflare: <name>-triptab.<account>.workers.dev. */
 const PREVIEW = /^https:\/\/[a-z0-9-]+-triptab\.[a-z0-9-]+\.workers\.dev$/;
 
-export function pickAppUrl(origin: string | null | undefined): string {
-  if (!origin) return DEFAULT_APP_URL;
+/**
+ * The site a link in an email opens. Production always links to triptab.org (11/18: a test email
+ * sent from a local run linked to localhost, which only works on that machine). TripTab dev, which
+ * local runs and pull request Previews use, links back to where the request came from, if that's
+ * a local run or a Preview. Nobody can make TripTab email a link to their own site.
+ */
+export function pickAppUrl(origin: string | null | undefined, dev = false): string {
+  if (!origin || !dev) return DEFAULT_APP_URL;
   const o = origin.replace(/\/+$/, "").toLowerCase();
-  return ALLOWED.has(o) || PREVIEW.test(o) ? o : DEFAULT_APP_URL;
+  return ALLOWED_ON_DEV.has(o) || PREVIEW.test(o) ? o : DEFAULT_APP_URL;
 }
 
 // ---------- The token ----------
@@ -82,9 +89,6 @@ export async function ipHashOf(forwardedFor: string | null): Promise<string> {
 }
 
 // ---------- The email ----------
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-
 export function buildConfirmEmail(p: { name: string; url: string }): { subject: string; text: string; html: string } {
   const subject = "Confirm your email for TripTab";
   const text = [
@@ -96,14 +100,14 @@ export function buildConfirmEmail(p: { name: string; url: string }): { subject: 
     "",
     "Didn't make a TripTab account? Ignore this email.",
   ].join("\n");
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f4ede3;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#2b2118">
-<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px">
-<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#6b4a2b">TripTab</p>
-<h1 style="margin:0 0 12px;font-family:Georgia,serif;font-style:italic;font-size:26px">Confirm your email</h1>
-<p style="margin:0 0 20px;font-size:16px;line-height:1.5">Hi ${escapeHtml(p.name)}, tap below to confirm this is your email. You can already use TripTab; this keeps password resets and invites reaching you.</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(p.url)}" style="display:inline-block;background:#6b4a2b;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">Confirm my email</a></p>
-<p style="margin:0;font-size:13px;color:#5c4a3a">Didn't make a TripTab account? Ignore this email.</p>
-</div></body></html>`;
+  const html = emailHtml({
+    preview: "One tap to confirm this is your email.",
+    label: "Your TripTab account",
+    title: "Confirm your email",
+    paragraphs: [`Hi ${p.name}, tap below to confirm this is your email.`, "You can already use TripTab. This keeps password resets and invites reaching you."],
+    button: { text: "Confirm my email", url: p.url },
+    footnote: `Didn't make a TripTab account? Ignore this email. The link works for ${TOKEN_DAYS} days.`,
+  });
   return { subject, text, html };
 }
 

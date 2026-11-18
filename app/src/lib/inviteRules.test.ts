@@ -33,15 +33,22 @@ describe("invite rate limits", () => {
 });
 
 describe("where an invite link points", () => {
-  it("uses TripTab's own addresses as given", () => {
-    expect(pickAppUrl("https://triptab.org")).toBe("https://triptab.org");
-    expect(pickAppUrl("http://localhost:5173")).toBe("http://localhost:5173");
-    expect(pickAppUrl("https://pr-21-triptab.mikep.workers.dev")).toBe("https://pr-21-triptab.mikep.workers.dev");
+  it("on production, always triptab.org, even when asked from a local run", () => {
+    for (const o of ["https://triptab.org", "http://localhost:5173", "https://pr-21-triptab.mikep.workers.dev", null]) {
+      expect(pickAppUrl(o, false)).toBe("https://triptab.org");
+    }
+    expect(pickAppUrl("http://localhost:5173")).toBe("https://triptab.org");
+  });
+
+  it("on TripTab dev, back to a local run or a Preview", () => {
+    expect(pickAppUrl("http://localhost:5173", true)).toBe("http://localhost:5173");
+    expect(pickAppUrl("https://pr-21-triptab.mikep.workers.dev", true)).toBe("https://pr-21-triptab.mikep.workers.dev");
   });
 
   it("never points at anyone else's site", () => {
     for (const o of ["https://evil.example", "https://triptab.org.evil.example", "https://evil-triptab.org", "http://triptab.org", "https://x-triptab.evil.example.dev", null, undefined, ""]) {
-      expect(pickAppUrl(o)).toBe(DEFAULT_APP_URL);
+      expect(pickAppUrl(o, true)).toBe(DEFAULT_APP_URL);
+      expect(pickAppUrl(o, false)).toBe(DEFAULT_APP_URL);
     }
   });
 });
@@ -61,6 +68,14 @@ describe("the invite email", () => {
     expect(email.text).toContain("https://triptab.org/join/abc?as=123");
     expect(email.text).toContain("Feb 5 to 16, 2027 · Chamonix, Andorra");
     expect(email.html).toContain('href="https://triptab.org/join/abc?as=123"');
+  });
+
+  it("looks like TripTab: the landing photo, the label, the trip as the heading", () => {
+    expect(email.html).toContain('src="https://triptab.org/email/header.jpg"');
+    expect(email.html).toContain("You&#39;re invited");
+    expect(email.html).toContain(">Euro ski trip</h1>");
+    expect(email.html).toContain("Feb 5 to 16, 2027 · Chamonix, Andorra");
+    expect(email.html).toContain("Playfair Display");
   });
 
   it("escapes names, so a name can't add HTML or a link of its own", () => {
