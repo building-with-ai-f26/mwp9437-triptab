@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { MapPin, Plus, Trash2 } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, Field, PhotoFrame } from "../components/ui";
+import { PlaceInput } from "../components/PlaceInput";
 import { createTrip } from "../lib/api";
 import { nameOf, useAuth } from "../lib/auth";
 import { dateRange, nightsBetween, tripSpan, validateTrip, type StopDraft } from "../lib/model";
@@ -30,6 +31,9 @@ export default function NewTrip() {
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The photo follows places you've picked or finished typing, not every keystroke (11/17 pod).
+  const [photoText, setPhotoText] = useState("");
+  const showPhotoFor = (tripName: string, list: StopDraft[]) => setPhotoText(`${list.map((s) => s.name).join(" ")} ${tripName}`.trim());
 
   const problems = validateTrip(name, stops);
   const dated = stops.filter((s) => s.start_date && s.end_date && s.end_date >= s.start_date);
@@ -56,7 +60,7 @@ export default function NewTrip() {
 
   return (
     <div className="relative min-h-dvh">
-      <PhotoFrame src={photoFor(`${stops.map((s) => s.name).join(" ")} ${name}`)} />
+      <PhotoFrame src={photoFor(photoText)} />
       <div className="relative z-10">
         <TopBar back={{ to: "/trips", label: "My trips" }} title={<span className="italic">Start a trip</span>} />
         <main className="mx-auto max-w-xl px-4 py-6 sm:py-10">
@@ -70,6 +74,7 @@ export default function NewTrip() {
                 onClick={() => {
                   setName(SKI_EXAMPLE.name);
                   setStops(SKI_EXAMPLE.stops);
+                  showPhotoFor(SKI_EXAMPLE.name, SKI_EXAMPLE.stops);
                 }}
               >
                 Fill in the ski trip example
@@ -77,7 +82,13 @@ export default function NewTrip() {
             </p>
 
             <Field label="Trip name">
-              <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Euro ski trip" />
+              <input
+                className="field"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => showPhotoFor(name, stops)}
+                placeholder="Euro ski trip"
+              />
             </Field>
 
             <fieldset className="mb-4">
@@ -87,11 +98,16 @@ export default function NewTrip() {
                   <li key={i} className="rounded-2xl border border-white/40 bg-white/20 p-3">
                     <div className="mb-2 flex items-center gap-2">
                       <MapPin className="size-4 shrink-0 text-primary" />
-                      <input
-                        className="field"
-                        aria-label={`Stop ${i + 1} place`}
+                      <PlaceInput
+                        label={`Stop ${i + 1} place`}
                         value={s.name}
-                        onChange={(e) => setStop(i, { name: e.target.value })}
+                        onChange={(text) => setStop(i, { name: text })}
+                        onPick={(place) => {
+                          const next = stops.map((x, j) => (j === i ? { ...x, name: place.name } : x));
+                          setStops(next);
+                          showPhotoFor(name, next);
+                        }}
+                        onCommit={() => showPhotoFor(name, stops)}
                         placeholder={i === 0 ? "Chamonix" : "Next stop"}
                       />
                       {stops.length > 1 && (

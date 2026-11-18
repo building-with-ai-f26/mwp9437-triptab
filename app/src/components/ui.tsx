@@ -89,7 +89,9 @@ export function Dialog({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className="glass-card-readable m-0 mt-auto w-full max-w-none rounded-t-3xl p-0 backdrop:bg-black/50 sm:m-auto sm:max-w-lg sm:rounded-3xl"
+      // !fixed: glass-card-readable sets position: relative, which a modal dialog turns into
+      // absolute, so on a phone it opened at the top of the page and scrolled you up to it (11/17).
+      className="glass-card-readable !fixed m-0 mt-auto w-full max-w-none rounded-t-3xl p-0 backdrop:bg-black/50 sm:m-auto sm:max-w-lg sm:rounded-3xl"
       aria-label={title}
     >
       {open && (
