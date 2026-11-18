@@ -138,6 +138,10 @@ export default function TripPage() {
         ? (ownLineOf(expenses, item.id, meId)?.total_cents ?? null)
         : (expenseByItem.get(item.id)?.total_cents ?? null),
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
+    aboard: (item) => {
+      const on = goingList(item, travelers, itemPeople);
+      return { names: on.map((t) => (t.id === meId ? "you" : t.name)), everyone: on.length === travelers.length && travelers.length > 0 };
+    },
     note: (item) => {
       if (item.pay_mode === "own") {
         // Everyone pays their own: "Planned, 2 of 5 booked" until everyone going has logged theirs.

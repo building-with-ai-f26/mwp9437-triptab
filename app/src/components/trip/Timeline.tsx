@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
+  clock,
   dayChip,
   longDay,
   PART_LABEL,
@@ -31,7 +32,13 @@ export interface TimelineActions {
   isOut?: (item: Item) => boolean;
   /** A short line on the card: "Your share $40", or "3 of 4 in" (Build 3). */
   note?: (item: Item) => string | null;
+  /** Who's on a flight or transfer, and whether that's the whole group: on an overnight one, they need no bed. */
+  aboard?: (item: Item) => { names: string[]; everyone: boolean };
 }
+
+/** "Everyone's on it" covers tonight: no prompt for a stay. */
+const nightCovered = (overnight: Item[], actions: TimelineActions): boolean =>
+  overnight.some((i) => actions.aboard?.(i).everyone);
 
 /** Sticky, horizontally scrolling day chips showing the actual day: "Thu" over "2/5". */
 export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active: string | null; onPick: (d: string) => void }) {
@@ -185,6 +192,34 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
   );
 }
 
+/** A red-eye or a night train in the stay row: who's on it needs no bed tonight (11/17 pod feedback). */
+function OvernightRow({ item, actions }: { item: Item; actions: TimelineActions }) {
+  const Icon = KIND_ICON[item.kind];
+  const aboard = actions.aboard?.(item);
+  const lands = item.end_day ? `${item.kind === "flight" ? "Lands" : "Arrives"} ${dayChip(item.end_day).weekday}${item.end_time ? ` ${clock(item.end_time)}` : ""}` : null;
+  const who = !aboard
+    ? null
+    : aboard.everyone
+      ? "Everyone's on it, so no stay needed tonight"
+      : aboard.names.length
+        ? `No stay needed for ${aboard.names.join(", ")}`
+        : "No one's on it yet";
+  return (
+    <button type="button" className="item-card" data-kind={item.kind} data-status={item.status} data-testid="overnight" onClick={() => actions.onOpen(item)}>
+      <div className="flex items-center gap-2.5">
+        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-indigo/10">
+          <Icon className="size-4 text-indigo" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="label-luxury text-[9px] text-muted-foreground">Overnight{lands ? ` · ${lands}` : ""}</p>
+          <p className="truncate text-sm font-medium">{item.title}</p>
+          {who && <p className="text-xs text-foreground/75">{who}</p>}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
@@ -199,6 +234,7 @@ function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
 
 export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boolean; actions: TimelineActions }) {
   const nights = day.stays.filter((s) => !s.checkout);
+  const covered = nightCovered(day.overnight, actions);
   return (
     <section id={`day-${day.date}`} data-date={day.date} className="scroll-mt-32 py-4 sm:scroll-mt-36" aria-label={longDay(day.date)}>
       <header className="mb-3 flex items-center gap-3">
@@ -253,10 +289,16 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
         {day.stays.map((s) => (
           <StayRow key={`${s.item.id}-${s.label}`} stay={s} actions={actions} />
         ))}
-        {nights.length === 0 && !last && actions.canEdit && (
-          <EmptySlot label="Add where everyone's staying" onClick={() => actions.onAdd(day.date, "night", "stay")} />
+        {day.overnight.map((i) => (
+          <OvernightRow key={`overnight-${i.id}`} item={i} actions={actions} />
+        ))}
+        {nights.length === 0 && !last && actions.canEdit && !covered && (
+          <EmptySlot
+            label={day.overnight.length ? "Add a stay for the others" : "Add where everyone's staying"}
+            onClick={() => actions.onAdd(day.date, "night", "stay")}
+          />
         )}
-        {nights.length === 0 && !last && !actions.canEdit && (
+        {nights.length === 0 && !last && !actions.canEdit && !covered && day.overnight.length === 0 && (
           <p className="text-xs italic text-muted-foreground/70">No stay added for tonight</p>
         )}
       </div>

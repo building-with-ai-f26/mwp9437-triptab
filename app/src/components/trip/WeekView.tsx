@@ -123,6 +123,19 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
                     <span className="line-clamp-2 text-[11px] font-medium leading-snug">{s.item.title}</span>
                   </button>
                 ))}
+                {d.overnight.map((i) => (
+                  <button
+                    key={`overnight-${i.id}`}
+                    type="button"
+                    className="item-card !px-1.5 !py-1.5"
+                    data-kind={i.kind}
+                    data-status={i.status}
+                    onClick={() => actions.onOpen(i)}
+                    title={`Overnight: ${i.title}${actions.aboard?.(i).everyone ? ", no stay needed" : ""}`}
+                  >
+                    <span className="line-clamp-2 text-[11px] font-medium leading-snug">{i.title}</span>
+                  </button>
+                ))}
               </div>
             );
           })}
