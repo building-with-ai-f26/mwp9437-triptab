@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowRight, Check, Plane, Plus, Receipt, Scale, Undo2 } from "lucide-react";
+import { Check, Plane, Plus, Receipt, Scale, Undo2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import type { ExpenseRow, ItemPerson, ShareInput } from "../../lib/api";
+import type { ExpenseRow, ItemPerson, Payment, ShareInput } from "../../lib/api";
+import { PaymentsList } from "./Payments";
 import { goingList, groupExpenses, isGoing, myNumbers } from "../../lib/ledger";
 import { dollars, longDay, tripDays, type CostType, type Item, type Traveler, type Trip } from "../../lib/model";
 import { parseDollars, toCents, totalCents } from "../../lib/money";
 import { computeSplit, SPLIT_LABEL, type SplitMode } from "../../lib/split";
-import type { Transfer } from "../../types";
 
 export type ExpenseTarget = { kind: "item"; item: Item; expense?: ExpenseRow } | { kind: "general"; expense?: ExpenseRow };
 
@@ -335,21 +335,28 @@ export function MoneyCard({
   balances,
   meId,
   canEdit,
+  payments,
+  myUserId,
   onAdd,
   onOpen,
   onSettle,
+  onRemovePayment,
 }: {
   travelers: Traveler[];
   expenses: ExpenseRow[];
   balances: Record<string, number>;
   meId: string | null;
   canEdit: boolean;
+  /** Null on a database without payments yet. */
+  payments: Payment[] | null;
+  myUserId: string | null;
   onAdd: () => void;
   onOpen: (e: ExpenseRow) => void;
   onSettle: () => void;
+  onRemovePayment: (p: Payment) => Promise<void>;
 }) {
-  const mine = myNumbers(expenses, meId);
-  const shared = groupExpenses(expenses);
+  const mine = myNumbers(expenses, meId, payments ?? []);
+  const anyMoney = groupExpenses(expenses).length > 0 || (payments?.length ?? 0) > 0;
   const general = expenses.filter((e) => !e.item_id);
   const name = (id: string) => travelers.find((t) => t.id === id)?.name ?? "?";
 
@@ -383,7 +390,7 @@ export function MoneyCard({
         )}
       </div>
 
-      {shared.length > 0 ? (
+      {anyMoney ? (
         <ul className="mb-3 space-y-1 text-sm">
           {travelers.map((t) => {
             const b = balances[t.id] ?? 0;
@@ -426,56 +433,12 @@ export function MoneyCard({
         </div>
       )}
 
-      <Button className="w-full" onClick={onSettle} disabled={shared.length === 0}>
+      {payments && <PaymentsList {...{ payments, travelers, meId, myUserId, canEdit }} onRemove={onRemovePayment} />}
+
+      <Button className="w-full" onClick={onSettle} disabled={!anyMoney}>
         <Scale /> Settle up
       </Button>
     </section>
-  );
-}
-
-export function SettleDialog({
-  open,
-  transfers,
-  travelers,
-  meId,
-  onClose,
-}: {
-  open: boolean;
-  transfers: Transfer[];
-  travelers: Traveler[];
-  meId: string | null;
-  onClose: () => void;
-}) {
-  const name = (id: string) => (id === meId ? "You" : (travelers.find((t) => t.id === id)?.name ?? "?"));
-  return (
-    <Dialog open={open} onClose={onClose} title="Settle up">
-      {open && (
-        <div>
-          <p className="mb-4 text-sm text-white/70">
-            The fewest payments that square everyone up. TripTab doesn't move money; pay each other with Venmo or Cash App.
-          </p>
-          {transfers.length === 0 ? (
-            <p className="rounded-2xl bg-white/5 px-4 py-3 text-white">Everyone's even.</p>
-          ) : (
-            <ol className="space-y-2">
-              {transfers.map((t, i) => (
-                <li key={i} className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-3 text-white">
-                  <span className="font-semibold">{name(t.from)}</span>
-                  <ArrowRight className="size-4 text-white/70" />
-                  <span className="min-w-0 flex-1 truncate font-semibold">{name(t.to)}</span>
-                  <span className="font-display text-lg font-bold tabular-nums">{dollars(t.amountCents)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-          <div className="mt-4 flex justify-end">
-            <Button variant="light" onClick={onClose}>
-              Done
-            </Button>
-          </div>
-        </div>
-      )}
-    </Dialog>
   );
 }
 

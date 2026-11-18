@@ -23,7 +23,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Your trips:</b> what you and your group put in them: trip names, dates and stops, plans with their times,
-          notes, places and costs, who's going, who paid and how it splits, and payments you record.
+          notes, places and costs, who's going, who paid and how it splits, and payments you record (who paid whom, how
+          much, when, and whether by Venmo, cash or another app). TripTab never sees your bank or Venmo account.
         </li>
         <li>
           <b>People you add:</b> a trip's Owners can add people by name and, if they like, an email or phone number, so
@@ -48,6 +49,7 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           or make a new one at any time.
         </li>
         <li>Emails and phone numbers of the people on a trip are shown to its Owners only.</li>
+        <li>Your Venmo username, if you add one, is shown to the people on your trips, so they can pay you.</li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
       </ul>
