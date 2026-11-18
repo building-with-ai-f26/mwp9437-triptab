@@ -49,7 +49,7 @@ The group chat holds the ideas, Splitwise holds the money, and nobody holds the 
 **Help along the way**
 
 - **Import, first (decided 11/16).** Paste a confirmation email, a receipt, flight numbers or a quick summary, or attach a PDF or screenshot; TripTab proposes the plans with their costs and who pays, and nothing is saved until you review them. It never invents a time, price or address that isn't in what you gave it.
-- **Plan with AI,** a button on the itinerary: describe what's already booked and it fills that in, or ask for ideas for empty slots (nothing planned Thursday or Friday night yet), shaped by an optional group survey. It fills gaps only; it never overwrites a plan or makes one up.
+- **Plan with AI,** a button on the itinerary: ask for ideas for empty slots (nothing planned Thursday or Friday night yet) and get real places, each with its source, added as Suggested; a group survey can shape them later. Telling it what's already booked is Import, above. Build 3 puts both behind one AI button with two choices, I have bookings and Give me ideas (your 11/18 call). It fills gaps only; it never overwrites a plan or makes one up.
 - **See alternatives** on any plan, for when Friday's ramen stops sounding good on Thursday.
 - **Packing list** built from the itinerary and the weather.
 - **Local tips:** rent a car or take transit, tipping norms, language: hello, goodbye and thank you.
@@ -60,7 +60,7 @@ The group chat holds the ideas, Splitwise holds the money, and nobody holds the 
 
 1. **Straight to the trip.** Start a trip lands on a blank itinerary: tap a slot to add something by hand, or use the Plan with AI button. Help is a button inside the trip, never a gate in front of it. The spring home screen made you choose "already planned" or "plan it for me" before you could reach anything.
 2. **No chore for anyone.** Members can get the same control as whoever started the trip (most trips make everyone an owner), and action items can be handed out.
-3. **Only what matters goes in.** Costs people pay on their own stay out; an even split is the default, with shares, percentages or exact amounts when it isn't even.
+3. **Only what matters goes in.** What you pay on your own can go in, like a $900 flight, so you still see your total cost; it just never gets split and never enters Settle up (your 11/18 call); an even split is the default, with shares, percentages or exact amounts when it isn't even.
 4. **A plan and its cost are one thing.** Every itinerary item carries a status: Suggested → Planned → Confirmed, and Confirmed means paid. Confirming captures the cost, who paid and who's in, in one step. Concert tickets go from Planned to Confirmed when someone buys them; a dinner stays Planned until the bill is paid; a free hike confirms at $0. A slot that's only Planned can still move. Whether something already happened comes from its date, not a status. Costs with no event, like a grocery run, go straight on the tab as general expenses.
 5. **AI suggests; the group decides.** It fills empty slots and enters what you tell it; it never overwrites a plan or makes one up (the spring version invented a flight nobody asked for).
 6. **Yours first, the group's one tap away.** Your itinerary shows your flights, the activities you're in (the rest look faded), your share of each cost, and what you owe or are owed. Everyone's flights are one tap away, for when you haven't booked yet.
@@ -126,7 +126,7 @@ Yes, with conditions. No rule caps scope, and the syllabus says size and difficu
 - **A hard cap removes the risk.** Your Max plan's $100 monthly Claude API credit is the cap: with no other credits on the account, calls stop when it runs out (decided 11/16; the course setup guide's alternative was a prepaid OpenRouter balance of $10 to $20). The key stays on the server, never in the app or on GitHub.
 - **Every call gets logged with its cost,** which feeds the Sponsor Memo's cost section.
 
-**Who pays, decided 11/16:** the Claude API, through the $100 monthly API credit your Max plan includes, instead of OpenRouter (Your calls, AI provider). Cash cost is $0, and the credit doubles as the hard cap. Every call still logs its tokens and list-price cost, since the Sponsor Memo's unit economics can't rest on a subscription perk.
+**Who pays, decided 11/16:** the Claude API, through the $100 monthly API credit your Max plan includes, instead of OpenRouter (Decided calls, AI provider). Cash cost is $0, and the credit doubles as the hard cap. Every call still logs its tokens and list-price cost, since the Sponsor Memo's unit economics can't rest on a subscription perk.
 
 ## Inviting people
 
@@ -191,7 +191,7 @@ Updated with your voice note. Nothing is thrown away: parked pieces stay in trip
 
 - **Book trips or move money.** It says who pays whom; Venmo or Cash App does the paying.
 - **Build whole itineraries on its own.** AI fills gaps and suggests; people build the plan. Maybe later, not in the course.
-- **Ask for every coffee.** Costs people pay on their own stay out.
+- **Ask for every coffee.** What you pay on your own is optional: log it to see your total, and it never gets split.
 - **Ship as a native app.** A phone-first web app with a good desktop view.
 
 ## How it could make money
@@ -234,6 +234,9 @@ You see a real gap in the market and would keep TripTab running after the course
 
 - **TripTab emails invites itself,** from triptab.org through Resend, now that the domain is bought; it goes in with the sign-in work in Build 3. The Text button still opens your own Messages; TripTab texting people itself stays beyond the course.
 - **Build mode.** Nothing waits on a pod test any more; build the vision as far as it goes, each piece verified before the next.
+- **Your own costs can go in.** What you pay on your own, like a $900 flight, can be logged so you see your total cost; it is never split.
+- **One AI button.** Import and Plan with AI open from one button with two choices, I have bookings and Give me ideas; underneath they stay two separate functions.
+- **Calls happen in chat.** At most five at a time, each with a recommendation. Ones you haven't answered wait in Open calls on the Run book tab; answered ones are archived on the For Claude tab.
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
