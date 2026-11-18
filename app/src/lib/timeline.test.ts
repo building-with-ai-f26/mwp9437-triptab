@@ -117,6 +117,20 @@ describe("the timeline", () => {
     const firsts = days.flatMap((d) => (["morning", "day", "evening", "night"] as const).flatMap((p) => Object.values(d.placed[p]).filter((x) => x.first)));
     expect(firsts).toHaveLength(2);
   });
+
+  it("a red-eye sits in the stay row of the night it's in the air, and no other", () => {
+    const redEye = item({ kind: "flight", title: "UA 956", day: "2027-02-04", part: "evening", end_day: "2027-02-05", end_part: "morning", end_time: "06:25:00" });
+    const sameDay = item({ kind: "flight", title: "EZY 1", day: "2027-02-12", part: "morning", end_part: "day" });
+    const nightTrain = item({ kind: "transport", title: "Night train", day: "2027-02-08", part: "night", end_day: "2027-02-10" });
+    const days = buildTimeline(trip, [], [redEye, sameDay, nightTrain]);
+    const overnight = (d: string) => days.find((x) => x.date === d)!.overnight.map((i) => i.title);
+    expect(overnight("2027-02-04")).toEqual(["UA 956"]);
+    expect(overnight("2027-02-05")).toEqual([]);
+    expect(overnight("2027-02-12")).toEqual([]);
+    expect(overnight("2027-02-08")).toEqual(["Night train"]);
+    expect(overnight("2027-02-09")).toEqual(["Night train"]);
+    expect(overnight("2027-02-10")).toEqual([]);
+  });
 });
 
 describe("checking a spanning plan", () => {

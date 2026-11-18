@@ -50,6 +50,12 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByRole('button', { name: 'Add to trip' }).click();
   await inDay(p, '2027-02-06', 'UA 57').waitFor();
   r.flightFri = await flat(inDay(p, '2027-02-05', 'UA 57'));
+  // The red-eye's night: the flight sits in the stay row, and with the whole group on it (just the
+  // owner here), there's no prompt for a bed (11/17 pod feedback).
+  const friStay = p.locator('#day-2027-02-05 [data-testid="overnight"]');
+  r.redEyeInStayRow = (await friStay.innerText()).replace(/\s+/g, ' ');
+  r.noBedPromptFri = (await p.locator('#day-2027-02-05').getByRole('button', { name: /Add where everyone's staying|Add a stay for the others/ }).count()) === 0;
+  r.bedPromptSat = (await p.locator('#day-2027-02-06').getByRole('button', { name: "Add where everyone's staying" }).count()) === 1;
   r.flightSat = await flat(inDay(p, '2027-02-06', 'UA 57'));
   await p.locator('#day-2027-02-05').scrollIntoViewIfNeeded();
   await p.evaluate(() => document.getElementById('day-2027-02-05').scrollIntoView({ block: 'start' }));
@@ -96,6 +102,10 @@ async function run(browser, label, opts, result) {
   result.errors = h.errors;
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
+  for (const r of [result.desktop, result.phone]) {
+    const ok = /Overnight · Lands Sat 7:10 AM/i.test(r.redEyeInStayRow) && /Everyone's on it, so no stay needed tonight/.test(r.redEyeInStayRow) && r.noBedPromptFri && r.bedPromptSat;
+    if (!ok || result.errors.length) process.exit(1);
+  }
 })().catch((e) => {
   console.error('FLOW FAILED:', e.message.split('\n').slice(0, 4).join(' | '));
   console.error('errors so far:', h.errors);

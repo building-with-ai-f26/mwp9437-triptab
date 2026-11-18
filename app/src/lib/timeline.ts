@@ -112,6 +112,8 @@ export interface TimelineDay {
   /** For each part, how each plan there shows, by plan id: where it starts, or a continuation. */
   placed: Record<DayPart, Record<string, Placement>>;
   stays: StayOnDay[];
+  /** Flights and transfers in the air or on the road across tonight: a red-eye needs no bed (11/17). */
+  overnight: Item[];
 }
 
 /**
@@ -127,8 +129,12 @@ export function buildTimeline(trip: Pick<Trip, "start_date" | "end_date">, stops
     const parts = Object.fromEntries(PARTS.map((p) => [p, [] as Item[]])) as Record<DayPart, Item[]>;
     const placed = Object.fromEntries(PARTS.map((p) => [p, {} as Record<string, Placement>])) as Record<DayPart, Record<string, Placement>>;
     const stays: StayOnDay[] = [];
+    const overnight: Item[] = [];
 
     for (const item of byCreated) {
+      if ((item.kind === "flight" || item.kind === "transport") && item.day <= date && item.end_day && item.end_day > date) {
+        overnight.push(item);
+      }
       if (item.kind !== "stay") {
         // A plan shows in every slot it covers: its own, and any it runs on into.
         for (const slot of itemSlots(item)) {
@@ -150,7 +156,7 @@ export function buildTimeline(trip: Pick<Trip, "start_date" | "end_date">, stops
     // Check-outs first: the morning's departure reads before the night's stay.
     stays.sort((a, b) => Number(b.checkout) - Number(a.checkout));
 
-    return { date, chip: dayChip(date), title: here.join(" to "), parts, placed, stays };
+    return { date, chip: dayChip(date), title: here.join(" to "), parts, placed, stays, overnight };
   });
 }
 
