@@ -11,11 +11,10 @@ Read first:
 
 Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 has the AI prices, caps and measured costs) and [journal/evals/README.md](./journal/evals/README.md) (eval results). `Intent.md`, `SPONSOR_MEMO.md`, `tests/README.md` and the `journal/build-0N` files are the course's templates.
 
-## Where the work happens (from 11/11)
+## Where the work happens
 
-- **When Mike steps away, a cloud session:** the TripTab cloud environment (full network access). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). If `app/.env.local` is missing, write it from the runbook's Run the app on your laptop block (public values only).
-- **When Mike is watching, his laptop:** the Claude desktop app's Code tab, opened on `code\mwp9437-triptab` in his user folder (outside OneDrive), with the app in the Browser pane so Mike and Claude look at the same screen.
-- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into the runbook's Your calls table or Product Vision tab, then re-export the vision. Nothing waits on Mike inside the runbook: no suggestion cards, no open rows. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
+- **Cloud sessions** on the TripTab cloud environment (full network access). Mike no longer runs the app on his laptop (11/18). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). If `app/.env.local` is missing, write it from the App settings block on the runbook's For Claude tab (public values only).
+- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into Decided calls or the Product Vision tab, then re-export the vision. A call he hasn't answered waits in Open calls, with your recommendation, and nowhere else: no suggestion cards. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
 - **A session starts from one line.** This file and the runbook's Steps table carry the rest, so don't ask Mike for a long prompt or write him one.
 - **Course admin** (due dates, pod check-ins, grades, redos) runs in Mike's NYU Stern MBA project. Leave it there. Read a build's brief on Icerynk when you need it (course key `fa26-tech-gb-2160-dm2-f2`; the connector is read-only, and Mike does all submitting).
 
@@ -36,10 +35,15 @@ Advanced lane (Mike's call, 11/17): the app moves to triptab.org on Cloudflare, 
 
 ## Runbook
 
-The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV (Run book, Product Vision and Build history tabs). What Mike has to do lives there, nowhere else. He finds it heavy to review (11/18), so keep what he reads short and put detail where only agents need it.
+The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV. What Mike has to do lives there, nowhere else. Its tabs (Mike's layout call, 11/18):
 
-- Anything Mike has to do goes in its Steps table. Keep the Target column at width 130 on any row you add. Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
-- Mike's decisions are in its Your calls table and on the Product Vision tab. Don't re-ask them.
+- **Run book**, the one screen Mike reads: a short status, Steps, and Open calls. One line a row.
+- **Product Vision**, the one place the vision is edited.
+- **Build history**: done steps.
+- **For Claude**, which Mike doesn't read: the table rules, the session block, the prompts, the app's public settings, and Decided calls (the archive).
+
+- Anything Mike has to do goes in the Steps table, with the detail on the For Claude tab. Keep the column widths as Mike set them (Target 88, Who 130). Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
+- Mike's decisions are in Decided calls and on the Product Vision tab. Don't re-ask them.
 - If this session can't reach the Claude Docs connector, list what Mike has to do under "For Mike" at the top of the current `journal/build-0N` file and say so in chat.
 
 ## Rules
