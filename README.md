@@ -33,7 +33,7 @@ cd mwp9437-triptab/app
 npm install
 ```
 
-Create `app/.env.local` from `app/.env.example` with the Supabase URL and publishable key (see [AGENTS.md](./AGENTS.md#set-up-and-run-locally); both are public values, and git ignores the file). Then:
+Copy `app/.env.example` to `app/.env.local` (see [AGENTS.md](./AGENTS.md#set-up-and-run-locally)). It points at TripTab dev, the test database, so local runs never touch real users; every value in it is public, and git ignores the file. Then:
 
 ```bash
 npm run dev     # open http://localhost:5173
