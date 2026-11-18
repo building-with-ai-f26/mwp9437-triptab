@@ -82,3 +82,16 @@ What this does and doesn't show:
 
 From the cost log (`ai_calls`, feature `plan`) at the end of the night: 22 calls (the two eval runs and one live click-through at each width), $0.4840 at list price, 41 web searches, 9.4 seconds on average, all test runs. About **$0.022 a request** on average, from $0.0007 (no search needed) to $0.035 (three searches). Cash cost was $0, covered by the Max plan's API credit.
 
+
+## On TripTab dev (Nov 18, about 10:40 PM New York)
+
+Build 3 added a second Supabase project, TripTab dev, for local runs, tests, evals and pull request Previews. Its two AI functions were copied from the repo, and the copies' source was compared with production's deployed source. Their bundle hashes still differ from production's, because each function loads the Anthropic SDK by a version range (`^1.9.0`) that resolves at deploy time. So both evals were run against dev, unchanged, to show dev's functions behave the same. Dev has its own key ("TripTab dev", in the TripTab workspace of the Claude Console) and a $2 daily cap (`AI_DAILY_CAP_USD`).
+
+| Eval | Run | Cases passing all four rules | Real cost | Production's last run |
+| --- | --- | --- | --- | --- |
+| Import | `import-dev-parity-20261118-0340` | 10 of 10 | $0.0208 | after-currency: 10 of 10, $0.0330 |
+| Plan with AI | `plan-dev-parity-20261118-0342` | 10 of 10 | $0.2017 | second: 10 of 10, $0.2238 |
+
+- **Dev matches production on both.** No prompt or rule changed, so this is a check of the copy, not a new result.
+- **Plan with AI's guard acted for the first time:** in the planted-instruction case (09), it dropped one of five ideas before it reached the app. All four rules still passed; the guard is why.
+- From here on, eval runs and their costs land in **dev's** `ai_calls` log, and real use in **production's**. The build log adds the two.

@@ -13,7 +13,7 @@
     "eval:import": "vitest run --config vitest.eval.config.ts evals/import",
     "eval:plan": "vitest run --config vitest.eval.config.ts evals/plan",
     "e2e": "node e2e/build2-flow.cjs && node e2e/build3-flow.cjs && node e2e/build4-flow.cjs && node e2e/settings-flow.cjs && node e2e/live-flow.cjs && node e2e/who-pays-flow.cjs && node e2e/import-flow.cjs && node e2e/span-flow.cjs && node e2e/extend-flow.cjs && node e2e/plan-ai-flow.cjs",
-    "build:pages": "tsc -b && vite build --mode pages --base=/mwp9437-triptab/app/ --outDir ../docs/app --emptyOutDir"
+    "build:pages": "echo 'Retired 11/18: the app deploys to triptab.org from GitHub Actions on every merge to main (AGENTS.md, Shipping).' && exit 1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
@@ -37,6 +37,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.164.0"
   }
 }
