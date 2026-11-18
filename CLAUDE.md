@@ -20,7 +20,7 @@ Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 h
 
 ## Scope: build the vision; each brief is a floor
 
-Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build the full product in the vision, in the order the runbook sets, and keep going past each week's minimum. Two guardrails: each Monday's submission still shows working evidence for that week's required items, and breadth without proof scores a 3, so finish and verify one piece before starting the next.
+Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build the full product in the vision, in the order the runbook sets, and keep going past each week's minimum. Two guardrails: each Monday's submission still shows working evidence for that week's required items, and breadth without proof scores a 3, so finish and verify one piece before starting the next. Build mode (Mike's call, 11/18): nothing waits on a pod test; take the vision as far as it goes.
 
 ## Current build: Build 3, due Mon 11/23 at noon
 

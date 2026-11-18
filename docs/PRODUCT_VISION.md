@@ -17,7 +17,7 @@ As of Nov 17. Everything in the Built column is live and checked by automated te
 
 | Area | Built (live) | Still to build |
 | --- | --- | --- |
-| Trips and people | Start a trip with dates and stops; change its dates, or extend it in one tap when a plan falls a day outside; add people by name, email or phone, or share one group link where they pick their name; Owner and Viewer roles; the group link inside People | Confirming your email and resetting a password (needs an email sender, your call); TripTab sending invites itself (beyond the course) |
+| Trips and people | Start a trip with dates and stops; change its dates, or extend it in one tap when a plan falls a day outside; add people by name, email or phone, or share one group link where they pick their name; Owner and Viewer roles; the group link inside People | Confirming your email and resetting a password (needs an email sender, your call); TripTab emailing invites itself from triptab.org (Build 3, your 11/18 call); texting them itself stays beyond the course |
 | Itinerary | Day by day, morning to night, with where everyone's staying; a week view; Suggested (dotted), Planned (solid) and Confirmed (paid, the green $ ✓); opting in or out; one plan across several parts or days (skiing all week); flights with an arrival day and time | Place autocomplete when typing a town (from your 11/16 walkthrough) |
 | Money | Confirm a plan with its cost, payer and split (even, shares, percent or exact); Who pays: one bill, or everyone pays their own, with private prices and paid with points; general expenses like a grocery run; your own view and balance; Settle up in the fewest payments | Costs in other currencies at the day's rate (stretch goal); one person buying for part of the group (a general expense for now) |
 | AI | Import of bookings: paste an email or summary, or attach a PDF or photo, with flight times looked up and a review before saving; Plan with AI: real places for empty slots, each with its source, added as Suggested. Both capped at $7 a day, logged with their cost, and scored by 10-case evals | Packing list; local tips; see alternatives; suggestions from a group survey; import by forwarding an email or from Gmail (both your calls) |
@@ -131,8 +131,8 @@ Yes, with conditions. No rule caps scope, and the syllabus says size and difficu
 ## Inviting people
 
 - **Two ways in, and people are on the trip right away.** Add someone directly by name plus email or phone and send them a one-off text, or drop one group link in the chat for all ten.
-- **The group link asks who you are.** People pick their name from the travelers already added; "Don't see your name?" lets them add themselves. Either way they get the role the trip's owner set as the link's default (Owner, for a casual trip), and a claimed name locks to that person's sign-in, so nobody else can take the spot.
-- **Direct invites go out two ways.** TripTab emails them the trip link, and a Text invite button opens your phone's Messages with the link filled in, for anyone you only have a number for.
+- **The group link asks who you are.** People pick their name from the travelers already added; "Don't see your name?" lets them add themselves. A claimed name keeps the role picked for that person; people who add themselves get the link's default, set by the trip's owner (Owner, for a casual trip; your 11/16 call). A claimed name locks to that person's sign-in, so nobody else can take the spot.
+- **Direct invites go out two ways.** TripTab emails them the trip link from triptab.org (Build 3; your 11/18 call), and a Text invite button opens your phone's Messages with the link filled in, for anyone you only have a number for.
 - **Opening a link claims a spot.** They sign in and take over the traveler with their name, so they can be put on plans and costs before they ever open TripTab.
 - **Two roles to start, picked from an Add as menu.** Owner: everything, from adding activities, costs and people (so a friend can bring a friend) to changing roles and deleting the trip. Viewer: sees the trip and opts in or out of activities. Most trips make everyone an owner; a leader running a corporate trip keeps the rest as viewers. An in-between Editor role can come later if trips need one.
 - **Why TripTab won't text people itself, for now:** that needs a paid SMS service, and US carrier registration for app texts can take days to weeks. Texting from your own phone sends the same link for free.
@@ -230,7 +230,12 @@ You see a real gap in the market and would keep TripTab running after the course
 
 ## Questions for you
 
-**Raised 11/17** (setting up the pod test trip; to build after the pod test)
+**Decided 11/18**
+
+- **TripTab emails invites itself,** from triptab.org through Resend, now that the domain is bought; it goes in with the sign-in work in Build 3. The Text button still opens your own Messages; TripTab texting people itself stays beyond the course.
+- **Build mode.** Nothing waits on a pod test any more; build the vision as far as it goes, each piece verified before the next.
+
+**Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
 - **Adding plans needs more flexibility.** An Add a plan button at the top of the trip, not only tapping a slot. A plan can run across several days with a start and end time (skiing 9 AM to 4 PM every day in Chamonix) instead of picking Morning and Day on each day. The four parts of the day stay as how the itinerary is laid out, and empty slots still show, so a gap like Thursday night stands out.
 - **Parts of the day are select all that apply.** The four part-of-day bubbles take more than one pick (Morning and Day for skiing), replacing the "Runs through the" dropdown.
@@ -240,7 +245,7 @@ You see a real gap in the market and would keep TripTab running after the course
 - **Start a trip by describing it.** Starting a trip offers two ways: enter dates and stops by hand, or type or dictate what's already planned in free form (from Granola or Wispr Flow, say: "Chamonix Feb 5 to 12, then Andorra; skiing every day in Chamonix, a dinner reservation Thursday, flights and the Airbnb booked"). AI sets up the trip and its plans, then asks follow-up questions to fill the gaps (flight numbers? the Airbnb link?). Why: a 12-day trip is 48 slots plus lodging and travel, too much clicking by hand.
 - **Claude's note:** part of the first exists today (a plan's "Runs through the" and "Every day through" fields make skiing every day one plan, and it works well per your 11/17 try), so the gaps are clock times, a top-level Add button, multi-select parts and making the multi-day option easy to find. Describing a trip extends AI import, which today works only inside a trip that already exists.
 
-**Raised 11/17, after the pod test** (logged only; nothing decided yet)
+**Raised 11/17, after the pod test** (scheduled for Build 3 in the Features row on the Run book tab)
 
 - **Start a trip: the photo waits for the place.** The background photo changes with every keystroke while typing a stop; it should change only once a place is picked. Stops should autocomplete as you type.
 - **Plan with AI: pick a day for each idea.** Each suggested idea can take a day (and part of the day), not only a checkbox to keep it.
