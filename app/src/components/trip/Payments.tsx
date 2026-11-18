@@ -28,6 +28,7 @@ export function SettleDialog({
   paymentsReady,
   onRecord,
   onSaveVenmo,
+  onSaveVenmoFor,
   onClose,
 }: {
   open: boolean;
@@ -40,10 +41,17 @@ export function SettleDialog({
   paymentsReady: boolean;
   onRecord: (prefill: Partial<PaymentDraft>) => void;
   onSaveVenmo: (handle: string) => Promise<void>;
+  /** Owners: add the Venmo of someone being paid, so Pay with Venmo works for everyone paying them. */
+  onSaveVenmoFor: (travelerId: string, handle: string) => Promise<void>;
   onClose: () => void;
 }) {
   const name = (id: string) => nameOf(travelers, id, meId);
   const venmoOf = (id: string) => travelers.find((t) => t.id === id)?.venmo ?? null;
+  // Offer "Add Jordan's Venmo" once, on the first line paying Jordan.
+  const firstLineTo = new Map<string, number>();
+  transfers.forEach((t, i) => {
+    if (!firstLineTo.has(t.to)) firstLineTo.set(t.to, i);
+  });
   return (
     <Dialog open={open} onClose={onClose} title="Settle up">
       {open && (
@@ -56,9 +64,10 @@ export function SettleDialog({
             <p className="rounded-2xl bg-white/5 px-4 py-3 text-white">Everyone's even.</p>
           ) : (
             <ol className="space-y-2">
-              {transfers.map((t) => {
+              {transfers.map((t, i) => {
                 const mine = t.from === meId || t.to === meId;
                 const handle = venmoOf(t.to);
+                const offerVenmo = !handle && canEdit && t.to !== meId && firstLineTo.get(t.to) === i;
                 return (
                   <li key={`${t.from}-${t.to}`} className="rounded-2xl bg-white/5 px-4 py-3 text-white" data-testid="transfer">
                     <div className="flex items-center gap-2">
@@ -82,11 +91,12 @@ export function SettleDialog({
                         <Button size="sm" variant="light" onClick={() => onRecord({ from: t.from, to: t.to, cents: t.amountCents })}>
                           Record it
                         </Button>
-                        {t.from === meId && !handle && (
+                        {t.from === meId && !handle && !canEdit && (
                           <span className="text-xs text-white/70">No Venmo for {name(t.to)} yet; any app works, then record it.</span>
                         )}
                       </div>
                     )}
+                    {paymentsReady && offerVenmo && <AddVenmoFor name={name(t.to)} onSave={(h) => onSaveVenmoFor(t.to, h)} />}
                   </li>
                 );
               })}
@@ -108,6 +118,59 @@ export function SettleDialog({
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** "Add Jordan's Venmo": an Owner fills it in for someone, from the Settle up line that pays them. */
+function AddVenmoFor({ name, onSave }: { name: string; onSave: (handle: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold text-white underline underline-offset-4">
+        Add {name}'s Venmo
+      </button>
+    );
+  }
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave(value);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={save} className="mt-2">
+      <label className="mb-1 block text-xs text-white/80" htmlFor={`venmo-for-${name}`}>
+        {name}'s Venmo username
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={`venmo-for-${name}`}
+          className="field-dark"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="@username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoFocus
+        />
+        <Button type="submit" size="sm" disabled={busy || !value.trim()}>
+          {busy ? "Saving..." : "Save"}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-1 text-xs font-medium text-red-200">
+          {error}
+        </p>
+      )}
+    </form>
   );
 }
 

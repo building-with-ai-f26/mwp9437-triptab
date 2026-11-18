@@ -243,10 +243,17 @@ export async function deletePayment(id: string): Promise<void> {
   if (!data?.length) throw new Error("Only whoever recorded it, or an owner, can remove it.");
 }
 
+/** An Owner sets someone's Venmo username on this trip (they can still change it themselves). */
+export async function setVenmoFor(travelerId: string, handle: string): Promise<void> {
+  const { data, error } = await supabase.from("travelers").update({ venmo: cleanVenmo(handle) }).eq("id", travelerId).select("id");
+  if (error) throw new Error(error.code === "23514" ? VENMO_FORMAT : friendly(error));
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
 /** Your Venmo username, on all your trips at once. Blank clears it. */
 export async function setMyVenmo(handle: string): Promise<void> {
   const { error } = await supabase.rpc("set_my_venmo", { p_venmo: handle });
-  if (error) throw new Error(error.code === "23514" ? "A Venmo username is 5 to 30 letters, numbers, - or _." : friendly(error));
+  if (error) throw new Error(error.code === "23514" ? VENMO_FORMAT : friendly(error));
 }
 
 // ---------- People ----------
@@ -256,7 +263,17 @@ export interface PersonDraft {
   email: string;
   phone: string;
   role: Role;
+  /** Their Venmo username, so people can pay them from Settle up (optional). */
+  venmo?: string;
 }
+
+const VENMO_FORMAT = "A Venmo username is 5 to 30 letters, numbers, - or _.";
+/** "@Jordan-B" or " jordan-b " becomes "Jordan-B"; blank becomes null. */
+export const cleanVenmo = (handle: string): string | null => handle.trim().replace(/^@/, "") || null;
+export const venmoLooksRight = (handle: string): boolean => {
+  const v = cleanVenmo(handle);
+  return v === null || /^[A-Za-z0-9_-]{5,30}$/.test(v);
+};
 
 /** Owners get each person's email and phone; everyone else gets null for both. */
 function withContacts(
@@ -276,9 +293,12 @@ export async function addTraveler(tripId: string, p: PersonDraft): Promise<Trave
       email: p.email.trim() || null,
       phone: p.phone.trim() || null,
       role: p.role,
+      // Only when given, so a database without Venmo names still adds people.
+      ...(cleanVenmo(p.venmo ?? "") ? { venmo: cleanVenmo(p.venmo ?? "") } : {}),
     })
     .select(TRAVELER_COLUMNS)
     .single();
+  if (error?.code === "23514") throw new Error(VENMO_FORMAT);
   const row = must(data as Omit<Traveler, "email" | "phone"> | null, error);
   return { ...row, email: p.email.trim() || null, phone: p.phone.trim() || null };
 }

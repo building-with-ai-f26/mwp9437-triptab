@@ -33,6 +33,7 @@ import {
   deletePayment,
   recordPayment,
   setMyVenmo,
+  setVenmoFor,
   type PaymentDraft,
   loadTrip,
   removeTraveler,
@@ -698,7 +699,12 @@ export default function TripPage() {
         }}
         onSaveVenmo={async (handle) => {
           await setMyVenmo(handle);
-          if (handle.trim()) track("venmo added");
+          if (handle.trim()) track("venmo added", { whose: "own" });
+          await reload();
+        }}
+        onSaveVenmoFor={async (travelerId, handle) => {
+          await setVenmoFor(travelerId, handle);
+          track("venmo added", { whose: "someone else" });
           await reload();
         }}
         onClose={() => setSettling(false)}
@@ -723,7 +729,7 @@ export default function TripPage() {
         onClose={() => setAddingPerson(false)}
         onAdd={async (p) => {
           await addTraveler(trip.id, p);
-          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()) });
+          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()), has_venmo: Boolean(p.venmo?.trim()) });
           await reload();
         }}
       />
