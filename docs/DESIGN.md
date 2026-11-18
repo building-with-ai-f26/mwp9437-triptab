@@ -71,7 +71,7 @@ All four transition `all 0.3s cubic-bezier(0.4, 0, 0.2, 1)`.
 - **Glass buttons** (`Dashboard.tsx` header, `InviteModal.tsx`): `rounded-xl border-white/20 glass hover:bg-white/30`.
 - **Small action buttons on items** (`Dashboard.tsx`): `px-2.5 py-1.5 min-h-[36px] min-w-[44px] rounded-lg border border-white/20 text-xs`, turning `bg-primary/15 text-primary` on hover. The 44px minimum is a phone tap target.
 
-**Rebuild:** CLAUDE.md calls for brown pill buttons, so the primary button keeps spring's brown, shadow and Playfair label and takes the header pills' `rounded-full` shape. Header actions stay glass.
+**Rebuild:** the vision calls for brown pill buttons, so the primary button keeps spring's brown, shadow and Playfair label and takes the header pills' `rounded-full` shape. Header actions stay glass.
 
 ## 6. The itinerary timeline
 
@@ -110,6 +110,6 @@ From `Dashboard.tsx` (the item card and the stay row) and `EditablePrice.tsx`.
 
 Spring used a centered Radix dialog on desktop and a bottom drawer on phones, both `glass-card-readable` (`AddActivityModal.tsx`, `AccommodationHub.tsx`), and the phone version broke through four fix attempts (the vision's "rules for the rebuild"). **Rebuild:** one dialog component, the opaque dark version of `glass-card-readable`, centered on desktop and pinned to the bottom of the screen at phone width with its own scroll, checked at 390px on every build.
 
-## 9. Held back
+## 9. Pod feedback
 
-The pod's 11/10 feedback (less glass, darker text, the popup's position) was about the broken spring app. It is not applied here until the pod has tried this build (CLAUDE.md, Design).
+The pod's 11/10 feedback (less glass, darker text, the popup's position) was about the broken spring app, so it was never applied as such. Text went dark on 11/16 (section 7). The pod tried this build on 11/17; their notes are on the runbook's Product Vision tab under Raised 11/17, and one changes section 8 when it is built: on a phone the Add a plan dialog should open where you are.

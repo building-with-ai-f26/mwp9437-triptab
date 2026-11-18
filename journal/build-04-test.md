@@ -12,8 +12,8 @@ Optional working notes. Publish your required build log on `docs/index.html`; no
 - **Summary of what works now:** 
 
 ## 2. Evidence from your chosen track
-- **Track A — Domain quality:** 3–4 rubric rules, 10 cases (5 normal, 3 messy, 2 adversarial), before/after results, and one outside target-user review.
-- **Track B — User friction:** 3–5 outside users, uncoached attempts and replay findings, fixes to the top three friction points, and before/after evidence.
+- **Track A, domain quality:** 3–4 rubric rules, 10 cases (5 normal, 3 messy, 2 adversarial), before/after results, and one outside target-user review.
+- **Track B, user friction:** 3–5 outside users, uncoached attempts and replay findings, fixes to the top three friction points, and before/after evidence.
 - **What the evidence changed in PRD v4:** 
 
 ## 3. What the agent did

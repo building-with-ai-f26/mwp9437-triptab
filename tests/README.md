@@ -4,11 +4,13 @@ Review agent changes and verify that the product works throughout the course. Us
 
 ## Build 4: choose one track
 
-**Track A — Domain quality**
+TripTab takes Track A: 10-case evals for AI import and Plan with AI in `app/evals/`, scored in code, with results in `journal/evals/README.md`.
+
+**Track A: Domain quality**
 
 Define 3–4 rules for good output. Evaluate 10 cases: 5 normal, 3 messy, and 2 adversarial. Compare results before and after improvements, and ask one outside target user to review the result.
 
-**Track B — User friction**
+**Track B: User friction**
 
 Watch 3–5 outside users try the product without coaching. Review PostHog replays, identify the top three friction points, and document fixes with before/after evidence. The app can still run locally.
 

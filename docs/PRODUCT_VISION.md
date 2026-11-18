@@ -230,6 +230,27 @@ You see a real gap in the market and would keep TripTab running after the course
 
 ## Questions for you
 
+**Raised 11/17** (setting up the pod test trip; to build after the pod test)
+
+- **Adding plans needs more flexibility.** An Add a plan button at the top of the trip, not only tapping a slot. A plan can run across several days with a start and end time (skiing 9 AM to 4 PM every day in Chamonix) instead of picking Morning and Day on each day. The four parts of the day stay as how the itinerary is laid out, and empty slots still show, so a gap like Thursday night stands out.
+- **Parts of the day are select all that apply.** The four part-of-day bubbles take more than one pick (Morning and Day for skiing), replacing the "Runs through the" dropdown.
+- **Plans save as you go.** A plan saves automatically, with no Save button to hit at the bottom.
+- **Cost starts collapsed.** The cost section is folded when the plan opens, so it doesn't overwhelm, especially for plans with no cost (skiing on a season pass).
+- **A red-eye night needs no lodging.** Importing a flight worked fine (11/17), but the night of an overnight flight (UA 956 Newark to Geneva, landing Fri 2/5 at 6:25 AM) still prompts "Add where everyone's staying". That night should show the flight in the stay row, or mark lodging not needed, for the people on it.
+- **Start a trip by describing it.** Starting a trip offers two ways: enter dates and stops by hand, or type or dictate what's already planned in free form (from Granola or Wispr Flow, say: "Chamonix Feb 5 to 12, then Andorra; skiing every day in Chamonix, a dinner reservation Thursday, flights and the Airbnb booked"). AI sets up the trip and its plans, then asks follow-up questions to fill the gaps (flight numbers? the Airbnb link?). Why: a 12-day trip is 48 slots plus lodging and travel, too much clicking by hand.
+- **Claude's note:** part of the first exists today (a plan's "Runs through the" and "Every day through" fields make skiing every day one plan, and it works well per your 11/17 try), so the gaps are clock times, a top-level Add button, multi-select parts and making the multi-day option easy to find. Describing a trip extends AI import, which today works only inside a trip that already exists.
+
+**Raised 11/17, after the pod test** (logged only; nothing decided yet)
+
+- **Start a trip: the photo waits for the place.** The background photo changes with every keystroke while typing a stop; it should change only once a place is picked. Stops should autocomplete as you type.
+- **Plan with AI: pick a day for each idea.** Each suggested idea can take a day (and part of the day), not only a checkbox to keep it.
+- **Suggested plans show who suggested them.**
+- **Drag and drop plans** to move them between slots and days.
+- **Phone: the Add a plan dialog opens at the top of the page.** Adding to a day lower on the itinerary means scrolling all the way back up to reach it; it should open where you are.
+- **Google sign-in.** A podmate who claimed her spot on her phone couldn't get in on her laptop: the link said her spot was taken instead of asking her to sign in. Signing in on the laptop fixed it. Google sign-in, and a "Sign in" prompt on a taken spot, would avoid this.
+- **A "Show me around" guide for new users.** A short walkthrough of the app the first time someone joins or starts a trip, so they get comfortable with it.
+- **Settle up mid-trip and record payments.** When you pay for the Airbnb up front and collect from people in advance, each payment gets recorded (who paid whom, how much), the way Splitwise's Record a payment works, and balances update right away instead of waiting for the end of the trip. TripTab still doesn't move money: each payment links out to Venmo to pay, and cash or another app (Zelle, say) can be recorded by hand. Today Settle up only lists the payments; there is no way to record one.
+
 **Decided 11/16** (from your walkthrough and the market scan)
 
 - **Who pays:** every plan is One bill, split or Everyone pays their own; flights default to their own. Own lines never create debts. Everyone sees who has booked; each price shows only to its owner. A plan is Confirmed once everyone going has booked. Points are a tag on your own line.

@@ -1,4 +1,4 @@
-# Intent.md — Optional PRD Draft (Build 1)
+# Intent.md: Optional PRD Draft (Build 1)
 
 Use this as a scratchpad if helpful. Publish the required PRD and Build 1 log on `docs/index.html`; this file is not a separate hand-in.
 

@@ -5,30 +5,20 @@
 - **Builder:** Mike Pezza (`@mwp9437`)
 - **Pod:** Pod 9
 - **Product Page & Living PRD:** https://building-with-ai-f26.github.io/mwp9437-triptab/
-- **App:** runs locally through Week 4; add a cloud URL in Build 5.
+- **App:** https://building-with-ai-f26.github.io/mwp9437-triptab/app/ (online since November 16)
 
-## Start here: Build 1
+## Where it stands
 
-**Due Monday, November 9 at noon, New York time.** No class November 3; keep building that week.
-
-1. Join the [class organization](https://github.com/building-with-ai-f26), then use this template to create a **public** repo named `<netid>-<project-slug>`. Ask Christian or Hew if the organization is missing from the owner list.
-2. Set up Git and one coding agent during the week of October 27. Follow the [Icerynk setup guide](https://www.icerynk.com/c/fa26-tech-gb-2160-dm2-f2/content/pre-class-setup-github-openrouter-your-coding-agent).
-3. Publish [`docs/index.html`](./docs/index.html): **Settings → Pages → Deploy from a branch → main → /docs → Save**. When deployment finishes, open `https://building-with-ai-f26.github.io/<your-repo-name>/`.
-4. Fill in PRD v1: a reachable user, their painful before/after workflow, one core workflow, and three non-goals.
-5. Build a rough local prototype. Add a screenshot or GIF and an honest Build 1 log to the Product Page, including progress, learning, problems, costs, and hours.
-6. Push meaningful commits on **at least two separate days each week outside class**, including the November 3 break.
-7. Submit your **Product Page URL and repository URL in Icerynk**. Come ready to demo the prototype in two minutes on November 10.
-
-Create your PostHog account in Week 1. Install it on the Product Page and local app in **Build 2**, then verify events. The Product Page is public from Build 1; the app can stay local through Week 4.
+Builds 1 and 2 are submitted; Build 3 is due Monday, November 23 at noon, New York time. The living PRD and the weekly build log, with screenshots, costs and hours, are on the [Product Page](https://building-with-ai-f26.github.io/mwp9437-triptab/).
 
 ## Repository map
 
 | File / folder | Purpose |
 | --- | --- |
 | [`docs/index.html`](./docs/index.html) | Required public pitch, living PRD, and weekly build log. Update with actual work and evidence. |
-| [`Intent.md`](./Intent.md), [`Plan.md`](./Plan.md), [`journal/`](./journal/) | Optional drafting aids. No duplicate submission is required. |
-| [`AGENTS.md`](./AGENTS.md) | Local run commands, project context, and agent rules. Build 2 onward. |
-| [`tests/`](./tests/) | Verification guidance. Build 4 offers Track A domain evals **or** Track B user replays. |
+| [`Intent.md`](./Intent.md), [`Plan.md`](./Plan.md), [`journal/`](./journal/) | Optional drafting aids. No duplicate submission is required. `journal/evals/` holds the AI eval results. |
+| [`AGENTS.md`](./AGENTS.md), [`CLAUDE.md`](./CLAUDE.md) | Local run commands, project structure, and agent rules. |
+| [`tests/`](./tests/) | Verification guidance. Build 4 offers Track A domain evals **or** Track B user replays; TripTab takes Track A (`app/evals/`). |
 | [`SPONSOR_MEMO.md`](./SPONSOR_MEMO.md) | One-page recommendation backed by actual usage, full costs, and risks. Due December 14 at noon. |
 
 [Icerynk](https://www.icerynk.com/c/fa26-tech-gb-2160-dm2-f2/content) holds the assignment instructions and submissions.
@@ -47,7 +37,7 @@ Create `app/.env.local` from `app/.env.example` with the Supabase URL and publis
 
 ```bash
 npm run dev     # open http://localhost:5173
-npm test        # 26 offline tests: split and settle-up math, the data model, the timeline
+npm test        # the offline tests: split and settle-up math, the data model, the timeline, the AI output checks
 ```
 
 Already cloned? Run `git pull` in `mwp9437-triptab`, then `npm install` again in `app`. Stop the app with Ctrl+C.
