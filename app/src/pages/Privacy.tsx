@@ -79,6 +79,10 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           field is hidden in replays.
         </li>
         <li>
+          <b>Open-Meteo</b> suggests places as you type a trip's stops. It gets only what you've typed in that box,
+          with no account or trip attached.
+        </li>
+        <li>
           <b>Google Fonts</b> and <b>Unsplash</b> supply the type and the destination photos, so your browser asks
           them for those files.
         </li>
