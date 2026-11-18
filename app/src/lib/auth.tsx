@@ -12,6 +12,10 @@ interface AuthState {
   googleEnabled: boolean;
   /** Leaves for Google; the browser comes back to `returnPath` on this site, signed in. */
   signInWithGoogle: (returnPath: string) => Promise<string | null>;
+  /** Emails a link to /reset-password. Says nothing about whether the account exists. */
+  sendPasswordReset: (email: string) => Promise<string | null>;
+  /** Sets a new password for whoever is signed in (after a reset link, the person it was sent to). */
+  setNewPassword: (password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -96,12 +100,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error ? "Couldn't reach Google. Try again, or use your email." : null;
   };
 
+  const sendPasswordReset = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (!error) return null;
+    if (error.status === 429 || /rate limit/i.test(error.message)) return "Too many reset emails just now. Try again in an hour.";
+    return "Couldn't send the email. Check the address and try again.";
+  };
+
+  const setNewPassword = async (password: string) => {
+    if (password.length < 8 || password.length > 72) return "Use a password of 8 to 72 characters.";
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) return null;
+    if (/different from the old/i.test(error.message)) return "That's your current password. Pick a new one.";
+    return "Couldn't save the new password. Ask for a new reset link and try again.";
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user: session?.user ?? null, ready, signUp, signIn, googleEnabled, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user: session?.user ?? null, ready, signUp, signIn, googleEnabled, signInWithGoogle, sendPasswordReset, setNewPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

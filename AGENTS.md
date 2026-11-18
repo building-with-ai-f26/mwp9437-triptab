@@ -13,7 +13,7 @@
 - **Run locally:** `cd app && npm run dev`, then open http://localhost:5173, click **Start a trip**, create an account, and use **Fill in the ski trip example**.
 - **Run deterministic tests:** `cd app && npm test` (money math, data model, timeline; offline).
 - **Run the database security tests:** `cd app && npm run test:rls` against TripTab dev (103 tests of row-level security, the money rules, who can write and read own costs, who can call AI import, plans that span time and extending a trip, against the Supabase project in `app/.env.local`, which is TripTab dev; 102 run every time, and the AI daily-cap test runs only with `VITE_CAP_FIXTURE=1`; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
-- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates, who pays, AI import and Plan with AI with canned replies, plans that span time, extending a trip, a joined spot asking you to sign in, and Google sign-in (with Google faked on); saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
+- **Click through the app:** with `npm run dev` running, `cd app && npm run e2e` (Playwright: the Build 2 flow, the Build 3 money flow, Build 4, trip settings, live updates, who pays, AI import and Plan with AI with canned replies, plans that span time, extending a trip, a joined spot asking you to sign in, Google sign-in (with Google faked on), and Forgot password; saves screenshots at 1280 and 390 wide to `docs/screenshots/`; events are tagged `test_run` so PostHog dashboards leave them out). On a laptop, Playwright needs `npm i -D playwright && npx playwright install chromium` first.
 - **Check text contrast:** with `npm run dev` running, `cd app && node e2e/contrast-check.cjs` measures every text run against the photo or glass behind it at 1280 and 390 wide and lists anything under 4.5:1 (3:1 for large text). Plan cards are listed apart from the rest.
 - **Check PostHog events:** start a dev server with a dummy key (`VITE_POSTHOG_KEY=phc_dummy npx vite --port 5174`), then `node e2e/posthog-check.cjs`. PostHog calls are intercepted; nothing is sent.
 - **Build:** `cd app && npm run build` (type-checks, then bundles).
@@ -27,8 +27,8 @@
 
 ```
 app/                      the web app (Vite)
-  src/main.tsx            routes: / , /sign-in, /trips, /trips/new, /trips/:id, /trips/:id/print, /join/:token
-  src/pages/              one file per screen (Landing, SignIn, Trips, NewTrip, TripPage, PrintTrip, Join)
+  src/main.tsx            routes: / , /sign-in, /reset-password, /trips, /trips/new, /trips/:id, /trips/:id/print, /join/:token
+  src/pages/              one file per screen (Landing, SignIn, ResetPassword, Trips, NewTrip, TripPage, PrintTrip, Join)
   src/components/         ui.tsx (button, dialog, fields), TopBar, Brand, AuthForm
   src/components/trip/    Timeline (day chips, days, item cards, stays), ItemDialog, PlanPanel (who pays, cost, own lines, in/out),
                           Money (confirm/expense dialog, money card, settle up, flights), People (people, group link),
