@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bookedLabel, goingList, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle } from "./ledger";
-import type { ExpenseRow, ItemPerson } from "./api";
+import { bookedLabel, goingList, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, venmoLink } from "./ledger";
+import type { ExpenseRow, ItemPerson, Payment } from "./api";
 import type { Traveler } from "./model";
 
 const t = (id: string): Traveler => ({
@@ -69,10 +69,60 @@ describe("the tab", () => {
   });
 
   it("your own numbers: what you paid, your share, and what you're owed", () => {
-    expect(myNumbers(expenses, "mike")).toEqual({ tripTotal: 20400, paid: 12000, share: 8200, balance: 3800, own: 0 });
+    expect(myNumbers(expenses, "mike")).toEqual({ tripTotal: 20400, paid: 12000, share: 8200, balance: 3800, own: 0, settled: 0 });
     expect(myNumbers(expenses, "priya").balance).toBe(-6100);
     expect(myShareOf(expenses[1], "vic")).toBe(2100);
     expect(myShareOf(expenses[0], "nobody")).toBeNull();
+  });
+});
+
+describe("recorded payments", () => {
+  const expenses = [
+    expense("fondue", "mike", 12000, [["mike", 4000], ["vic", 4000], ["priya", 4000]], "dinner"),
+    expense("groceries", "vic", 8400, [["mike", 4200], ["vic", 2100], ["priya", 2100]]),
+  ];
+  const payment = (from_traveler: string, to_traveler: string, amount_cents: number): Payment => ({
+    id: `${from_traveler}-${to_traveler}`,
+    trip_id: "trip",
+    from_traveler,
+    to_traveler,
+    amount_cents,
+    paid_on: "2027-02-06",
+    method: "venmo",
+    note: null,
+    created_by: null,
+    created_at: "",
+  });
+
+  it("a payment moves both balances at once, and the rest still settles", () => {
+    // Priya owed $61: she Venmos Mike his $38.
+    const { balances, transfers } = settle(expenses, people, [payment("priya", "mike", 3800)]);
+    expect(balances).toEqual({ mike: 0, vic: 2300, priya: -2300 });
+    expect(transfers).toEqual([{ from: "priya", to: "vic", amountCents: 2300 }]);
+  });
+
+  it("once everyone's paid, everyone's even", () => {
+    const { balances, transfers } = settle(expenses, people, [payment("priya", "mike", 3800), payment("priya", "vic", 2300)]);
+    expect(Object.values(balances).every((b) => b === 0)).toBe(true);
+    expect(transfers).toEqual([]);
+  });
+
+  it("your numbers: payments change your balance, not what the trip cost or your share", () => {
+    const paid = [payment("priya", "mike", 3800)];
+    expect(myNumbers(expenses, "priya", paid)).toMatchObject({ tripTotal: 20400, share: 6100, balance: -2300, settled: 3800 });
+    expect(myNumbers(expenses, "mike", paid)).toMatchObject({ balance: 0, settled: -3800 });
+  });
+
+  it("an advance before anything is spent shows as owed back", () => {
+    // Mike collects $200 from Vic toward the Airbnb before it's booked.
+    const { balances } = settle([], people, [payment("vic", "mike", 20000)]);
+    expect(balances).toEqual({ mike: -20000, vic: 20000, priya: 0 });
+  });
+
+  it("Pay with Venmo fills in the person, the amount and a note", () => {
+    const url = new URL(venmoLink("mike-p", 3850, "TripTab: Euro ski trip"));
+    expect(url.origin).toBe("https://venmo.com");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ txn: "pay", audience: "private", recipients: "mike-p", amount: "38.50", note: "TripTab: Euro ski trip" });
   });
 });
 

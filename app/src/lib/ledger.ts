@@ -4,7 +4,7 @@
  */
 import { calculateSettlements } from "./money";
 import type { Item, Traveler } from "./model";
-import type { ExpenseRow, ItemPerson, OwnMark } from "./api";
+import type { ExpenseRow, ItemPerson, OwnMark, Payment } from "./api";
 import type { Expense, Transfer } from "../types";
 
 /** In or out: an explicit choice wins; otherwise in, except flights, which are per person. */
@@ -34,8 +34,34 @@ function toSettleExpense(e: ExpenseRow): Expense {
  * need no special case: each is a cost whose payer is its only share, so it adds and subtracts the
  * same amount for the same person and never creates a debt.
  */
-export function settle(expenses: ExpenseRow[], travelers: Traveler[]): { balances: Record<string, number>; transfers: Transfer[] } {
-  return calculateSettlements(expenses.map(toSettleExpense), travelers);
+/**
+ * Everyone's balance and the fewest payments to square up. A recorded payment counts at once: the
+ * one who paid is owed it back, as if they'd paid an expense that was all the other person's.
+ */
+export function settle(
+  expenses: ExpenseRow[],
+  travelers: Traveler[],
+  payments: Payment[] = [],
+): { balances: Record<string, number>; transfers: Transfer[] } {
+  const paid = payments.map((p) => ({
+    id: p.id,
+    planId: "",
+    description: "Payment",
+    totalCents: p.amount_cents,
+    paidBy: p.from_traveler,
+    shares: { [p.to_traveler]: p.amount_cents },
+    createdAt: p.created_at,
+  }));
+  return calculateSettlements([...expenses.map(toSettleExpense), ...paid], travelers);
+}
+
+/**
+ * "Pay with Venmo": opens Venmo (the app on a phone) with the person, amount and note filled in.
+ * TripTab never sees or moves the money; recording the payment is a separate tap.
+ */
+export function venmoLink(handle: string, cents: number, note: string): string {
+  const q = new URLSearchParams({ txn: "pay", audience: "private", recipients: handle, amount: (cents / 100).toFixed(2), note });
+  return `https://venmo.com/?${q.toString()}`;
 }
 
 export interface MyNumbers {
@@ -49,9 +75,11 @@ export interface MyNumbers {
   balance: number;
   /** The part of your share that is your own lines (flights and the like), never split. */
   own: number;
+  /** Payments you've made minus payments you've got: already in balance. */
+  settled: number;
 }
 
-export function myNumbers(expenses: ExpenseRow[], meId: string | null): MyNumbers {
+export function myNumbers(expenses: ExpenseRow[], meId: string | null, payments: Payment[] = []): MyNumbers {
   let tripTotal = 0;
   let paid = 0;
   let share = 0;
@@ -64,7 +92,8 @@ export function myNumbers(expenses: ExpenseRow[], meId: string | null): MyNumber
     share += e.expense_shares.find((s) => s.traveler_id === meId)?.amount_cents ?? 0;
     if (e.own) own += e.total_cents;
   }
-  return { tripTotal, paid, share, balance: paid - share, own };
+  const settled = payments.reduce((n, p) => n + (p.from_traveler === meId ? p.amount_cents : 0) - (p.to_traveler === meId ? p.amount_cents : 0), 0);
+  return { tripTotal, paid, share, balance: paid - share + settled, own, settled };
 }
 
 /** The group's tab: everything except own lines. */

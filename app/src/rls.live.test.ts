@@ -135,7 +135,11 @@ describe("the group link", () => {
     const { data } = await visitor.rpc("join_preview", { p_token: token });
     expect(data.name).toBe("RLS test: Euro ski trip");
     expect(data.stops).toEqual(["Chamonix", "Barcelona", "Andorra"]);
-    expect(data.people.map((p: { name: string }) => p.name)).toEqual(["Mike", "Vic", "Priya"]);
+    // In the order they were added. Vic and Priya went in with one insert, so they share a
+    // created_at and either may come first; Mike, who started the trip, always leads.
+    const names = data.people.map((p: { name: string }) => p.name);
+    expect(names[0]).toBe("Mike");
+    expect(names.slice(1).sort()).toEqual(["Priya", "Vic"]);
     expect(data.people.find((p: { name: string }) => p.name === "Mike").claimed).toBe(true);
     expect(data).not.toHaveProperty("token");
   });

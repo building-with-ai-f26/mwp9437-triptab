@@ -94,6 +94,21 @@ export interface ExpenseShare {
   weight: number | null;
 }
 
+/** A recorded payment between two people on the trip (Build 3). TripTab never moves the money. */
+export type PaymentMethod = "venmo" | "cash" | "zelle" | "other";
+export interface Payment {
+  id: string;
+  trip_id: string;
+  from_traveler: string;
+  to_traveler: string;
+  amount_cents: number;
+  paid_on: string;
+  method: PaymentMethod;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 /** Money that changed hands: a confirmed plan's cost (item_id set) or a general expense. */
 export interface ExpenseRow {
   id: string;
@@ -152,10 +167,15 @@ export interface TripBundle {
   itemPeople: ItemPerson[];
   ownMarks: OwnMark[];
   actions: ActionItem[];
+  /**
+   * Recorded payments, oldest first. Null when this database doesn't have them yet (production
+   * until its migration is OK'd): the app then hides payments rather than failing to load.
+   */
+  payments: Payment[] | null;
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -166,6 +186,9 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("action_items").select("*").eq("trip_id", id).order("created_at"),
     supabase.rpc("trip_contacts", { p_trip: id }),
     supabase.rpc("own_marks", { p_trip: id }),
+    // Asked apart, so a database without payments yet still loads the trip.
+    supabase.from("payments").select("*").eq("trip_id", id).order("paid_on").order("created_at"),
+    supabase.from("travelers").select("id, venmo").eq("trip_id", id),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -175,7 +198,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     travelers: withContacts(
       must(travelers.data, travelers.error) as Omit<Traveler, "email" | "phone">[],
       (contacts.data as { traveler_id: string; email: string | null; phone: string | null }[] | null) ?? [],
-    ),
+    ).map((t) => ({ ...t, venmo: venmo.error ? undefined : ((venmo.data as { id: string; venmo: string | null }[]).find((v) => v.id === t.id)?.venmo ?? null) })),
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
     expenses: must(expenses.data, expenses.error) as ExpenseRow[],
@@ -184,7 +207,46 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     ),
     ownMarks: (marks.data as OwnMark[] | null) ?? [],
     actions: must(actions.data, actions.error) as ActionItem[],
+    payments: payments.error ? null : (payments.data as Payment[]),
   };
+}
+
+// ---------- Payments ----------
+
+export interface PaymentDraft {
+  from: string;
+  to: string;
+  cents: number;
+  paidOn: string;
+  method: PaymentMethod;
+  note: string;
+}
+
+/** Anyone on the trip records a payment they made or got; an Owner records any. */
+export async function recordPayment(tripId: string, p: PaymentDraft): Promise<void> {
+  const { error } = await supabase.from("payments").insert({
+    trip_id: tripId,
+    from_traveler: p.from,
+    to_traveler: p.to,
+    amount_cents: p.cents,
+    paid_on: p.paidOn,
+    method: p.method,
+    note: p.note.trim() || null,
+  });
+  if (error) throw new Error(error.code === "42501" ? "You can record a payment you made or got. An owner can record any." : friendly(error));
+}
+
+/** Whoever recorded a payment, or an Owner, can remove it. */
+export async function deletePayment(id: string): Promise<void> {
+  const { data, error } = await supabase.from("payments").delete().eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only whoever recorded it, or an owner, can remove it.");
+}
+
+/** Your Venmo username, on all your trips at once. Blank clears it. */
+export async function setMyVenmo(handle: string): Promise<void> {
+  const { error } = await supabase.rpc("set_my_venmo", { p_venmo: handle });
+  if (error) throw new Error(error.code === "23514" ? "A Venmo username is 5 to 30 letters, numbers, - or _." : friendly(error));
 }
 
 // ---------- People ----------

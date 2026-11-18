@@ -41,6 +41,8 @@ export interface Traveler {
   user_id: string | null;
   claimed_at: string | null;
   created_at: string;
+  /** Their Venmo username, for "Pay with Venmo" (Build 3); missing on a database without payments yet. */
+  venmo?: string | null;
 }
 
 export interface Item {

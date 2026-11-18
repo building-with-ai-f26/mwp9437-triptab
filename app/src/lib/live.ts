@@ -9,7 +9,7 @@ import { supabase } from "./supabase";
 const BY_TRIP = ["items", "travelers", "stops", "expenses", "action_items"] as const;
 const NO_TRIP_COLUMN = ["expense_shares", "item_people"] as const;
 
-export function subscribeToTrip(tripId: string, onChange: () => void): () => void {
+export function subscribeToTrip(tripId: string, onChange: () => void, opts: { payments?: boolean } = {}): () => void {
   let timer: number | undefined;
   const bump = () => {
     window.clearTimeout(timer);
@@ -17,7 +17,8 @@ export function subscribeToTrip(tripId: string, onChange: () => void): () => voi
   };
 
   const channel = supabase.channel(`trip:${tripId}`);
-  for (const table of BY_TRIP) {
+  // Payments only where the database has them: subscribing to a missing table could break the channel.
+  for (const table of opts.payments ? [...BY_TRIP, "payments" as const] : BY_TRIP) {
     const filter = `trip_id=eq.${tripId}`;
     channel.on("postgres_changes", { event: "INSERT", schema: "public", table, filter }, bump);
     channel.on("postgres_changes", { event: "UPDATE", schema: "public", table, filter }, bump);
