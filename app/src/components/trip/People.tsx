@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus, Wallet } from "lucide-react";
+import { PayLine } from "./PayInfo";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import { inviteUrl, sendInviteEmail, venmoLooksRight, type PersonDraft } from "../../lib/api";
+import { inviteUrl, sendInviteEmail, type PersonDraft } from "../../lib/api";
+import { venmoLooksRight } from "../../lib/pay";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
 
@@ -50,6 +52,9 @@ export function PeopleCard({
   onAdd,
   onRole,
   onRemove,
+  payReady = false,
+  onEditMyPay,
+  onVenmoFor,
   linkControls,
 }: {
   trip: Trip;
@@ -60,6 +65,12 @@ export function PeopleCard({
   onAdd: () => void;
   onRole: (t: Traveler, role: Role) => Promise<void>;
   onRemove: (t: Traveler) => Promise<void>;
+  /** The database has Venmo names (and maybe Zelle): show how each person is paid. */
+  payReady?: boolean;
+  /** Your own row: how people pay you. */
+  onEditMyPay?: () => void;
+  /** Owners: add or fix someone's Venmo, until they set their own. */
+  onVenmoFor?: (t: Traveler) => void;
   /** Owners only: the group link lives inside People (Mike's call, 11/16). Viewers never get it. */
   linkControls?: {
     onChange: (patch: Partial<Pick<GroupLink, "default_role" | "enabled">>) => Promise<void>;
@@ -149,6 +160,7 @@ export function PeopleCard({
                     )}
                     {canEdit && (t.email || t.phone) ? ` · ${t.email ?? t.phone}` : ""}
                   </p>
+                  {payReady && <PayLine person={t} />}
                 </div>
                 {canEdit && !me ? (
                   <select
@@ -166,6 +178,28 @@ export function PeopleCard({
                   </span>
                 )}
               </div>
+              {payReady && me && onEditMyPay && (
+                <div className="mt-2 pl-11">
+                  <button
+                    type="button"
+                    className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
+                    onClick={onEditMyPay}
+                  >
+                    <Wallet className="size-3" /> {t.venmo || t.zelle ? "Edit how people pay you" : "Add how people pay you"}
+                  </button>
+                </div>
+              )}
+              {payReady && canEdit && !me && t.user_id && !t.pay_locked && onVenmoFor && (
+                <div className="mt-2 pl-11">
+                  <button
+                    type="button"
+                    className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
+                    onClick={() => onVenmoFor(t)}
+                  >
+                    <Wallet className="size-3" /> {t.venmo ? "Change Venmo" : "Add Venmo"}
+                  </button>
+                </div>
+              )}
               {canEdit && !t.user_id && (
                 <div className="mt-2 flex flex-wrap gap-1.5 pl-11">
                   {url ? (
@@ -199,6 +233,14 @@ export function PeopleCard({
                     </>
                   ) : (
                     <span className="text-xs text-muted-foreground">Turn the group link on to send invites.</span>
+                  )}
+                  {payReady && !t.pay_locked && onVenmoFor && (
+                    <button
+                      className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
+                      onClick={() => onVenmoFor(t)}
+                    >
+                      <Wallet className="size-3" /> {t.venmo ? "Change Venmo" : "Add Venmo"}
+                    </button>
                   )}
                   <button
                     className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs text-destructive hover:bg-destructive/10"

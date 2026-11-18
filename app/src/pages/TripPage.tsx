@@ -14,6 +14,7 @@ import { splitEqually } from "../lib/money";
 import { AddPersonDialog, PeopleCard } from "../components/trip/People";
 import { ExpenseDialog, FlightsCard, MoneyCard, type ExpenseTarget } from "../components/trip/Money";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
+import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
 import { ImportDialog } from "../components/trip/Import";
 import { draftCents, type Draft } from "../lib/importPlans";
@@ -33,6 +34,7 @@ import {
   deleteItem,
   deletePayment,
   recordPayment,
+  setMyPay,
   setMyVenmo,
   setVenmoFor,
   type PaymentDraft,
@@ -51,7 +53,7 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, type Item, type ItemStatus } from "../lib/model";
+import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, type Item, type ItemStatus, type Traveler } from "../lib/model";
 import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
@@ -72,6 +74,9 @@ export default function TripPage() {
   // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
   const trackedEdit = useRef<string | null>(null);
   const [addingPerson, setAddingPerson] = useState(false);
+  // How people pay you (your own), and an Owner adding someone's Venmo, from People.
+  const [editingPay, setEditingPay] = useState(false);
+  const [venmoFor, setVenmoForPerson] = useState<Traveler | null>(null);
   const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
   const [settling, setSettling] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<Partial<PaymentDraft> | null>(null);
@@ -102,6 +107,8 @@ export default function TripPage() {
   // Live updates: reload when anyone on the trip changes something.
   const loaded = Boolean(bundle);
   const paymentsReady = bundle?.payments != null;
+  // A database with Zelle and the lock answers pay_locked for every person.
+  const zelleReady = (bundle?.travelers ?? []).some((t) => t.pay_locked !== undefined);
   useEffect(() => (loaded ? subscribeToTrip(id, reload, { payments: paymentsReady }) : undefined), [id, loaded, reload, paymentsReady]);
 
   const days = useMemo(
@@ -134,6 +141,13 @@ export default function TripPage() {
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
+  /** Your Venmo and Zelle, on all your trips; a database without Zelle yet saves the Venmo only. */
+  const saveMyPay = async (venmo: string, zelle: string, where: string) => {
+    if (zelleReady) await setMyPay(venmo, zelle);
+    else await setMyVenmo(venmo);
+    track("pay info saved", { where, has_venmo: Boolean(venmo.trim()), has_zelle: Boolean(zelle.trim()) });
+    await reload();
+  };
   const photo = photoFor(`${stops.map((s) => s.name).join(" ")} ${trip.name}`);
   // A plan's one bill. Own lines are kept apart: several per plan, and only some are readable.
   const expenseByItem = new Map(expenses.filter((e) => e.item_id && !e.own).map((e) => [e.item_id as string, e]));
@@ -243,6 +257,9 @@ export default function TripPage() {
         await removeTraveler(t.id);
         await reload();
       }}
+      payReady={paymentsReady}
+      onEditMyPay={() => setEditingPay(true)}
+      onVenmoFor={(t) => setVenmoForPerson(t)}
       linkControls={{
         onChange: async (patch) => {
           await updateLink(trip.id, patch);
@@ -694,16 +711,14 @@ export default function TripPage() {
         meId={meId}
         canEdit={editable}
         tripName={trip.name}
+        tripDates={dateRange(trip.start_date, trip.end_date)}
         paymentsReady={paymentsReady}
+        zelleReady={zelleReady}
         onRecord={(prefill) => {
           setSettling(false);
           setPaymentTarget(prefill);
         }}
-        onSaveVenmo={async (handle) => {
-          await setMyVenmo(handle);
-          if (handle.trim()) track("venmo added", { whose: "own" });
-          await reload();
-        }}
+        onSaveMyPay={(v, z) => saveMyPay(v, z, "settle up")}
         onSaveVenmoFor={async (travelerId, handle) => {
           await setVenmoFor(travelerId, handle);
           track("venmo added", { whose: "someone else" });
@@ -724,6 +739,22 @@ export default function TripPage() {
           setPaymentTarget(null);
           setSettling(true);
         }}
+      />
+      <PayInfoDialog
+        open={editingPay}
+        me={me}
+        zelleReady={zelleReady}
+        onSave={(v, z) => saveMyPay(v, z, "people")}
+        onClose={() => setEditingPay(false)}
+      />
+      <VenmoForDialog
+        person={venmoFor}
+        onSave={async (travelerId, handle) => {
+          await setVenmoFor(travelerId, handle);
+          track("venmo added", { whose: "someone else", where: "people" });
+          await reload();
+        }}
+        onClose={() => setVenmoForPerson(null)}
       />
       <AddPersonDialog
         open={addingPerson}

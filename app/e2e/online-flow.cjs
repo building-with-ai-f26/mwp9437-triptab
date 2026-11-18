@@ -39,7 +39,7 @@ const ROOT = (process.argv[2] || 'https://building-with-ai-f26.github.io') + '/m
   await v.goto(groupUrl);
   await v.getByRole('button', { name: 'Vic' }).click();
   await h.signUp(v, 'Vic', 'vic');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(v);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await v.locator('#day-2027-02-06').getByText('Ski school').waitFor();
   result.vicJoined = true;
@@ -60,7 +60,7 @@ const ROOT = (process.argv[2] || 'https://building-with-ai-f26.github.io') + '/m
   await s.getByLabel('Your name').fill('Sam');
   await s.getByRole('button', { name: 'Next' }).click();
   await h.signIn(s, 'sam');
-  await s.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(s);
   await s.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   result.samSignedInAndJoined = true;
 

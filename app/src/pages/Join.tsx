@@ -4,7 +4,8 @@ import { Check, UserPlus } from "lucide-react";
 import { Brand } from "../components/Brand";
 import { AuthForm } from "../components/AuthForm";
 import { Button, PhotoFrame, Spinner } from "../components/ui";
-import { joinPreview, joinTrip, type JoinPreview } from "../lib/api";
+import { joinPreview, joinTrip, myPayOn, setMyPay, type JoinPreview } from "../lib/api";
+import { PayInfoForm } from "../components/trip/PayInfo";
 import { nameOf, useAuth } from "../lib/auth";
 import { dateRange, ROLE_LABEL } from "../lib/model";
 import { LANDING_PHOTO, photoFor } from "../lib/photos";
@@ -36,6 +37,8 @@ export default function Join() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signInAs, setSignInAs] = useState<string | null>(null);
+  // Just joined: how people pay you, once (Mike's 11/18 notes). Skipped when you set it on another trip.
+  const [payStep, setPayStep] = useState<{ tripId: string; venmo: string | null; zelle: string | null } | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -87,6 +90,13 @@ export default function Join() {
       const tripId = await joinTrip(token, "travelerId" in pick ? { travelerId: pick.travelerId } : { newName: pick.newName });
       track("name claimed", { method: "travelerId" in pick ? "picked" : "added" });
       if (!("travelerId" in pick)) track("person added", { method: "group link", role: preview.default_role });
+      // Null on a database without Zelle yet, or if it can't be read: straight to the trip.
+      const pay = user ? await myPayOn(tripId, user.id) : null;
+      if (pay && !pay.pay_locked) {
+        setPayStep({ tripId, venmo: pay.venmo, zelle: pay.zelle });
+        setBusy(false);
+        return;
+      }
       navigate(`/trips/${tripId}`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -94,6 +104,41 @@ export default function Join() {
       joinPreview(token).then((p) => p && setPreview(p));
     }
   };
+
+  if (payStep) {
+    const open = () => navigate(`/trips/${payStep.tripId}`, { replace: true });
+    return (
+      <Frame photo={photo}>
+        <TripHeading preview={preview} />
+        <h2 className="mb-1 font-display text-xl font-bold text-white">How should people pay you back?</h2>
+        <p className="mb-4 text-sm text-white/80">
+          So the group can pay you in a tap from Settle up. You can change it any time in People.
+        </p>
+        <PayInfoForm
+          venmo={payStep.venmo}
+          zelle={payStep.zelle}
+          zelleReady
+          saveLabel="Save and open the trip"
+          onSave={async (v, z) => {
+            await setMyPay(v, z);
+            track("pay info saved", { where: "join", has_venmo: Boolean(v.trim()), has_zelle: Boolean(z.trim()) });
+            open();
+          }}
+        >
+          <Button
+            type="button"
+            variant="light"
+            onClick={() => {
+              track("pay info skipped", { where: "join" });
+              open();
+            }}
+          >
+            Skip for now
+          </Button>
+        </PayInfoForm>
+      </Frame>
+    );
+  }
 
   if (preview.my_traveler_id) {
     const mine = preview.people.find((p) => p.id === preview.my_traveler_id);

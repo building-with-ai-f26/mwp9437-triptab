@@ -23,7 +23,7 @@ const h = require('./helpers.cjs');
   await v.goto(groupUrl);
   await v.getByRole('button', { name: 'Vic' }).click();
   await h.signUp(v, 'Vic', 'vic');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(v);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await v.waitForTimeout(1500); // let the live channel connect
 

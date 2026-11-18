@@ -59,6 +59,11 @@ export function settle(
  * "Pay with Venmo": opens Venmo (the app on a phone) with the person, amount and note filled in.
  * TripTab never sees or moves the money; recording the payment is a separate tap.
  */
+/** The note on a Venmo payment: "TripTab · Pod test · Nov 20 to 22, 2026" (Mike's 11/18 ask). */
+export function venmoNote(tripName: string, dates: string): string {
+  return ["TripTab", tripName.trim(), dates].filter(Boolean).join(" · ");
+}
+
 export function venmoLink(handle: string, cents: number, note: string): string {
   const q = new URLSearchParams({ txn: "pay", audience: "private", recipients: handle, amount: (cents / 100).toFixed(2), note });
   return `https://venmo.com/?${q.toString()}`;

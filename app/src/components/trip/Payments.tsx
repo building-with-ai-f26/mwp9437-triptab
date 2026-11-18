@@ -2,7 +2,9 @@ import { useState, type FormEvent } from "react";
 import { ArrowRight, Banknote, X } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import type { Payment, PaymentDraft, PaymentMethod } from "../../lib/api";
-import { venmoLink } from "../../lib/ledger";
+import { zelleLabel } from "../../lib/pay";
+import { venmoLink, venmoNote } from "../../lib/ledger";
+import { PayInfoForm, ZelleCopy } from "./PayInfo";
 import { dollars, longDay, todayIso, type Traveler } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import type { Transfer } from "../../types";
@@ -25,9 +27,11 @@ export function SettleDialog({
   meId,
   canEdit,
   tripName,
+  tripDates,
   paymentsReady,
+  zelleReady,
   onRecord,
-  onSaveVenmo,
+  onSaveMyPay,
   onSaveVenmoFor,
   onClose,
 }: {
@@ -37,16 +41,23 @@ export function SettleDialog({
   meId: string | null;
   canEdit: boolean;
   tripName: string;
+  /** "Nov 20 to 22, 2026", for the note on a Venmo payment. */
+  tripDates: string;
   /** False on a database without payments yet: Settle up only lists who pays whom. */
   paymentsReady: boolean;
+  /** False on a database without Zelle yet: Venmo only, and no lock. */
+  zelleReady: boolean;
   onRecord: (prefill: Partial<PaymentDraft>) => void;
-  onSaveVenmo: (handle: string) => Promise<void>;
-  /** Owners: add the Venmo of someone being paid, so Pay with Venmo works for everyone paying them. */
+  onSaveMyPay: (venmo: string, zelle: string) => Promise<void>;
+  /** Owners: add or fix the Venmo of someone being paid, until they set their own. */
   onSaveVenmoFor: (travelerId: string, handle: string) => Promise<void>;
   onClose: () => void;
 }) {
   const name = (id: string) => nameOf(travelers, id, meId);
-  const venmoOf = (id: string) => travelers.find((t) => t.id === id)?.venmo ?? null;
+  const person = (id: string) => travelers.find((t) => t.id === id);
+  const venmoOf = (id: string) => person(id)?.venmo ?? null;
+  const me = meId ? person(meId) : undefined;
+  const note = venmoNote(tripName, tripDates);
   // Offer "Add Jordan's Venmo" once, on the first line paying Jordan.
   const firstLineTo = new Map<string, number>();
   transfers.forEach((t, i) => {
@@ -67,7 +78,9 @@ export function SettleDialog({
               {transfers.map((t, i) => {
                 const mine = t.from === meId || t.to === meId;
                 const handle = venmoOf(t.to);
-                const offerVenmo = !handle && canEdit && t.to !== meId && firstLineTo.get(t.to) === i;
+                const zelle = person(t.to)?.zelle ?? null;
+                // An Owner adds it, or fixes one an Owner added; once Jordan saves his own, it's his.
+                const offerVenmo = canEdit && t.to !== meId && !person(t.to)?.pay_locked && firstLineTo.get(t.to) === i;
                 return (
                   <li key={`${t.from}-${t.to}`} className="rounded-2xl bg-white/5 px-4 py-3 text-white" data-testid="transfer">
                     <div className="flex items-center gap-2">
@@ -80,7 +93,7 @@ export function SettleDialog({
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         {t.from === meId && handle && (
                           <a
-                            href={venmoLink(handle, t.amountCents, `TripTab: ${tripName}`)}
+                            href={venmoLink(handle, t.amountCents, note)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-9 items-center rounded-full bg-[#1e6aa1] px-3.5 text-sm font-semibold text-white hover:bg-[#185a8a]"
@@ -88,15 +101,16 @@ export function SettleDialog({
                             Pay with Venmo
                           </a>
                         )}
-                        <Button size="sm" variant="light" onClick={() => onRecord({ from: t.from, to: t.to, cents: t.amountCents })}>
+                        {t.from === meId && zelle && <ZelleCopy zelle={zelle} />}
+                        <Button size="sm" variant="light" onClick={() => onRecord({ from: t.from, to: t.to, cents: t.amountCents, method: handle ? "venmo" : zelle ? "zelle" : undefined })}>
                           Record it
                         </Button>
-                        {t.from === meId && !handle && !canEdit && (
-                          <span className="text-xs text-white/70">No Venmo for {name(t.to)} yet; any app works, then record it.</span>
+                        {t.from === meId && !handle && !zelle && !canEdit && (
+                          <span className="text-xs text-white/70">No Venmo or Zelle for {name(t.to)} yet; any app works, then record it.</span>
                         )}
                       </div>
                     )}
-                    {paymentsReady && offerVenmo && <AddVenmoFor name={name(t.to)} onSave={(h) => onSaveVenmoFor(t.to, h)} />}
+                    {paymentsReady && offerVenmo && <AddVenmoFor name={name(t.to)} current={handle} onSave={(h) => onSaveVenmoFor(t.to, h)} />}
                   </li>
                 );
               })}
@@ -107,7 +121,7 @@ export function SettleDialog({
               <Button variant="light" size="sm" className="mt-3" onClick={() => onRecord({})}>
                 <Banknote /> Record a payment
               </Button>
-              <VenmoField current={venmoOf(meId) ?? ""} onSave={onSaveVenmo} />
+              <MyPay me={me} zelleReady={zelleReady} onSave={onSaveMyPay} />
             </>
           )}
           <div className="mt-4 flex justify-end">
@@ -121,16 +135,16 @@ export function SettleDialog({
   );
 }
 
-/** "Add Jordan's Venmo": an Owner fills it in for someone, from the Settle up line that pays them. */
-function AddVenmoFor({ name, onSave }: { name: string; onSave: (handle: string) => Promise<void> }) {
+/** "Add Jordan's Venmo" (or "Change"): an Owner fills it in for someone, from the line that pays them. */
+function AddVenmoFor({ name, current, onSave }: { name: string; current: string | null; onSave: (handle: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(current ? `@${current}` : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold text-white underline underline-offset-4">
-        Add {name}'s Venmo
+        {current ? "Change" : "Add"} {name}'s Venmo
       </button>
     );
   }
@@ -140,6 +154,8 @@ function AddVenmoFor({ name, onSave }: { name: string; onSave: (handle: string) 
     setError(null);
     try {
       await onSave(value);
+      setOpen(false);
+      setBusy(false);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -174,49 +190,42 @@ function AddVenmoFor({ name, onSave }: { name: string; onSave: (handle: string) 
   );
 }
 
-/** Your Venmo username, so Pay with Venmo works for people paying you. */
-function VenmoField({ current, onSave }: { current: string; onSave: (handle: string) => Promise<void> }) {
-  const [value, setValue] = useState(current);
-  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const save = async (e: FormEvent) => {
-    e.preventDefault();
-    setState("saving");
-    setError(null);
-    try {
-      await onSave(value);
-      setState("saved");
-    } catch (err) {
-      setError((err as Error).message);
-      setState("idle");
-    }
-  };
+/** How people pay you, at the foot of Settle up: what's set, and Edit opens the same form as People. */
+function MyPay({ me, zelleReady, onSave }: { me: Traveler | undefined; zelleReady: boolean; onSave: (venmo: string, zelle: string) => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const has = Boolean(me?.venmo || me?.zelle);
+  const summary = [me?.venmo ? `Venmo @${me.venmo}` : null, me?.zelle ? `Zelle ${zelleLabel(me.zelle)}` : null].filter(Boolean).join(" · ");
   return (
-    <form onSubmit={save} className="mt-4 border-t border-white/10 pt-3">
-      <DarkField label="Your Venmo (optional)" hint="So friends can pay you in one tap. Everyone on your trips sees it.">
-        <div className="flex gap-2">
-          <input
-            className="field-dark"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setState("idle");
-            }}
-            placeholder="@username"
-            autoCapitalize="none"
-            autoCorrect="off"
-          />
-          <Button type="submit" size="sm" disabled={state === "saving" || value.trim() === current}>
-            {state === "saving" ? "Saving..." : state === "saved" ? "Saved" : "Save"}
-          </Button>
+    <section className="mt-4 border-t border-white/10 pt-3" aria-label="How people pay you">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="label-luxury text-white/80">How people pay you</p>
+          <p className="truncate text-sm text-white">{has ? summary : "Add your Venmo or Zelle so friends can pay you in a tap."}</p>
         </div>
-      </DarkField>
-      {error && (
-        <p role="alert" className="-mt-1 text-xs font-medium text-red-200">
-          {error}
-        </p>
+        {!editing && (
+          <Button type="button" size="sm" variant="light" onClick={() => setEditing(true)}>
+            {has ? "Edit" : "Add"}
+          </Button>
+        )}
+      </div>
+      {editing && (
+        <div className="mt-3">
+          <PayInfoForm
+            venmo={me?.venmo}
+            zelle={me?.zelle}
+            zelleReady={zelleReady}
+            onSave={async (v, z) => {
+              await onSave(v, z);
+              setEditing(false);
+            }}
+          >
+            <Button type="button" variant="light" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </PayInfoForm>
+        </div>
       )}
-    </form>
+    </section>
   );
 }
 

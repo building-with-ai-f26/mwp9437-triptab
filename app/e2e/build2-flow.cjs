@@ -4,6 +4,7 @@
 // claims a name through the group link on a phone; a third person adds themselves.
 const { chromium, devices } = require('playwright');
 const path = require('path');
+const { joinTrip } = require('./helpers.cjs');
 const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
 const BASE = 'http://localhost:5173';
 const run = Math.random().toString(36).slice(2, 7);
@@ -148,7 +149,7 @@ async function addPlan(page, day, slot, f) {
   await signUp(v, 'Vic', 'vic');
   await v.getByRole('button', { name: 'Join the trip' }).waitFor();
   await shot(v, 'join-confirm-phone');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await joinTrip(v);
   await v.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await v.waitForTimeout(800);
@@ -174,7 +175,7 @@ async function addPlan(page, day, slot, f) {
   await j.getByLabel('Your name').first().fill('Jules');
   await j.getByRole('button', { name: 'Next' }).click();
   await signUp(j, 'Jules', 'jules');
-  await j.getByRole('button', { name: 'Join the trip' }).click();
+  await joinTrip(j);
   await j.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await j.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   result.julesCanAdd = await j.getByRole('button', { name: 'Add a plan' }).count();

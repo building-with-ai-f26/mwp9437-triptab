@@ -51,7 +51,7 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   await v.goto(groupUrl);
   await v.getByRole('button', { name: 'Vic' }).click();
   await h.signUp(v, 'Vic', 'vic');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(v);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
 
   // 1. A flight, already booked: their own by default, logged while adding, Confirmed at once.
