@@ -14,7 +14,7 @@ Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 h
 ## Where the work happens
 
 - **Cloud sessions** on the TripTab cloud environment (full network access). Mike no longer runs the app on his laptop (11/18). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). If `app/.env.local` is missing, write it from the App settings block on the runbook's For Claude tab (public values only).
-- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into Decided calls or the Product Vision tab, then re-export the vision. A call he hasn't answered waits in Open calls, numbered (C1, C2) and with your recommendation, and nowhere else: no suggestion cards. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
+- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into Decided calls or the Product Vision tab, then re-export the vision. A call he hasn't answered waits in Open calls, numbered (C1, C2) and with your recommendation, and nowhere else: no suggestion cards. His TripTab project in Claude is archived (11/18); the Sponsor Memo, pricing and research happen here too.
 - **A session starts from one line.** This file and the runbook's Steps table carry the rest, so don't ask Mike for a long prompt or write him one.
 - **Course admin is yours too (Mike's call, 11/18).** At the start of a session, sync Icerynk (course key `fa26-tech-gb-2160-dm2-f2`, read-only) into Steps: due dates, pod check-ins, announcements, feedback and redos. The steps are under Course admin on the runbook's For Claude tab. Grades and feedback are private to Mike: runbook only, never the repo or the Product Page. Mike does all submitting.
 
@@ -42,7 +42,7 @@ The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shM
 - **Build history**: done steps.
 - **For Claude**, which Mike doesn't read: the table rules, the session block, the prompts, the app's public settings, and Decided calls (the archive).
 
-- Anything Mike has to do goes in the Steps table, with the detail on the For Claude tab. Keep the column widths as Mike set them (Target 88, Who 130). Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
+- Anything Mike has to do goes in the Steps table, with the detail on the For Claude tab. Leave the column widths as Mike sets them, and edit rows in place rather than replacing the table. Give each row you run a suggested model and effort. Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
 - Mike's decisions are in Decided calls and on the Product Vision tab. Don't re-ask them.
 - If this session can't reach the Claude Docs connector, list what Mike has to do under "For Mike" at the top of the current `journal/build-0N` file and say so in chat.
 
