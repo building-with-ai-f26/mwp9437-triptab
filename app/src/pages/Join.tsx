@@ -12,10 +12,17 @@ import { track } from "../lib/analytics";
 
 type Pick = { travelerId: string; name: string } | { newName: string };
 
+/** Names match the way the database's unique index does: trimmed, any case. */
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 /**
  * The group link. You see the trip and the names already added, pick yours ("Don't see your
  * name?" adds you), make an account or sign in, and you're on the trip. The role comes from
  * the server (join_trip), never from the link.
+ *
+ * A name that has already joined is someone's spot. Signed out, tapping it asks you to sign in
+ * (the 11/17 pod test: a podmate who joined on her phone found her spot "taken" on her laptop),
+ * and signing in opens the trip. Signed in as someone else, it stays shut.
  */
 export default function Join() {
   const { token = "" } = useParams();
@@ -28,6 +35,7 @@ export default function Join() {
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signInAs, setSignInAs] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -43,6 +51,11 @@ export default function Join() {
       .catch(() => setPreview(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, ready, user?.id]);
+
+  // Signed back in to a spot you'd already taken: go straight to the trip.
+  useEffect(() => {
+    if (signInAs && user && preview?.my_traveler_id) navigate(`/trips/${preview.trip_id}`, { replace: true });
+  }, [signInAs, user, preview, navigate]);
 
   if (!ready || preview === undefined) return <Spinner label="Opening the invite" />;
 
@@ -96,7 +109,25 @@ export default function Join() {
     <Frame photo={photo}>
       <TripHeading preview={preview} />
 
-      {!pick || !user ? (
+      {signInAs && !user ? (
+        <>
+          <p className="mb-4 rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/85">
+            <strong>{signInAs}</strong> already joined this trip. That's you? Sign in with the account you joined with, and the
+            trip opens.{" "}
+            <button className="underline underline-offset-4" onClick={() => setSignInAs(null)}>
+              Not you?
+            </button>
+          </p>
+          <AuthForm
+            initialMode="sign-in"
+            intro="Use the email you joined with, on any device."
+            onDone={() => {
+              /* "signed in" is tracked by the sign-in itself; the effects above reload the preview
+                 once the session lands, then open the trip */
+            }}
+          />
+        </>
+      ) : !pick || !user ? (
         <>
           {!pick && (
             <>
@@ -105,14 +136,15 @@ export default function Join() {
                 {preview.people.map((p) => (
                   <li key={p.id}>
                     <button
-                      disabled={p.claimed}
-                      onClick={() => setPick({ travelerId: p.id, name: p.name })}
+                      disabled={p.claimed && Boolean(user)}
+                      aria-label={p.claimed && !user ? `${p.name}, joined. That's you? Sign in` : undefined}
+                      onClick={() => (p.claimed ? setSignInAs(p.name) : setPick({ travelerId: p.id, name: p.name }))}
                       className="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 text-left text-sm text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-45 disabled:hover:bg-white/5"
                     >
                       <span className="truncate">{p.name}</span>
                       {p.claimed && (
-                        <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-white/70">
-                          <Check className="size-3" /> Joined
+                        <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-white/80">
+                          <Check className="size-3" /> {user ? "Joined" : "Joined · Sign in"}
                         </span>
                       )}
                     </button>
@@ -124,13 +156,23 @@ export default function Join() {
                   className="flex gap-2"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (newName.trim()) setPick({ newName: newName.trim() });
+                    const typed = newName.trim();
+                    if (!typed) return;
+                    // A name already on the trip is that person's spot: sign in to it, or take it.
+                    const known = preview.people.find((p) => sameName(p.name, typed));
+                    if (known?.claimed && !user) setSignInAs(known.name);
+                    else if (known?.claimed) setError(`${known.name} has already joined. Pick another name.`);
+                    else if (known) setPick({ travelerId: known.id, name: known.name });
+                    else setPick({ newName: typed });
                   }}
                 >
                   <input
                     className="field-dark"
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    onChange={(e) => {
+                      setNewName(e.target.value);
+                      setError(null);
+                    }}
                     placeholder="Your name"
                     aria-label="Your name"
                     autoFocus
@@ -149,6 +191,11 @@ export default function Join() {
                 >
                   <UserPlus className="size-4" /> Don't see your name?
                 </button>
+              )}
+              {error && (
+                <p role="alert" className="mt-3 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-100">
+                  {error}
+                </p>
               )}
             </>
           )}
