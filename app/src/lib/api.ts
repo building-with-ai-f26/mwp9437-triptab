@@ -248,6 +248,30 @@ export const appUrl = (path: string) =>
 export const inviteUrl = (token: string, travelerId?: string) =>
   appUrl(`/join/${token}${travelerId ? `?as=${travelerId}` : ""}`);
 
+export type InviteResult = { ok: true } | { ok: false; code: string; error: string };
+
+/**
+ * Emails someone their invite from invites@triptab.org (the send-invite Edge Function, Owners only,
+ * rate-limited there). `not_set_up` means the project has no email key yet: send it yourself instead.
+ */
+export async function sendInviteEmail(tripId: string, travelerId: string): Promise<InviteResult> {
+  const { error } = await supabase.functions.invoke("send-invite", { body: { trip_id: tripId, traveler_id: travelerId } });
+  if (!error) return { ok: true };
+  const response = (error as { context?: unknown }).context;
+  if (response instanceof Response) {
+    // A project without the function yet (production before its rollout) behaves like no email key:
+    // the Owner sends the invite from their own mail app, as before.
+    if (response.status === 404) return { ok: false, code: "not_set_up", error: "Invite emails aren't set up yet." };
+    try {
+      const body = (await response.json()) as { code?: string; error?: string };
+      if (body?.code) return { ok: false, code: body.code, error: body.error ?? "The email didn't go out." };
+    } catch {
+      // not JSON; fall through
+    }
+  }
+  return { ok: false, code: "error", error: "Can't reach TripTab's email right now. Send the invite yourself for now." };
+}
+
 export async function updateLink(tripId: string, patch: Partial<Pick<GroupLink, "default_role" | "enabled">>) {
   const { data, error } = await supabase.from("trip_links").update(patch).eq("trip_id", tripId).select("*").single();
   return must(data as GroupLink | null, error);
