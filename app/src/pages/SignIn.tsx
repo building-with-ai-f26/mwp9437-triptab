@@ -1,4 +1,4 @@
-import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { Brand } from "../components/Brand";
 import { PhotoFrame } from "../components/ui";
 import { LANDING_PHOTO } from "../lib/photos";
@@ -18,7 +18,7 @@ export default function SignIn() {
       <header className="relative z-10 px-4 py-4 sm:px-6 sm:py-5">
         <Brand light />
       </header>
-      <main className="relative z-10 flex flex-1 items-start justify-center px-4 pb-10 pt-4 sm:items-center">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-start px-4 pb-10 pt-4 sm:justify-center">
         <div className="glass-card-readable w-full max-w-sm rounded-3xl p-6">
           <AuthForm
             initialMode={params.get("mode") === "sign-in" ? "sign-in" : "create"}
@@ -26,6 +26,9 @@ export default function SignIn() {
             googleReturn={`/sign-in?next=${encodeURIComponent(next)}`}
           />
         </div>
+        <Link to="/privacy" className="mt-4 text-xs font-medium text-white underline underline-offset-4 drop-shadow">
+          How TripTab uses your data
+        </Link>
       </main>
     </div>
   );
