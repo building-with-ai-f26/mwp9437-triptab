@@ -46,6 +46,9 @@ export default function Join() {
           track("group link opened", { signed_in: Boolean(user), personal: Boolean(params.get("as")) });
           const as = p.people.find((x) => x.id === params.get("as") && !x.claimed);
           if (as) setPick({ travelerId: as.id, name: as.name });
+          // Back from Google with a new name typed before leaving.
+          const typed = params.get("name")?.trim();
+          if (!as && typed && !p.people.some((x) => sameName(x.name, typed))) setPick({ newName: typed.slice(0, 60) });
         }
       })
       .catch(() => setPreview(null));
@@ -120,6 +123,7 @@ export default function Join() {
           </p>
           <AuthForm
             initialMode="sign-in"
+            googleReturn={`/join/${token}`}
             intro="Use the email you joined with, on any device."
             onDone={() => {
               /* "signed in" is tracked by the sign-in itself; the effects above reload the preview
@@ -210,6 +214,11 @@ export default function Join() {
               </p>
               <AuthForm
                 defaultName={pickedName}
+                googleReturn={
+                  "travelerId" in pick
+                    ? `/join/${token}?as=${pick.travelerId}`
+                    : `/join/${token}?name=${encodeURIComponent(pick.newName)}`
+                }
                 intro="So your spot stays yours on any device. No email to confirm."
                 onDone={() => {
                   /* the effect above reloads the preview once the session lands; then Join shows */

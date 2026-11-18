@@ -6,19 +6,24 @@ import { useAuth } from "../lib/auth";
  * Create an account or sign in, on dark glass. Used on the sign-in page and the join page.
  * The two are separate, labeled tabs at the top (11/16 walkthrough: the old small link at the
  * bottom was easy to miss, so people with an account tried to create a second one).
+ * Where the project has Google sign-in turned on, "Continue with Google" sits above both; it
+ * signs in or creates the account in one step, and comes back to `googleReturn`.
  */
 export function AuthForm({
   onDone,
   defaultName = "",
   intro,
   initialMode = "create",
+  googleReturn,
 }: {
   onDone: () => void;
   defaultName?: string;
   intro?: string;
   initialMode?: "create" | "sign-in";
+  /** Where Google sends you back to on this site; defaults to this page. */
+  googleReturn?: string;
 }) {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, googleEnabled, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<"create" | "sign-in">(initialMode);
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState("");
@@ -38,8 +43,26 @@ export function AuthForm({
 
   const valid = email.includes("@") && password.length >= 8 && (mode === "sign-in" || name.trim().length > 0);
 
+  const google = async () => {
+    setBusy(true);
+    setError(null);
+    const err = await signInWithGoogle(googleReturn ?? `${window.location.pathname}${window.location.search}`);
+    if (err) {
+      setError(err);
+      setBusy(false);
+    }
+  };
+
   return (
     <form onSubmit={submit} noValidate>
+      {googleEnabled && (
+        <>
+          <Button type="button" variant="light" className="mb-3 w-full" onClick={google} disabled={busy}>
+            Continue with Google
+          </Button>
+          <p className="mb-4 text-center text-xs text-white/70">or use your email</p>
+        </>
+      )}
       <div role="tablist" aria-label="Create an account or sign in" className="mb-5 grid grid-cols-2 gap-1 rounded-full bg-white/10 p-1">
         {(
           [
