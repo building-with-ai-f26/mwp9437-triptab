@@ -16,6 +16,15 @@ interface AuthState {
   sendPasswordReset: (email: string) => Promise<string | null>;
   /** Sets a new password for whoever is signed in (after a reset link, the person it was sent to). */
   setNewPassword: (password: string) => Promise<string | null>;
+  /**
+   * An email-and-password account whose "Confirm your email" link hasn't been opened yet (C6,
+   * 11/18). Set only by the server; Google sign-ins and older accounts are never pending.
+   */
+  emailPending: boolean;
+  /** Emails a fresh confirmation link; the answer is a line to show. */
+  resendConfirm: () => Promise<{ ok: boolean; message: string }>;
+  /** Re-reads the account from the server, after the link was opened (on this device or another). */
+  refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -117,12 +126,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "Couldn't save the new password. Ask for a new reset link and try again.";
   };
 
+  const resendConfirm = async () => {
+    const { data, error } = await supabase.functions.invoke("confirm-email", { body: { action: "resend" } });
+    if (error) {
+      let message = "Couldn't send it just now. Try again in a bit.";
+      try {
+        const body = await (error as { context?: Response }).context?.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // keep the generic message
+      }
+      return { ok: false, message };
+    }
+    if (data?.already) return { ok: true, message: "Your email is already confirmed." };
+    if (data?.code === "reserved") return { ok: false, message: "That address can't get email. Sign up with a real one to confirm it." };
+    track("confirm email resent");
+    return { ok: true, message: "Sent. Check your inbox, and your spam folder." };
+  };
+
+  const refreshUser = async () => {
+    await supabase.auth.refreshSession();
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user: session?.user ?? null, ready, signUp, signIn, googleEnabled, signInWithGoogle, sendPasswordReset, setNewPassword, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user: session?.user ?? null,
+        ready,
+        signUp,
+        signIn,
+        googleEnabled,
+        signInWithGoogle,
+        sendPasswordReset,
+        setNewPassword,
+        emailPending: session?.user?.app_metadata?.email_check === "pending",
+        resendConfirm,
+        refreshUser,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

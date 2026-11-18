@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet, Wand2 } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
+import { ConfirmBanner } from "../components/ConfirmBanner";
 import { Button, ErrorNote, PhotoFrame, Segmented, Spinner } from "../components/ui";
 import { WeekView } from "../components/trip/WeekView";
 import { ActionsCard } from "../components/trip/Actions";
@@ -297,6 +298,7 @@ export default function TripPage() {
             </span>
           )}
         </TopBar>
+        <ConfirmBanner />
 
         {/* Phone: one pane at a time (spring's Schedule / Details toggle). */}
         <div className="flex gap-1 px-4 pt-3 lg:hidden" role="tablist">

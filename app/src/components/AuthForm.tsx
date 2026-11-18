@@ -110,7 +110,7 @@ export function AuthForm({
       <p className="mb-5 text-sm text-white/80">
         {resetting
           ? "We'll email you a link to set a new one. It works on any device."
-          : (intro ?? (mode === "create" ? "New here? Takes ten seconds. No email to confirm." : "Sign in to see your trips."))}
+          : (intro ?? (mode === "create" ? "New here? Takes ten seconds, and you can start right away." : "Sign in to see your trips."))}
       </p>
 
       {resetSentTo ? (

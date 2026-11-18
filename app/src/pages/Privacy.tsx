@@ -34,6 +34,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           <b>Logs:</b> a record of each AI request (who asked, on which trip, when, how long the input was and what it
           cost) and of each invite email (who sent it, to which person, when). They hold counts and costs, never your
           text or anyone's email, and they stay after a trip is deleted so TripTab's costs and daily limits add up.
+          When you sign up, TripTab keeps a scrambled (hashed) form of your network address, never the address
+          itself, so it can limit how many accounts are made from one place.
         </li>
       </ul>
     ),
@@ -72,7 +74,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           Anthropic's terms for businesses it isn't used to train its models. Nothing is saved until you review it.
         </li>
         <li>
-          <b>Resend</b> delivers TripTab's emails: password resets, and invites an Owner sends. An invite carries the
+          <b>Resend</b> delivers TripTab's emails: the link to confirm your email, password resets, and invites an
+          Owner sends. An invite carries the
           Owner's name, the trip's name, dates and stops, and the person's link.
         </li>
         <li>

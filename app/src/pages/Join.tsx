@@ -219,7 +219,7 @@ export default function Join() {
                     ? `/join/${token}?as=${pick.travelerId}`
                     : `/join/${token}?name=${encodeURIComponent(pick.newName)}`
                 }
-                intro="So your spot stays yours on any device. No email to confirm."
+                intro="So your spot stays yours on any device. You can start right away."
                 onDone={() => {
                   /* the effect above reloads the preview once the session lands; then Join shows */
                 }}
