@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet, Wand2 } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
@@ -62,6 +62,8 @@ export default function TripPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("itinerary");
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
+  // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
+  const trackedEdit = useRef<string | null>(null);
   const [addingPerson, setAddingPerson] = useState(false);
   const [expenseTarget, setExpenseTarget] = useState<ExpenseTarget | null>(null);
   const [settling, setSettling] = useState(false);
@@ -479,18 +481,26 @@ export default function TripPage() {
             />
           )
         }
-        onClose={() => setDialog(null)}
-        onSave={async (input, existing, paid) => {
+        onClose={() => {
+          setDialog(null);
+          trackedEdit.current = null;
+        }}
+        onSave={async (input, existing, paid, patch) => {
           // A day just outside the trip stretches the trip first (the dialog says so before saving).
           if (input.day < trip.start_date || input.day > trip.end_date) {
             await extendTrip(trip.id, input.day);
             track("trip extended", { via: "plan", kind: input.kind, side: input.day < trip.start_date ? "before" : "after" });
           }
           if (existing) {
-            await updateItem(existing.id, input);
-            track("plan updated", { kind: input.kind, status: input.status });
-            if (existing.status !== input.status) {
-              track("plan status changed", { kind: input.kind, from: existing.status, to: input.status });
+            // As saved last, which a save a moment ago may have changed.
+            const current = items.find((i) => i.id === existing.id) ?? existing;
+            await updateItem(existing.id, patch ?? input);
+            if (trackedEdit.current !== existing.id) {
+              track("plan updated", { kind: input.kind, status: input.status });
+              trackedEdit.current = existing.id;
+            }
+            if ((patch ? patch.status !== undefined : true) && current.status !== input.status) {
+              track("plan status changed", { kind: input.kind, from: current.status, to: input.status });
             }
           } else {
             // "Already booked and paid?" logs the one bill, or your own line, in the same step.
