@@ -39,6 +39,7 @@ async function addPlan(page, day, slot, f) {
   await d.getByLabel('What').fill(f.title);
   if (f.kind) await d.getByRole('radio', { name: f.kind }).click();
   if (f.status) await d.getByRole('radio', { name: f.status }).click();
+  if (f.est || f.perPerson) await d.getByRole('button', { name: /^Cost/ }).click();
   if (f.est) await d.getByLabel(/Estimated/).fill(f.est);
   if (f.perPerson) await d.getByRole('radio', { name: 'Per person' }).click();
   await d.getByRole('button', { name: 'Add to trip' }).click();

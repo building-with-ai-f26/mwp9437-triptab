@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
   addDays,
@@ -9,10 +9,12 @@ import {
   longDay,
   PART_LABEL,
   PARTS,
+  partOfEndTime,
   partOfTime,
   PAY_MODE_LABEL,
   SPILL_DAYS,
   STATUS_LABEL,
+  togglePart,
   tripDays,
   validateItem,
   widenTrip,
@@ -129,6 +131,9 @@ function ItemForm({
   const [paidAmount, setPaidAmount] = useState("");
   const [paidBy, setPaidBy] = useState(meId ?? travelers[0]?.id ?? "");
   const [points, setPoints] = useState(false);
+  // Cost starts folded, so a plan with no cost (skiing on a season pass) doesn't face five
+  // money questions (11/17 pod feedback).
+  const [costOpen, setCostOpen] = useState(false);
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,8 +171,8 @@ function ItemForm({
     part: isStay ? "night" : part,
     end_day: isStay ? endDay : spanLastDay,
     end_part: spanEndPart,
-    start_time: travel && startTime ? startTime : null,
-    end_time: travel && endTime ? endTime : null,
+    start_time: !isStay && startTime ? startTime : null,
+    end_time: !isStay && endTime ? endTime : null,
     location: location.trim() || null,
     notes: notes.trim() || null,
     status: paidNow ? "planned" : status,
@@ -175,12 +180,24 @@ function ItemForm({
     cost_type: isStay ? "total" : costType,
     ...(it ? {} : { pay_mode: payMode }),
   };
-  const problems = [
-    ...validateItem(input, tripNow),
+  const costProblems = [
     ...(!paidNow && typed != null && Number.isNaN(typed) ? ["Type the estimate as a number, like 45 or $45."] : []),
     ...(paidNow && paidBad ? ["Enter what it cost, like 120 or $120."] : []),
     ...(paidNow && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
   ];
+  const problems = [...validateItem(input, tripNow), ...costProblems];
+  // Non-travel plans: the run of parts covered, as indexes into PARTS.
+  const fromIdx = PARTS.indexOf(part);
+  const toIdx = endPart && PARTS.indexOf(endPart) > fromIdx ? PARTS.indexOf(endPart) : fromIdx;
+  const setRun = (from: number, to: number) => {
+    setPart(PARTS[from]);
+    setEndPart(to > from ? PARTS[to] : "");
+  };
+  const costSummary = paidNow
+    ? "paid, logging it now"
+    : estCents != null
+      ? `about ${dollars(estCents)}${!isStay && costType === "per_person" ? " a person" : ""}`
+      : "none yet";
 
   if (!canEdit && it) {
     return (
@@ -217,6 +234,7 @@ function ItemForm({
 
   const save = async () => {
     setTried(true);
+    if (costProblems.length) setCostOpen(true);
     if (problems.length) return;
     setBusy(true);
     setError(null);
@@ -316,9 +334,35 @@ function ItemForm({
               {longDay(day)} is {day < trip.start_date ? "before" : "after"} the trip. Saving adds it, so the trip {day < trip.start_date ? "starts" : "ends"} {longDay(day)}.
             </p>
           )}
-          <DarkField label={travel ? (flight ? "Departs in the" : "Leaves in the") : "Part of the day"} group>
-            <Segmented label="Part of the day" value={part} onChange={setPart} options={PARTS.map((p) => ({ value: p, label: PART_LABEL[p] }))} />
-          </DarkField>
+          {travel ? (
+            <DarkField label={flight ? "Departs in the" : "Leaves in the"} group>
+              <Segmented label="Part of the day" value={part} onChange={setPart} options={PARTS.map((p) => ({ value: p, label: PART_LABEL[p] }))} />
+            </DarkField>
+          ) : (
+            <DarkField label="Part of the day" group hint="Pick all that apply. It covers every part from the first to the last.">
+              <div role="group" aria-label="Part of the day" className="flex flex-wrap gap-1.5">
+                {PARTS.map((p, i) => {
+                  const on = i >= fromIdx && i <= toIdx;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        const run = togglePart(fromIdx, toIdx, i);
+                        setRun(run.from, run.to);
+                      }}
+                      className={`min-h-9 rounded-full px-3.5 text-sm transition-colors ${
+                        on ? "bg-primary font-semibold text-white" : "border border-white/15 bg-white/5 text-white/80 hover:bg-white/15"
+                      }`}
+                    >
+                      {PART_LABEL[p]}
+                    </button>
+                  );
+                })}
+              </div>
+            </DarkField>
+          )}
 
           {travel ? (
             <div className="grid grid-cols-2 gap-x-2">
@@ -367,26 +411,44 @@ function ItemForm({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-2">
-              <DarkField label="Runs through the">
-                <select className="field-dark" value={endPart && PARTS.indexOf(endPart) > PARTS.indexOf(part) ? endPart : ""} onChange={(e) => setEndPart(e.target.value as DayPart | "")}>
-                  <option value="">Just the {PART_LABEL[part].toLowerCase()}</option>
-                  {PARTS.filter((p) => PARTS.indexOf(p) > PARTS.indexOf(part)).map((p) => (
-                    <option key={p} value={p}>
-                      {PART_LABEL[p]}
-                    </option>
-                  ))}
-                </select>
+              <DarkField label="Starts at (optional)">
+                <input
+                  type="time"
+                  className="field-dark"
+                  value={startTime}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    if (!e.target.value) return;
+                    const from = PARTS.indexOf(partOfTime(e.target.value));
+                    setRun(from, Math.max(from, toIdx));
+                  }}
+                />
               </DarkField>
-              <DarkField label="Every day through">
-                <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
-                  <option value="">Just this day</option>
-                  {lastDays.map((d) => (
-                    <option key={d} value={d}>
-                      {longDay(d)}
-                    </option>
-                  ))}
-                </select>
+              <DarkField label="Ends at (optional)">
+                <input
+                  type="time"
+                  className="field-dark"
+                  value={endTime}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    if (!e.target.value) return;
+                    const to = PARTS.indexOf(partOfEndTime(e.target.value));
+                    setRun(Math.min(fromIdx, to), to);
+                  }}
+                />
               </DarkField>
+              <div className="col-span-2">
+                <DarkField label="Every day through">
+                  <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
+                    <option value="">Just {longDay(day)}</option>
+                    {lastDays.map((d) => (
+                      <option key={d} value={d}>
+                        {longDay(d)}
+                      </option>
+                    ))}
+                  </select>
+                </DarkField>
+              </div>
             </div>
           )}
           {(spanLastDay || spanEndPart) && (
@@ -399,86 +461,9 @@ function ItemForm({
         </>
       )}
 
-      {!it && (
-        <>
-          <DarkField
-            group
-            label="Who pays"
-            hint={
-              payMode === "own"
-                ? "Each person going logs their own price (flights, lift passes). Prices stay private and never go into Settle up."
-                : "One person pays and it's split among who's in. If someone buys for only part of the group, add that as a general expense for now."
-            }
-          >
-            <Segmented
-              label="Who pays"
-              value={payMode}
-              onChange={(m) => {
-                setPayMode(m);
-                setPayPicked(true);
-              }}
-              options={[
-                { value: "split", label: PAY_MODE_LABEL.split },
-                { value: "own", label: PAY_MODE_LABEL.own },
-              ]}
-            />
-          </DarkField>
-          <DarkField group label="Already booked and paid?">
-            <Segmented
-              label="Already booked and paid?"
-              value={paid ? "yes" : "no"}
-              onChange={(v) => setPaid(v === "yes")}
-              options={[
-                { value: "no", label: "Not yet" },
-                { value: "yes", label: "Yes, log it now" },
-              ]}
-            />
-          </DarkField>
-        </>
-      )}
 
-      {paidNow && (
-        <div className="mb-3 rounded-2xl bg-white/5 p-3">
-          <DarkField label={payMode === "own" ? (points ? "Cash value or fees (optional)" : "What you paid") : isStay ? "What it cost in total" : "What it cost"}>
-            <input
-              className="field-dark"
-              inputMode="decimal"
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
-              placeholder="$"
-            />
-          </DarkField>
-          {payMode === "own" ? (
-            <>
-              <label className="mb-2 flex min-h-9 items-center gap-2.5 text-sm text-white">
-                <input type="checkbox" className="size-5 accent-[#8c7054]" checked={points} onChange={(e) => setPoints(e.target.checked)} />
-                Paid with points
-              </label>
-              <p className="text-xs text-white/60">
-                Logs your own line. The plan is Confirmed once everyone going has logged theirs
-                {kind === "flight" ? " (on a flight, that's whoever is on it: you, to start)." : "."}
-              </p>
-            </>
-          ) : (
-            <>
-              <DarkField label="Paid by">
-                <select className="field-dark" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
-                  {travelers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.id === meId ? " (you)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </DarkField>
-              <p className="text-xs text-white/60">
-                Saved as Confirmed and split evenly among {kind === "flight" ? "whoever is on the flight (you, to start)" : "everyone on the trip"}.
-                Change the split or who's in from the plan afterwards. Paid with points? Enter what the group should pay.
-              </p>
-            </>
-          )}
-        </div>
-      )}
+
+
 
       {paidNow ? null : status !== "confirmed" ? (
         <DarkField group label="Status" hint="Suggested has a dotted outline until the group decides. Confirm it with the real cost from the button above once it's saved.">
@@ -496,27 +481,128 @@ function ItemForm({
         <p className="mb-3 text-sm text-white/70">Confirmed and paid. Undo the confirmation to change its status.</p>
       )}
 
-      <div className={`grid grid-cols-[1fr_auto] items-end gap-2 ${paidNow ? "hidden" : ""}`}>
-        <DarkField label={isStay ? "Estimated total" : "Estimated cost"}>
-          <input
-            className="field-dark"
-            inputMode="decimal"
-            value={estimate}
-            onChange={(e) => setEstimate(e.target.value)}
-            placeholder="$"
-          />
-        </DarkField>
-        {!isStay && (
-          <div className="mb-3">
-            <Segmented
-              label="Priced as"
-              value={costType}
-              onChange={setCostType}
-              options={[
-                { value: "total", label: "Total" },
-                { value: "per_person", label: "Per person" },
-              ]}
-            />
+      <div className="mb-3 rounded-2xl border border-white/15 bg-white/5">
+        <button
+          type="button"
+          aria-expanded={costOpen}
+          aria-controls="plan-cost"
+          onClick={() => setCostOpen((o) => !o)}
+          className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left"
+        >
+          <span className="min-w-0">
+            <span className="label-luxury block text-white/80">Cost</span>
+            <span className="block truncate text-sm text-white">
+              {costSummary}
+              {!it && !paidNow ? ` · ${PAY_MODE_LABEL[payMode]}` : ""}
+            </span>
+          </span>
+          <ChevronDown className={`size-5 shrink-0 text-white/70 transition-transform ${costOpen ? "rotate-180" : ""}`} />
+        </button>
+        {costOpen && (
+          <div id="plan-cost" className="border-t border-white/10 px-3 pt-3">
+          {!it && (
+            <>
+              <DarkField
+                group
+                label="Who pays"
+                hint={
+                  payMode === "own"
+                    ? "Each person going logs their own price (flights, lift passes). Prices stay private and never go into Settle up."
+                    : "One person pays and it's split among who's in. If someone buys for only part of the group, add that as a general expense for now."
+                }
+              >
+                <Segmented
+                  label="Who pays"
+                  value={payMode}
+                  onChange={(m) => {
+                    setPayMode(m);
+                    setPayPicked(true);
+                  }}
+                  options={[
+                    { value: "split", label: PAY_MODE_LABEL.split },
+                    { value: "own", label: PAY_MODE_LABEL.own },
+                  ]}
+                />
+              </DarkField>
+              <DarkField group label="Already booked and paid?">
+                <Segmented
+                  label="Already booked and paid?"
+                  value={paid ? "yes" : "no"}
+                  onChange={(v) => setPaid(v === "yes")}
+                  options={[
+                    { value: "no", label: "Not yet" },
+                    { value: "yes", label: "Yes, log it now" },
+                  ]}
+                />
+              </DarkField>
+            </>
+          )}
+          {paidNow && (
+            <div className="mb-3 rounded-2xl bg-white/5 p-3">
+              <DarkField label={payMode === "own" ? (points ? "Cash value or fees (optional)" : "What you paid") : isStay ? "What it cost in total" : "What it cost"}>
+                <input
+                  className="field-dark"
+                  inputMode="decimal"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder="$"
+                />
+              </DarkField>
+              {payMode === "own" ? (
+                <>
+                  <label className="mb-2 flex min-h-9 items-center gap-2.5 text-sm text-white">
+                    <input type="checkbox" className="size-5 accent-[#8c7054]" checked={points} onChange={(e) => setPoints(e.target.checked)} />
+                    Paid with points
+                  </label>
+                  <p className="text-xs text-white/60">
+                    Logs your own line. The plan is Confirmed once everyone going has logged theirs
+                    {kind === "flight" ? " (on a flight, that's whoever is on it: you, to start)." : "."}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <DarkField label="Paid by">
+                    <select className="field-dark" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+                      {travelers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                          {t.id === meId ? " (you)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </DarkField>
+                  <p className="text-xs text-white/60">
+                    Saved as Confirmed and split evenly among {kind === "flight" ? "whoever is on the flight (you, to start)" : "everyone on the trip"}.
+                    Change the split or who's in from the plan afterwards. Paid with points? Enter what the group should pay.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          <div className={`grid grid-cols-[1fr_auto] items-end gap-2 ${paidNow ? "hidden" : ""}`}>
+            <DarkField label={isStay ? "Estimated total" : "Estimated cost"}>
+              <input
+                className="field-dark"
+                inputMode="decimal"
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
+                placeholder="$"
+              />
+            </DarkField>
+            {!isStay && (
+              <div className="mb-3">
+                <Segmented
+                  label="Priced as"
+                  value={costType}
+                  onChange={setCostType}
+                  options={[
+                    { value: "total", label: "Total" },
+                    { value: "per_person", label: "Per person" },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
           </div>
         )}
       </div>

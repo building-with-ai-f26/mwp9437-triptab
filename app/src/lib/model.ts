@@ -216,6 +216,26 @@ export function partOfTime(time: string): DayPart {
   return h < 12 ? "morning" : h < 17 ? "day" : h < 21 ? "evening" : "night";
 }
 
+/** The part of the day a plan ending at this time ends in: a class until noon ends in the morning. */
+export function partOfEndTime(time: string): DayPart {
+  const [h, m] = time.split(":").map(Number);
+  const before = Math.max(0, h * 60 + m - 1);
+  return partOfTime(`${String(Math.floor(before / 60)).padStart(2, "0")}:${String(before % 60).padStart(2, "0")}`);
+}
+
+/**
+ * Parts of the day as select all that apply (11/17 pod feedback). A plan covers one run of
+ * parts, so picking a part outside the run stretches it to that part, picking an end of the run
+ * drops that end, and picking one in the middle starts over from there. Indexes into PARTS.
+ */
+export function togglePart(from: number, to: number, i: number): { from: number; to: number } {
+  if (i < from || i > to) return { from: Math.min(from, i), to: Math.max(to, i) };
+  if (from === to) return { from, to };
+  if (i === from) return { from: from + 1, to };
+  if (i === to) return { from, to: to - 1 };
+  return { from: i, to: i };
+}
+
 // ---------- Roles ----------
 
 /** Owners change the trip; viewers see it and opt in or out (vision, "Inviting people"). */
@@ -284,6 +304,8 @@ export interface ItemDraft {
   part: DayPart;
   end_day: string | null;
   end_part?: DayPart | null;
+  start_time?: string | null;
+  end_time?: string | null;
   status: ItemStatus;
   est_cents: number | null;
 }
@@ -307,6 +329,9 @@ export function validateItem(d: ItemDraft, trip: Pick<Trip, "start_date" | "end_
     const sameDay = !d.end_day || d.end_day === d.day;
     if (d.end_part && (sameDay || !travel) && PARTS.indexOf(d.end_part) < PARTS.indexOf(d.part)) {
       errors.push(travel ? "On the same day it can't arrive earlier than it leaves." : "It can't end in an earlier part of the day than it starts.");
+    }
+    if (!travel && d.start_time && d.end_time && d.end_time.slice(0, 5) <= d.start_time.slice(0, 5)) {
+      errors.push("It has to end after it starts.");
     }
   }
   if (d.est_cents != null && (d.est_cents < 0 || !Number.isInteger(d.est_cents))) {

@@ -7,7 +7,9 @@ import {
   canEdit,
   dateRange,
   dayChip,
+  partOfEndTime,
   priceLabel,
+  togglePart,
   tripDays,
   tripSpan,
   validateItem,
@@ -219,5 +221,38 @@ describe("action item due dates", () => {
   });
   it("reads today off the device's calendar", () => {
     expect(todayIso(new Date(2026, 10, 6, 23, 30))).toBe("2026-11-06");
+  });
+});
+
+describe("parts of the day, select all that apply", () => {
+  // Indexes: 0 morning, 1 day, 2 evening, 3 night.
+  it("stretches to a part outside the run, filling the gap", () => {
+    expect(togglePart(0, 0, 1)).toEqual({ from: 0, to: 1 });
+    expect(togglePart(0, 0, 2)).toEqual({ from: 0, to: 2 });
+    expect(togglePart(2, 2, 0)).toEqual({ from: 0, to: 2 });
+  });
+
+  it("drops an end, keeps at least one part, and starts over from the middle", () => {
+    expect(togglePart(0, 1, 1)).toEqual({ from: 0, to: 0 });
+    expect(togglePart(0, 1, 0)).toEqual({ from: 1, to: 1 });
+    expect(togglePart(1, 1, 1)).toEqual({ from: 1, to: 1 });
+    expect(togglePart(0, 3, 1)).toEqual({ from: 1, to: 1 });
+  });
+});
+
+describe("times on any plan", () => {
+  it("puts an end time in the part it ends in", () => {
+    expect(partOfEndTime("16:00")).toBe("day");
+    expect(partOfEndTime("12:00")).toBe("morning");
+    expect(partOfEndTime("17:00")).toBe("day");
+    expect(partOfEndTime("17:01")).toBe("evening");
+    expect(partOfEndTime("00:00")).toBe("morning");
+  });
+
+  it("needs an activity to end after it starts", () => {
+    const t = { start_date: "2027-02-05", end_date: "2027-02-16" };
+    const base = { kind: "activity" as const, title: "Skiing", day: "2027-02-06", part: "morning" as const, end_day: null, status: "planned" as const, est_cents: null };
+    expect(validateItem({ ...base, start_time: "09:00", end_time: "16:00" }, t)).toEqual([]);
+    expect(validateItem({ ...base, start_time: "16:00", end_time: "09:00" }, t)).toEqual(["It has to end after it starts."]);
   });
 });

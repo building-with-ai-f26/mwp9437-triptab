@@ -18,8 +18,10 @@ async function run(browser, label, opts, result) {
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   await h.dlg(p).getByLabel('What').fill('Skiing');
   await h.dlg(p).getByRole('radio', { name: 'Planned' }).click();
-  await h.dlg(p).getByLabel('Runs through the').selectOption('day');
+  // Parts of the day are select all that apply (11/17): Morning is on, add Day.
+  await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { name: 'Day', exact: true }).click();
   await h.dlg(p).getByLabel('Every day through').selectOption('2027-02-11');
+  await h.dlg(p).getByRole('button', { name: /^Cost/ }).click();
   await h.dlg(p).getByLabel(/Estimated/).fill('84');
   await h.dlg(p).getByRole('radio', { name: 'Per person' }).click();
   await h.dlg(p).getByLabel('Every day through').scrollIntoViewIfNeeded();
@@ -57,7 +59,10 @@ async function run(browser, label, opts, result) {
   // 3. Opening any slot opens the one plan; a later slot is the same plan.
   await inDay(p, '2027-02-08', 'Skiing').last().click();
   r.openedFromALaterSlot = await h.dlg(p).getByLabel('What').inputValue();
-  r.itKeptItsSpan = [await h.dlg(p).getByLabel('Runs through the').inputValue(), await h.dlg(p).getByLabel('Every day through').inputValue()];
+  r.itKeptItsSpan = [
+    (await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { pressed: true }).allInnerTexts()).join(' and '),
+    await h.dlg(p).getByLabel('Every day through').inputValue(),
+  ];
   // One cost for the whole plan: confirm it once.
   await h.dlg(p).getByRole('button', { name: 'Confirm with the real cost' }).click();
   await h.dlg(p).getByLabel('What it cost').fill('504');
