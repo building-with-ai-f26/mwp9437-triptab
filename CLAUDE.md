@@ -14,9 +14,9 @@ Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 h
 ## Where the work happens
 
 - **Cloud sessions** on the TripTab cloud environment (full network access). Mike no longer runs the app on his laptop (11/18). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). If `app/.env.local` is missing, write it from the App settings block on the runbook's For Claude tab (public values only).
-- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into Decided calls or the Product Vision tab, then re-export the vision. A call he hasn't answered waits in Open calls, with your recommendation, and nowhere else: no suggestion cards. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
+- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into Decided calls or the Product Vision tab, then re-export the vision. A call he hasn't answered waits in Open calls, numbered (C1, C2) and with your recommendation, and nowhere else: no suggestion cards. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
 - **A session starts from one line.** This file and the runbook's Steps table carry the rest, so don't ask Mike for a long prompt or write him one.
-- **Course admin** (due dates, pod check-ins, grades, redos) runs in Mike's NYU Stern MBA project. Leave it there. Read a build's brief on Icerynk when you need it (course key `fa26-tech-gb-2160-dm2-f2`; the connector is read-only, and Mike does all submitting).
+- **Course admin is yours too (Mike's call, 11/18).** At the start of a session, sync Icerynk (course key `fa26-tech-gb-2160-dm2-f2`, read-only) into Steps: due dates, pod check-ins, announcements, feedback and redos. The steps are under Course admin on the runbook's For Claude tab. Grades and feedback are private to Mike: runbook only, never the repo or the Product Page. Mike does all submitting.
 
 ## Scope: build the vision; each brief is a floor
 
