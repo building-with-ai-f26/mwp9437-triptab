@@ -1,4 +1,4 @@
-# Sponsor Memo — Invest, Maintain, or Sunset
+# Sponsor Memo: Invest, Maintain, or Sunset
 
 Keep the finished memo to **one page**. Publish it here, link it from your Product Page, and submit in Icerynk.
 
@@ -36,7 +36,7 @@ Keep the finished memo to **one page**. Publish it here, link it from your Produ
 ---
 
 ## 4. What Broke (and How You Recovered)
-*Name the most important failure modes—deterministic bugs, model hallucinations, latency, security/ops issues—and what your tests/evals caught (or missed).*
+*Name the most important failure modes (deterministic bugs, model hallucinations, latency, security/ops issues) and what your tests/evals caught (or missed).*
 
 ---
 
