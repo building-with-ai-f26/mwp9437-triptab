@@ -8,6 +8,8 @@ import { buildConfirmEmail, confirmSendDecision, isReservedEmail, newToken, pick
 export type SendResult = { sent: true } | { sent: false; reason: "reserved" | "not_set_up" | "error" | string; message?: string };
 
 const FROM = "TripTab <no-reply@triptab.org>";
+/** TripTab dev: its links may go back to a local run or a Preview. */
+const DEV_PROJECT = "iivseqkvixmvcpldarqy";
 
 export async function sendConfirm(
   admin: SupabaseClient,
@@ -30,7 +32,8 @@ export async function sendConfirm(
     .upsert({ user_id: user.id, token_hash: await tokenHash(token), sent_at: new Date().toISOString(), confirmed_at: null });
   if (saveError) return { sent: false, reason: "error" };
 
-  const mail = buildConfirmEmail({ name: user.name || "there", url: `${pickAppUrl(origin)}/confirm-email?t=${token}` });
+  const dev = (Deno.env.get("SUPABASE_URL") ?? "").includes(DEV_PROJECT);
+  const mail = buildConfirmEmail({ name: user.name || "there", url: `${pickAppUrl(origin, dev)}/confirm-email?t=${token}` });
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

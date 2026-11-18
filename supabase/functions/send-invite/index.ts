@@ -24,6 +24,8 @@ const fail = (status: number, code: string, error: string) => json({ code, error
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FROM = "TripTab <invites@triptab.org>";
+/** TripTab dev: its invite links may go back to a local run or a Preview. */
+const DEV_PROJECT = "iivseqkvixmvcpldarqy";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const short = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
@@ -96,7 +98,7 @@ Deno.serve(async (req) => {
     tripName: trip?.name ?? "your trip",
     dates: trip ? dateRange(trip.start_date, trip.end_date) : "",
     stops: (stops ?? []).map((s) => s.name),
-    url: `${pickAppUrl(req.headers.get("Origin"))}/join/${link.token}?as=${travelerId}`,
+    url: `${pickAppUrl(req.headers.get("Origin"), url.includes(DEV_PROJECT))}/join/${link.token}?as=${travelerId}`,
   });
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

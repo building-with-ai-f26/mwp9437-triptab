@@ -52,10 +52,12 @@ describe("confirmation emails", () => {
     for (const e of ["mike@gmail.com", "jo@examples.com", "pat@example.com.au"]) expect(isReservedEmail(e)).toBe(false);
   });
 
-  it("links only to TripTab itself", () => {
+  it("links only to TripTab itself, and on production only to triptab.org", () => {
     expect(pickAppUrl("https://triptab.org")).toBe("https://triptab.org");
-    expect(pickAppUrl("https://evil.example")).toBe(DEFAULT_APP_URL);
-    expect(pickAppUrl(null)).toBe(DEFAULT_APP_URL);
+    expect(pickAppUrl("http://localhost:5173")).toBe(DEFAULT_APP_URL);
+    expect(pickAppUrl("http://localhost:5173", true)).toBe("http://localhost:5173");
+    expect(pickAppUrl("https://evil.example", true)).toBe(DEFAULT_APP_URL);
+    expect(pickAppUrl(null, true)).toBe(DEFAULT_APP_URL);
   });
 
   it("makes long random tokens and stores only a hash", async () => {
@@ -80,5 +82,8 @@ describe("confirmation emails", () => {
     expect(m.text).toContain("https://triptab.org/confirm-email?t=abc");
     expect(m.html).toContain('href="https://triptab.org/confirm-email?t=abc"');
     expect(m.html).not.toContain("<b>Vic</b>");
+    expect(m.html).toContain('src="https://triptab.org/email/header.jpg"');
+    expect(m.html).toContain(">Confirm my email</a>");
+    expect(m.html).toContain("works for 7 days");
   });
 });
