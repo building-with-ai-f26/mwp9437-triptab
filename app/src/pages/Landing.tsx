@@ -74,6 +74,11 @@ export default function Landing() {
           ))}
         </ul>
       </main>
+      <footer className="relative z-10 px-4 pb-5 text-center text-xs text-white drop-shadow">
+        <Link to="/privacy" className="font-medium underline underline-offset-4">
+          Privacy
+        </Link>
+      </footer>
     </div>
   );
 }
