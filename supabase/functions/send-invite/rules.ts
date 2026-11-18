@@ -3,8 +3,9 @@
 // (app/src/lib/inviteRules.test.ts) run this same file.
 
 // ---------- Rate limits, over the last 24 hours, counted from the invite_emails log ----------
-// Resend's free plan sends 100 emails a day for the whole domain; invites keep 20 of those free
-// for sign-in emails (password resets).
+// Resend's free plan sends 100 emails a day for the whole domain: invites take up to 65, leaving
+// 20 for confirm-your-email links (supabase/functions/_shared/account.ts) and the rest for
+// password resets.
 export const LIMITS = {
   /** Emails to one person on a trip: a nudge or two, never a stream. */
   perPerson: 3,
@@ -13,7 +14,7 @@ export const LIMITS = {
   /** Emails one signed-in person sends, across all their trips. */
   perSender: 50,
   /** Every invite email TripTab sends. */
-  total: 80,
+  total: 65,
 } as const;
 
 export interface SentRow {

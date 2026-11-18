@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { CalendarDays, LogOut, MapPin, Plus, Users } from "lucide-react";
 import { TopBar } from "../components/TopBar";
+import { ConfirmBanner } from "../components/ConfirmBanner";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
 import { listMyTrips, type TripSummary } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -34,6 +35,7 @@ export default function Trips() {
             <LogOut /> <span className="hidden sm:inline">Sign out</span>
           </Button>
         </TopBar>
+        <ConfirmBanner />
 
         <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
           {error && <ErrorNote>{error}</ErrorNote>}

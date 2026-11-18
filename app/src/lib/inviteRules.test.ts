@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { buildInvite, DEFAULT_APP_URL, inviteDecision, LIMITS, pickAppUrl, type SentRow } from "../../../supabase/functions/send-invite/rules.ts";
+import { CONFIRM_LIMITS } from "../../../supabase/functions/_shared/account.ts";
 
 const T = "trip-1", P = "person-1", ME = "me";
 const rows = (n: number, r: Partial<SentRow>): SentRow[] => Array.from({ length: n }, () => ({ trip_id: "t", traveler_id: "p", sent_by: "s", ...r }));
@@ -26,8 +27,8 @@ describe("invite rate limits", () => {
     expect(inviteDecision(rows(LIMITS.total - 1, {}), T, P, ME)).toBeNull();
   });
 
-  it("leaves room in Resend's free 100 a day for sign-in emails", () => {
-    expect(LIMITS.total).toBeLessThanOrEqual(80);
+  it("leaves room in Resend's free 100 a day for confirmation and reset emails", () => {
+    expect(LIMITS.total + CONFIRM_LIMITS.total).toBeLessThanOrEqual(85);
   });
 });
 

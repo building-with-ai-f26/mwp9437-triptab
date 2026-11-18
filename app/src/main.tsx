@@ -17,6 +17,7 @@ const Join = lazy(() => import("./pages/Join"));
 const PrintTrip = lazy(() => import("./pages/PrintTrip"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 
 startAnalytics();
 
@@ -55,6 +56,7 @@ function App() {
             <Route path="/join/:token" element={<Join />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/trips" element={<RequireUser><Trips /></RequireUser>} />
             <Route path="/trips/new" element={<RequireUser><NewTrip /></RequireUser>} />
             <Route path="/trips/:id" element={<RequireUser><TripPage /></RequireUser>} />
