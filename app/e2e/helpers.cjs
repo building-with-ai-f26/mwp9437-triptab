@@ -76,4 +76,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { signIn, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { run, PW, signIn, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
