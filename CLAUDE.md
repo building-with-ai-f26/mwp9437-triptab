@@ -15,7 +15,8 @@ Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 h
 
 - **When Mike steps away, a cloud session:** the TripTab cloud environment (full network access). There is no Browser pane: start the dev server and check the app with the pre-installed headless Chromium (Playwright). If `app/.env.local` is missing, write it from the runbook's Run the app on your laptop block (public values only).
 - **When Mike is watching, his laptop:** the Claude desktop app's Code tab, opened on `code\mwp9437-triptab` in his user folder (outside OneDrive), with the app in the Browser pane so Mike and Claude look at the same screen.
-- **Product calls** happen in Mike's TripTab project in Claude; the decisions land on the runbook's Product Vision tab, then get exported here.
+- **Product calls happen here, in chat (Mike's call, 11/18).** End a session with at most five numbered calls, each with your recommendation; Mike answers in a line. Write his answer, dated, into the runbook's Your calls table or Product Vision tab, then re-export the vision. Nothing waits on Mike inside the runbook: no suggestion cards, no open rows. His TripTab project in Claude is only for the Sponsor Memo, pricing and research.
+- **A session starts from one line.** This file and the runbook's Steps table carry the rest, so don't ask Mike for a long prompt or write him one.
 - **Course admin** (due dates, pod check-ins, grades, redos) runs in Mike's NYU Stern MBA project. Leave it there. Read a build's brief on Icerynk when you need it (course key `fa26-tech-gb-2160-dm2-f2`; the connector is read-only, and Mike does all submitting).
 
 ## Scope: build the vision; each brief is a floor
@@ -35,7 +36,7 @@ Advanced lane (Mike's call, 11/17): the app moves to triptab.org on Cloudflare, 
 
 ## Runbook
 
-The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV (Run book, Product Vision and Build history tabs). Everything Mike needs to know or do lives there, nowhere else.
+The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shMVNV (Run book, Product Vision and Build history tabs). What Mike has to do lives there, nowhere else. He finds it heavy to review (11/18), so keep what he reads short and put detail where only agents need it.
 
 - Anything Mike has to do goes in its Steps table. Keep the Target column at width 130 on any row you add. Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
 - Mike's decisions are in its Your calls table and on the Product Vision tab. Don't re-ask them.
