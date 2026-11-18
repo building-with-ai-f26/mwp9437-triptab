@@ -42,7 +42,7 @@ const h = require('./helpers.cjs');
   r.joinScreenNames = (await v.getByRole('button').allInnerTexts()).filter((t) => ['Mike', 'Vic', 'Olivia'].includes(t.trim()));
   await v.getByRole('button', { name: 'Vic' }).click();
   await h.signUp(v, 'Vic', 'pod-vic');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(v);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   r.task1SecondsForAScript = Math.round((Date.now() - t0) / 1000);
 
@@ -67,7 +67,7 @@ const h = require('./helpers.cjs');
   await ol.goto(groupUrl);
   await ol.getByRole('button', { name: 'Olivia' }).click();
   await h.signUp(ol, 'Olivia', 'pod-olivia');
-  await ol.getByRole('button', { name: 'Join the trip' }).click();
+  await h.joinTrip(ol);
   await ol.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await ol.locator('#day-2027-02-06 .item-card').filter({ hasText: 'Fondue' }).scrollIntoViewIfNeeded();
   await ol.locator('#day-2027-02-06 .item-card').filter({ hasText: 'Fondue' }).click();

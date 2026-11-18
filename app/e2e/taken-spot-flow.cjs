@@ -28,7 +28,7 @@ const h = require('./helpers.cjs');
     await v.goto(groupUrl);
     await v.getByRole('button', { name: 'Vic' }).click();
     await h.signUp(v, 'Vic', 'vic');
-    await v.getByRole('button', { name: 'Join the trip' }).click();
+    await h.joinTrip(v);
     await v.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
     await vCtx.close();
 

@@ -7,6 +7,9 @@ import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, PayMode, Role, Stop, StopDraft, Traveler, Trip } from "./model";
 import type { SplitMode } from "./split";
 import type { ImportResult } from "./importPlans";
+import { cleanVenmo, cleanZelle, VENMO_FORMAT, venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "./pay";
+
+export { cleanVenmo, venmoLooksRight, zelleLabel, zelleLooksRight } from "./pay";
 
 /** Every traveler column a member may read; email and phone come from tripContacts (owners only). */
 const TRAVELER_COLUMNS = "id, trip_id, name, role, user_id, claimed_at, added_by, created_at";
@@ -175,7 +178,7 @@ export interface TripBundle {
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -189,6 +192,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     // Asked apart, so a database without payments yet still loads the trip.
     supabase.from("payments").select("*").eq("trip_id", id).order("paid_on").order("created_at"),
     supabase.from("travelers").select("id, venmo").eq("trip_id", id),
+    supabase.from("travelers").select("id, zelle, pay_locked").eq("trip_id", id),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -198,7 +202,16 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     travelers: withContacts(
       must(travelers.data, travelers.error) as Omit<Traveler, "email" | "phone">[],
       (contacts.data as { traveler_id: string; email: string | null; phone: string | null }[] | null) ?? [],
-    ).map((t) => ({ ...t, venmo: venmo.error ? undefined : ((venmo.data as { id: string; venmo: string | null }[]).find((v) => v.id === t.id)?.venmo ?? null) })),
+    ).map((t) => {
+      const v = venmo.error ? undefined : (venmo.data as { id: string; venmo: string | null }[]).find((x) => x.id === t.id);
+      const z = pay.error ? undefined : (pay.data as { id: string; zelle: string | null; pay_locked: boolean }[]).find((x) => x.id === t.id);
+      return {
+        ...t,
+        venmo: venmo.error ? undefined : (v?.venmo ?? null),
+        // Asked apart again, so a database without Zelle yet keeps Venmo working.
+        ...(pay.error ? {} : { zelle: z?.zelle ?? null, pay_locked: z?.pay_locked ?? false }),
+      };
+    }),
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
     expenses: must(expenses.data, expenses.error) as ExpenseRow[],
@@ -243,17 +256,40 @@ export async function deletePayment(id: string): Promise<void> {
   if (!data?.length) throw new Error("Only whoever recorded it, or an owner, can remove it.");
 }
 
-/** An Owner sets someone's Venmo username on this trip (they can still change it themselves). */
+/**
+ * An Owner adds or fixes someone's Venmo username on this trip, until that person sets their own
+ * (then the database refuses it, and says so).
+ */
 export async function setVenmoFor(travelerId: string, handle: string): Promise<void> {
   const { data, error } = await supabase.from("travelers").update({ venmo: cleanVenmo(handle) }).eq("id", travelerId).select("id");
+  if (error?.code === "42501" && /set their own Venmo/.test(error.message)) throw new Error(error.message);
   if (error) throw new Error(error.code === "23514" ? VENMO_FORMAT : friendly(error));
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }
 
-/** Your Venmo username, on all your trips at once. Blank clears it. */
+/** Your Venmo username, on all your trips at once. Blank clears it. (Databases without Zelle yet.) */
 export async function setMyVenmo(handle: string): Promise<void> {
   const { error } = await supabase.rpc("set_my_venmo", { p_venmo: handle });
   if (error) throw new Error(error.code === "23514" ? VENMO_FORMAT : friendly(error));
+}
+
+/**
+ * How people pay you: your Venmo and Zelle, on all your trips at once, and locked to you (only you
+ * can change them). Blank clears one.
+ */
+export async function setMyPay(venmo: string, zelle: string): Promise<void> {
+  if (!venmoLooksRight(venmo)) throw new Error(VENMO_FORMAT);
+  if (!zelleLooksRight(zelle)) throw new Error(ZELLE_FORMAT);
+  const { error } = await supabase.rpc("set_my_pay", { p_venmo: cleanVenmo(venmo) ?? "", p_zelle: cleanZelle(zelle) ?? "" });
+  if (error?.code === "23514") throw new Error(error.message.includes("zelle") ? ZELLE_FORMAT : VENMO_FORMAT);
+  if (error) throw new Error(friendly(error));
+}
+
+/** Your own Venmo, Zelle and lock on one trip (after joining it), or null if this database has no Zelle yet. */
+export async function myPayOn(tripId: string, userId: string): Promise<{ venmo: string | null; zelle: string | null; pay_locked: boolean } | null> {
+  const { data, error } = await supabase.from("travelers").select("venmo, zelle, pay_locked").eq("trip_id", tripId).eq("user_id", userId).maybeSingle();
+  if (error || !data) return null;
+  return data as { venmo: string | null; zelle: string | null; pay_locked: boolean };
 }
 
 // ---------- People ----------
@@ -266,14 +302,6 @@ export interface PersonDraft {
   /** Their Venmo username, so people can pay them from Settle up (optional). */
   venmo?: string;
 }
-
-const VENMO_FORMAT = "A Venmo username is 5 to 30 letters, numbers, - or _.";
-/** "@Jordan-B" or " jordan-b " becomes "Jordan-B"; blank becomes null. */
-export const cleanVenmo = (handle: string): string | null => handle.trim().replace(/^@/, "") || null;
-export const venmoLooksRight = (handle: string): boolean => {
-  const v = cleanVenmo(handle);
-  return v === null || /^[A-Za-z0-9_-]{5,30}$/.test(v);
-};
 
 /** Owners get each person's email and phone; everyone else gets null for both. */
 function withContacts(

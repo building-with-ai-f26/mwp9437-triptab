@@ -1,5 +1,5 @@
 // Recording payments (Build 3, the 11/17 pod feedback): an owner at 1280 wide and a viewer on a
-// 390 phone. Mike puts down the $200 Airbnb deposit, split with Vic; Mike adds his Venmo; Vic's
+// 390 phone. Mike puts down the $200 Airbnb deposit, split with Vic; Mike adds his Venmo under How people pay you; Vic's
 // Settle up shows "Pay with Venmo" with $100 filled in and "Record it"; Vic records it as cash and
 // everyone's even at once; Mike sees "Vic paid you" and can remove it, which puts the $100 back.
 // Run with `npm run dev` going.
@@ -33,9 +33,11 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
 
     // Mike adds his Venmo in Settle up.
     await money(o).getByRole('button', { name: 'Settle up' }).click();
-    await h.dlg(o).getByLabel('Your Venmo (optional)').fill('@mike-p-tt');
-    await h.dlg(o).getByRole('button', { name: 'Save' }).click();
-    await h.dlg(o).getByRole('button', { name: 'Saved' }).waitFor();
+    const mine = h.dlg(o).getByRole('region', { name: 'How people pay you' });
+    await mine.getByRole('button', { name: 'Add' }).click();
+    await mine.getByLabel('Venmo username').fill('@mike-p-tt');
+    await mine.getByRole('button', { name: 'Save' }).click();
+    await mine.getByText('Venmo @mike-p-tt').waitFor();
     await h.dlg(o).getByRole('button', { name: 'Done' }).click();
 
     // Vic joins on a phone and settles up.
@@ -43,7 +45,7 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
     await v.goto(groupUrl);
     await v.getByRole('button', { name: 'Vic' }).click();
     await h.signUp(v, 'Vic', 'pay-vic');
-    await v.getByRole('button', { name: 'Join the trip' }).click();
+    await h.joinTrip(v);
     await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
     await v.getByRole('tab', { name: /Money/ }).click();
     result.vicBefore = await balance(v);
@@ -84,7 +86,7 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
       /You owe \$100/.test(result.vicBefore) &&
       /You.*Mike.*\$100/.test(result.transfer) &&
       result.venmoLink.host === 'venmo.com' && result.venmoLink.recipients === 'mike-p-tt' && result.venmoLink.amount === '100.00' &&
-      result.venmoLink.note === 'TripTab: Euro ski trip' && result.opensElsewhere &&
+      result.venmoLink.note === 'TripTab · Euro ski trip · Feb 5 to 16, 2027' && result.opensElsewhere &&
       result.prefilled === '100.00' && /even/i.test(result.vicAfter) && /You paid Mike.*Cash.*\$100/.test(result.vicSees) &&
       /Vic paid you.*Cash.*\$100/.test(result.ownerSees) && /even/i.test(result.ownerAfter) && /owed \$100/.test(result.ownerAfterRemove) &&
       result.settleOverflow <= 0 && result.ownerOverflow <= 0;

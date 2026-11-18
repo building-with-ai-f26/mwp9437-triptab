@@ -72,6 +72,20 @@ async function addPlan(page, day, slot, f) {
 }
 
 /** Signs in to an account an earlier signUp(page, name, who) made, through the Sign in tab. */
+/**
+ * Taps Join the trip. Right after joining, TripTab asks how people pay you (Mike's 11/18 notes);
+ * flows about other things skip it. Returns true if that step showed.
+ */
+async function joinTrip(page) {
+  await page.getByRole('button', { name: 'Join the trip' }).click();
+  const step = page.getByRole('heading', { name: 'How should people pay you back?' });
+  await Promise.race([step.waitFor(), page.waitForURL(/\/trips\/[0-9a-f-]{36}$/)]);
+  if (!(await step.isVisible())) return false;
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
+  return true;
+}
+
 async function signIn(page, who) {
   await page.getByRole('tab', { name: 'Sign in' }).click();
   await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
@@ -79,4 +93,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { run, PW, signIn, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { run, PW, signIn, joinTrip, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

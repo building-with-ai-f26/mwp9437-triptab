@@ -43,6 +43,10 @@ export interface Traveler {
   created_at: string;
   /** Their Venmo username, for "Pay with Venmo" (Build 3); missing on a database without payments yet. */
   venmo?: string | null;
+  /** Their Zelle phone (10 digits) or email; only they can add it. Missing on a database without it yet. */
+  zelle?: string | null;
+  /** True once they set their own Venmo or Zelle: then only they can change it. */
+  pay_locked?: boolean;
 }
 
 export interface Item {

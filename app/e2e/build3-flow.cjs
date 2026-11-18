@@ -2,6 +2,7 @@
 // flight, settle up, and a viewer's own view (their share, opting out). Run with the dev server
 // up (npm run dev): node e2e/build3-flow.cjs. Events are tagged test_run in PostHog.
 const path = require('path');
+const { joinTrip } = require('./helpers.cjs');
 const { chromium, devices } = require('playwright');
 const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
 const BASE = 'http://localhost:5173';
@@ -123,7 +124,7 @@ async function addPlan(page, day, slot, f) {
   await v.goto(groupUrl);
   await v.getByRole('button', { name: 'Vic' }).click();
   await signUp(v, 'Vic', 'vic');
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  await joinTrip(v);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await v.locator('#day-2027-02-06').getByText('Ski school').click();
   await dlg(v).getByRole('radio', { name: "I'm out" }).click();
