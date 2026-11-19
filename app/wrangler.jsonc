@@ -15,5 +15,8 @@
   // built against TripTab dev, so a Preview never touches real users.
   "routes": [{ "pattern": "triptab.org", "custom_domain": true }],
   "workers_dev": false,
-  "preview_urls": true
+  "preview_urls": true,
+  // Workers Builds deploys a branch with `wrangler preview`, which won't run without this block. It
+  // stays empty: assets and compatibility settings above apply to Previews too.
+  "previews": {}
 }
