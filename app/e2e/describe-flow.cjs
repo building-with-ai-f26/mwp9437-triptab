@@ -89,6 +89,12 @@ async function run(browser, label, opts, result) {
   const cards = h.dlg(p).getByTestId('proposal');
   r.proposed = await cards.count();
   r.dinnerMarkedCheckThis = (await cards.nth(2).innerText()).includes('check this');
+  // Its questions are optional (Mike's 11/18 call, C11): all start ticked to park on the To do list;
+  // the second is unticked here, as if answered on its plan, so only the first is parked.
+  const followups = h.dlg(p).getByTestId('followups');
+  r.followups = (await followups.innerText()).replace(/\s+/g, ' ');
+  r.allTickedAtFirst = (await followups.getByRole('checkbox').evaluateAll((els) => els.map((e) => e.checked))).every(Boolean);
+  await followups.getByLabel(`Park on my To do list: ${QUESTIONS[1]}`).uncheck();
   await h.shot(p, `describe-review-${label}`);
   await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 });
@@ -98,17 +104,14 @@ async function run(browser, label, opts, result) {
   r.stay = (await p.locator('#day-2027-02-05 .item-card').filter({ hasText: 'Chamonix Airbnb' }).first().innerText()).replace(/\s+/g, ' ');
   r.dinner = (await p.locator('#day-2027-02-11 .item-card').filter({ hasText: 'Dinner reservation' }).innerText()).replace(/\s+/g, ' ');
 
-  // 4. The questions are on the To do list, assigned to the person who described the trip.
+  // 4. The question left ticked is on the To do list, assigned to the person who described the trip.
   if (label === 'phone') await p.getByRole('tab', { name: 'To do' }).click();
   const todo = p.locator('section[aria-labelledby="actions-title"]');
   await todo.getByText(QUESTIONS[0]).waitFor();
   r.todos = (await todo.locator('li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
   // Each one's picker shows who has it: the person who described the trip.
-  r.todoAssignees = [];
-  for (const q of QUESTIONS) {
-    const pick = todo.getByLabel(`Who has "${q}"`);
-    r.todoAssignees.push(await pick.evaluate((el) => el.options[el.selectedIndex].text));
-  }
+  r.todoAssignees = [await todo.getByLabel(`Who has "${QUESTIONS[0]}"`).evaluate((el) => el.options[el.selectedIndex].text)];
+  r.answeredNotParked = !r.todos.some((t) => t.includes(QUESTIONS[1]));
   await todo.scrollIntoViewIfNeeded();
   await h.shot(p, `describe-todos-${label}`);
 
@@ -126,9 +129,10 @@ async function run(browser, label, opts, result) {
     r.noTripMessage.length > 0 && r.textKeptAfterError && r.textKeptOnChange && r.calls === 3 &&
     r.tripName === 'Euro ski trip' && r.stops.join() === 'Chamonix,Andorra' &&
     r.dates.join() === '2027-02-05,2027-02-12,2027-02-12,2027-02-16' &&
-    /review 3 plans/.test(r.note) && /2 questions/.test(r.note) &&
+    /review the 3 plans/.test(r.note) && /2 optional questions/.test(r.note) && /park them on your To do list/.test(r.note) &&
     r.proposed === 3 && r.dinnerMarkedCheckThis && r.dinner.includes('Dinner reservation') &&
-    QUESTIONS.every((q) => r.todos.some((t) => t.includes(q))) && r.todoAssignees.every((a) => /Mike/.test(a)) &&
+    /if you like/.test(r.followups) && QUESTIONS.every((q) => r.followups.includes(q)) && r.allTickedAtFirst &&
+    r.todos.some((t) => t.includes(QUESTIONS[0])) && r.answeredNotParked && r.todoAssignees.every((a) => /Mike/.test(a)) &&
     r.reviewAfterReload === 0 && r.todoCountAfterReload === 1 &&
     r.overflowDescribe <= 0 && r.overflowForm <= 0 && r.overflowTrip <= 0;
   r.pass = ok;

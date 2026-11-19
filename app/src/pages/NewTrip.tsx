@@ -12,6 +12,17 @@ import { track } from "../lib/analytics";
 
 const blankStop = (start = ""): StopDraft => ({ name: "", start_date: start, end_date: "" });
 
+/** The note after Set it up: what comes next. Its questions are optional (Mike's 11/18 call, C11). */
+function nextSteps(d: DescribeResult): string {
+  const plans = d.plans.length;
+  const questions = d.questions.length;
+  const q = `${questions} optional ${questions === 1 ? "question" : "questions"} about what's missing`;
+  if (plans && questions) return ` Next you'll review the ${plans} ${plans === 1 ? "plan" : "plans"} it found, with ${q}: answer them there, or park them on your To do list for later.`;
+  if (plans) return ` Next you'll review the ${plans} ${plans === 1 ? "plan" : "plans"} it found.`;
+  if (questions) return ` Its ${q} will wait on your To do list.`;
+  return "";
+}
+
 /** What you typed in Describe it, kept on this device before any AI call, so nothing is lost. */
 const DRAFT = "triptab.describe_draft";
 const MAX_DESCRIBE = 5000;
@@ -177,11 +188,7 @@ export default function NewTrip() {
                 <p className="font-semibold">From your description</p>
                 <p className="text-foreground/80">
                   Check the name, dates and stops below, then start the trip.
-                  {described.plans.length > 0 &&
-                    ` Next you'll review ${described.plans.length} ${described.plans.length === 1 ? "plan" : "plans"} it found`}
-                  {described.questions.length > 0 &&
-                    `${described.plans.length > 0 ? "," : " Next,"} and ${described.questions.length} ${described.questions.length === 1 ? "question" : "questions"} for what's missing become to-dos for you`}
-                  {described.plans.length > 0 || described.questions.length > 0 ? "." : ""}
+                  {nextSteps(described)}
                 </p>
                 <button
                   type="button"

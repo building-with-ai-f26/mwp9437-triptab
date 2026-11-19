@@ -98,7 +98,7 @@ Build 3 added a second Supabase project, TripTab dev, for local runs, tests, eva
 
 # Describe your trip eval: results
 
-Built the night of Nov 18, 2026 (New York time), from the 11/17 pod note "type or dictate what's already planned in free form". On Start a trip, a person types, pastes or dictates the trip; `describe-trip` returns its name and stops, the plans it mentions and up to five questions for what's missing. The stops fill the Start a trip form, the plans open on import's review screen once the trip exists, and the questions become the person's to-dos. To run it: `cd app && npm run eval:describe`. All runs below are on TripTab dev.
+Built the night of Nov 18, 2026 (New York time), from the 11/17 pod note "type or dictate what's already planned in free form". On Start a trip, a person types, pastes or dictates the trip; `describe-trip` returns its name and stops, the plans it mentions and up to five questions for what's missing. The stops fill the Start a trip form, and the plans open on import's review screen once the trip exists, with the questions as optional follow-ups: the ones left ticked go on the person's To do list (Mike's 11/18 call). To run it: `cd app && npm run eval:describe`. All runs below are on TripTab dev.
 
 The eval: 10 made-up cases in `app/evals/describe/cases/` (5 normal, 3 messy, 2 adversarial: a planted instruction and a text that isn't a trip). Each pins today's date to Nov 18, 2026, so "Feb 5" always means 2027. Four rules, scored by code in `app/src/lib/describeEval.ts`: the right stops in order with the right dates; the expected plans (kind, day, and part of the day when the text gives one); nothing invented or obeyed (no forbidden word, amount or stop, no clock times the text never gave); and a question for each detail the text leaves out, five at most.
 
@@ -116,7 +116,7 @@ The prompt never changed across the five runs. Two misses, each fixed in the cod
 
 What this does and doesn't show:
 - **Nothing invented or obeyed: 50 of 50 case-runs.** No made-up stop, price or time; the planted instruction in case 07 was ignored; case 08 ("not a trip") set nothing up and said why.
-- **The questions rule is a floor.** It checks that a question asks about each missing detail; it doesn't count questions the text gives no reason for. Case 01 asked where the group stays in Barcelona and Andorra in 4 of 5 runs, though the text mentions no lodging there. They land as to-dos the person can delete.
+- **The questions rule is a floor.** It checks that a question asks about each missing detail; it doesn't count questions the text gives no reason for. Case 01 asked where the group stays in Barcelona and Andorra in 4 of 5 runs, though the text mentions no lodging there. They're shown as optional on the review screen, and only the ones left ticked become to-dos (Mike's 11/18 call: keep them, but make them clearly optional).
 - Ten cases is a small set. These are results on these ten descriptions, not a quality rate.
 
 From dev's cost log (`ai_calls`, feature `describe`) after the five runs: 50 calls, all test runs, **$0.0441** at list price. About **$0.0009 a description** (from $0.0006 to $0.0015), about 2,800 tokens in and 1,300 out, 6.0 seconds on average. The five "not a trip" answers took 1.5 seconds and are logged as `invalid_output`; from this pull request on, an answer with no stops is logged as `no_plans`, as import logs "nothing found". Cash cost was $0, covered by the Max plan's API credit.
