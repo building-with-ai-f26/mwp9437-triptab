@@ -78,7 +78,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         <li>
           <b>Anthropic (Claude)</b> reads what you give the AI buttons, such as a pasted booking email, a PDF or a
           screenshot, along with the trip's name, dates, stops and plans, and suggests plans back. It may search the
-          web to check things like a flight's times. Nothing goes to it unless you tap an AI button, and under
+          web to check things like a flight's times. On Start a trip, "Set it up" sends it the description you typed
+          and today's date, and nothing else. Nothing goes to it unless you tap one of these buttons, and under
           Anthropic's terms for businesses it isn't used to train its models. Nothing is saved until you review it.
         </li>
         <li>
@@ -107,7 +108,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
     body: (
       <p>
         TripTab keeps you signed in with a token saved in your browser, and PostHog saves an id there to tell visits
-        apart. There are no advertising cookies.
+        apart. A trip description you're writing on Start a trip is kept there too, so it isn't lost, until the trip
+        is started. There are no advertising cookies.
       </p>
     ),
   },

@@ -1,0 +1,38 @@
+{
+  "label": "log-label",
+  "ran_at": "2026-11-19T01:31:14.207Z",
+  "model": null,
+  "effort": null,
+  "cases_run": 1,
+  "passed_all_four": 1,
+  "by_rule": {
+    "trip": 1,
+    "plans": 1,
+    "grounded": 1,
+    "questions": 1
+  },
+  "total_cost_usd": 0,
+  "cases": [
+    {
+      "id": "08-not-a-trip",
+      "group": "adversarial",
+      "what": "Errands, not a trip: nothing should be set up.",
+      "http_status": 422,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": null,
+      "trip": null,
+      "plans": [],
+      "questions": []
+    }
+  ]
+}

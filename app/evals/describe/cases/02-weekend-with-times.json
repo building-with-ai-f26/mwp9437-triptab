@@ -1,0 +1,75 @@
+{
+  "id": "02-weekend-with-times",
+  "group": "normal",
+  "what": "A weekend with a house, a timed dinner, an afternoon activity and a brunch.",
+  "text": "Bachelor weekend in Nashville, March 12 to 15. We're staying at a house on Airbnb. Friday dinner at Hattie B's at 7, Saturday afternoon a pedal tavern tour, Sunday brunch before everyone flies home.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Nashville"
+          ],
+          "start": "2027-03-12",
+          "end": "2027-03-15"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": [
+          "2027-03-12"
+        ]
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": [
+          "2027-03-12"
+        ],
+        "part": [
+          "evening"
+        ]
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": [
+          "2027-03-13"
+        ],
+        "part": [
+          "day"
+        ]
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": [
+          "2027-03-14"
+        ],
+        "part": [
+          "morning",
+          "day"
+        ]
+      }
+    ],
+    "questions": [
+      [
+        "airbnb",
+        "address",
+        "house",
+        "link",
+        "where"
+      ]
+    ],
+    "forbidden_words": [],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

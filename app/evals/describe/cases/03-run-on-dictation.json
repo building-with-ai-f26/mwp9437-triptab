@@ -1,0 +1,52 @@
+{
+  "id": "03-run-on-dictation",
+  "group": "messy",
+  "what": "Dictated with filler words and loose dates: a stop given in nights, a train and a food tour.",
+  "text": "ok so we're going to lisbon um the 3rd through the 8th of april and then porto for two nights after that, we booked the train between them on the 8th in the morning, and theres a food tour on the 5th i think",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Lisbon",
+            "Lisboa"
+          ],
+          "start": "2027-04-03",
+          "end": "2027-04-08"
+        },
+        {
+          "names": [
+            "Porto"
+          ],
+          "start": "2027-04-08",
+          "end": "2027-04-10"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "transport"
+        ],
+        "day": [
+          "2027-04-08"
+        ],
+        "part": [
+          "morning"
+        ]
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": [
+          "2027-04-05"
+        ]
+      }
+    ],
+    "questions": [],
+    "forbidden_words": [],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

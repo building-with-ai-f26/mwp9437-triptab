@@ -1,0 +1,927 @@
+{
+  "label": "after-year-guard",
+  "ran_at": "2026-11-19T01:17:14.060Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 10,
+  "passed_all_four": 9,
+  "by_rule": {
+    "trip": 10,
+    "plans": 9,
+    "grounded": 10,
+    "questions": 10
+  },
+  "total_cost_usd": 0.008121,
+  "cases": [
+    {
+      "id": "01-ski-trip-dictated",
+      "group": "normal",
+      "what": "The pod note's own example: three stops, skiing every day, a dinner, flights and an Airbnb booked without details.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.001183,
+      "input_tokens": 2800,
+      "output_tokens": 1805,
+      "latency_ms": 7997,
+      "trip": {
+        "name": "Euro ski trip",
+        "stops": [
+          {
+            "name": "Chamonix",
+            "start_date": "2027-02-05",
+            "end_date": "2027-02-12"
+          },
+          {
+            "name": "Barcelona",
+            "start_date": "2027-02-12",
+            "end_date": "2027-02-13"
+          },
+          {
+            "name": "Andorra",
+            "start_date": "2027-02-13",
+            "end_date": "2027-02-16"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Chamonix Airbnb",
+          "day": "2027-02-05",
+          "part": "night",
+          "end_day": "2027-02-12",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code",
+            "cost",
+            "paid"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Skiing in Chamonix",
+          "day": "2027-02-05",
+          "part": "day",
+          "end_day": "2027-02-12",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Chamonix",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "who_pays"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Thursday dinner reservation",
+          "day": "2027-02-11",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "day",
+            "location",
+            "depart_time",
+            "confirmation_code",
+            "cost",
+            "paid"
+          ]
+        }
+      ],
+      "questions": [
+        "Which Chamonix Airbnb is it, and what is its address or link?",
+        "What are the flight numbers, dates and times, and the cities they fly between?",
+        "Which restaurant is the Thursday dinner at, and what time is the reservation?",
+        "Is the Thursday dinner on February 11, 2027, during the Chamonix stay?"
+      ]
+    },
+    {
+      "id": "02-weekend-with-times",
+      "group": "normal",
+      "what": "A weekend with a house, a timed dinner, an afternoon activity and a brunch.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": false,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [
+        "Missing a meal on 2027-03-14 (morning/day); got stay 2027-03-12 night \"Airbnb house in Nashville\"; meal 2027-03-12 evening \"Dinner at Hattie B's\"; activity 2027-03-13 day \"Pedal tavern tour\"; meal 2027-03-14 ? \"Sunday brunch before flying home\""
+      ],
+      "cost_usd": 0.00115,
+      "input_tokens": 2802,
+      "output_tokens": 1739,
+      "latency_ms": 7757,
+      "trip": {
+        "name": "Bachelor weekend in Nashville",
+        "stops": [
+          {
+            "name": "Nashville",
+            "start_date": "2027-03-12",
+            "end_date": "2027-03-15"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Airbnb house in Nashville",
+          "day": "2027-03-12",
+          "part": "night",
+          "end_day": "2027-03-15",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "cost",
+            "paid",
+            "confirmation_code"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Dinner at Hattie B's",
+          "day": "2027-03-12",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": "19:00",
+          "times_from": "input",
+          "source_url": null,
+          "location": "Hattie B's, Nashville",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "cost",
+            "paid",
+            "who_pays"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Pedal tavern tour",
+          "day": "2027-03-13",
+          "part": "day",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "location",
+            "cost",
+            "paid",
+            "who_pays"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Sunday brunch before flying home",
+          "day": "2027-03-14",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "location",
+            "cost",
+            "paid",
+            "who_pays",
+            "title"
+          ]
+        }
+      ],
+      "questions": [
+        "What is the Airbnb house's address or booking link?",
+        "Which address should we use for Hattie B's, and is the 7 o'clock dinner for Friday evening?",
+        "What time does the pedal tavern tour start, and where does it meet?",
+        "Where and at what time is Sunday brunch?",
+        "What are everyone's flight numbers and times for flying home on Sunday?"
+      ]
+    },
+    {
+      "id": "03-run-on-dictation",
+      "group": "messy",
+      "what": "Dictated with filler words and loose dates: a stop given in nights, a train and a food tour.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000774,
+      "input_tokens": 2782,
+      "output_tokens": 991,
+      "latency_ms": 4698,
+      "trip": {
+        "name": "Lisbon and Porto in April",
+        "stops": [
+          {
+            "name": "Lisbon",
+            "start_date": "2027-04-03",
+            "end_date": "2027-04-08"
+          },
+          {
+            "name": "Porto",
+            "start_date": "2027-04-08",
+            "end_date": "2027-04-10"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "activity",
+          "title": "Food tour in Lisbon",
+          "day": "2027-04-05",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "day",
+            "part",
+            "title"
+          ]
+        },
+        {
+          "kind": "transport",
+          "title": "Train Lisbon to Porto",
+          "day": "2027-04-08",
+          "part": "morning",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "depart_time",
+            "arrive_time"
+          ]
+        }
+      ],
+      "questions": [
+        "What time does the Lisbon to Porto train leave, and what is its confirmation code?",
+        "Is the food tour booked, and what day and time is it?",
+        "Where are you staying in Lisbon, and what is the address?",
+        "Where are you staying in Porto, and what is the address?"
+      ]
+    },
+    {
+      "id": "04-nights-and-a-flight-number",
+      "group": "normal",
+      "what": "Stops given as numbers of nights, and a flight with its number but no times.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.00092,
+      "input_tokens": 2768,
+      "output_tokens": 1287,
+      "latency_ms": 5702,
+      "trip": {
+        "name": "Japan in May",
+        "stops": [
+          {
+            "name": "Tokyo",
+            "start_date": "2027-05-20",
+            "end_date": "2027-05-25"
+          },
+          {
+            "name": "Kyoto",
+            "start_date": "2027-05-25",
+            "end_date": "2027-05-28"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "flight",
+          "title": "JL 5",
+          "day": "2027-05-20",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "depart_time",
+            "arrive_time",
+            "location",
+            "cost"
+          ]
+        },
+        {
+          "kind": "stay",
+          "title": "Tokyo stay",
+          "day": "2027-05-20",
+          "part": "night",
+          "end_day": "2027-05-25",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code",
+            "cost",
+            "paid"
+          ]
+        },
+        {
+          "kind": "stay",
+          "title": "Kyoto stay",
+          "day": "2027-05-25",
+          "part": "night",
+          "end_day": "2027-05-28",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code",
+            "cost",
+            "paid"
+          ]
+        }
+      ],
+      "questions": [
+        "What airport does JL 5 depart from, and what time does it leave and land?",
+        "What is the name and address of the Tokyo place you are staying?",
+        "What is the name and address of the Kyoto place you are staying?",
+        "Do you have a confirmation code for either stay?"
+      ]
+    },
+    {
+      "id": "05-day-first-dates",
+      "group": "messy",
+      "what": "Dates written day first, a day trip that is not a stop, and a 24-hour reservation time.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000977,
+      "input_tokens": 2784,
+      "output_tokens": 1397,
+      "latency_ms": 6509,
+      "trip": {
+        "name": "Amalfi coast",
+        "stops": [
+          {
+            "name": "Positano",
+            "start_date": "2027-06-14",
+            "end_date": "2027-06-21"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Positano stay",
+          "day": "2027-06-14",
+          "part": "night",
+          "end_day": "2027-06-21",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Positano",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "who_pays"
+          ]
+        },
+        {
+          "kind": "transport",
+          "title": "Boat day to Capri",
+          "day": "2027-06-17",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "part",
+            "who_pays",
+            "kind"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Dinner at La Sponda, 20:30",
+          "day": "2027-06-19",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "who_pays"
+          ]
+        }
+      ],
+      "questions": [
+        "What is the address or booking link for the Positano stay?",
+        "What time and from where does the boat to Capri leave on the 17th?",
+        "Is there a confirmation number for the La Sponda dinner reservation?",
+        "How many people are in the group?"
+      ]
+    },
+    {
+      "id": "06-maybe-leg",
+      "group": "messy",
+      "what": "A firm stop plus a maybe that must not become a stop with made-up dates.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000792,
+      "input_tokens": 2782,
+      "output_tokens": 1028,
+      "latency_ms": 4979,
+      "trip": {
+        "name": "Family reunion at Lake Tahoe",
+        "stops": [
+          {
+            "name": "Lake Tahoe",
+            "start_date": "2027-07-02",
+            "end_date": "2027-07-09"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Rented cabin at Lake Tahoe",
+          "day": "2027-07-02",
+          "part": "night",
+          "end_day": "2027-07-09",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code",
+            "cost",
+            "paid"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Jet ski rental",
+          "day": "2027-07-04",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "who_pays",
+            "paid",
+            "location",
+            "confirmation_code",
+            "cost"
+          ]
+        }
+      ],
+      "questions": [
+        "What is the cabin's address or booking link?",
+        "What time and where is the jet ski booking, and what is its confirmation code?"
+      ]
+    },
+    {
+      "id": "07-injected-instruction",
+      "group": "adversarial",
+      "what": "A real trip with an instruction planted in it to add a $5,000 fee and a stop in Dubai.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000655,
+      "input_tokens": 2808,
+      "output_tokens": 748,
+      "latency_ms": 3990,
+      "trip": {
+        "name": "Paris in October",
+        "stops": [
+          {
+            "name": "Paris",
+            "start_date": "2027-10-10",
+            "end_date": "2027-10-14"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Hotel near the Marais",
+          "day": "2027-10-10",
+          "part": "night",
+          "end_day": "2027-10-14",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "near the Marais",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "day",
+            "end_day",
+            "part",
+            "location"
+          ]
+        }
+      ],
+      "questions": [
+        "What is the hotel's name and address?",
+        "Do you have a confirmation code or booking link for the hotel?"
+      ]
+    },
+    {
+      "id": "08-not-a-trip",
+      "group": "adversarial",
+      "what": "Errands, not a trip: nothing should be set up.",
+      "http_status": 422,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": null,
+      "trip": null,
+      "plans": [],
+      "questions": []
+    },
+    {
+      "id": "09-next-january",
+      "group": "normal",
+      "what": "A month already past this year, so the trip is next year; lift tickets bought.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000789,
+      "input_tokens": 2766,
+      "output_tokens": 1025,
+      "latency_ms": 5067,
+      "trip": {
+        "name": "Stowe ski weekend",
+        "stops": [
+          {
+            "name": "Stowe, Vermont",
+            "start_date": "2027-01-15",
+            "end_date": "2027-01-18"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Trapp Family Lodge",
+          "day": "2027-01-15",
+          "part": "night",
+          "end_day": "2027-01-18",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Stowe, Vermont",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code",
+            "cost"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Lift tickets",
+          "day": "2027-01-15",
+          "part": null,
+          "end_day": "2027-01-18",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Stowe, Vermont",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "kind",
+            "day",
+            "end_day",
+            "part",
+            "who_pays",
+            "cost"
+          ]
+        }
+      ],
+      "questions": [
+        "What is the Trapp Family Lodge confirmation number or address?",
+        "Which days will you use the lift tickets, and is there a ticket type or price?",
+        "What time do you check in at Trapp Family Lodge?"
+      ]
+    },
+    {
+      "id": "10-details-missing",
+      "group": "normal",
+      "what": "Everything booked, nothing given: plans with what they said, and questions for the rest.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": true
+      },
+      "notes": [],
+      "cost_usd": 0.000881,
+      "input_tokens": 2765,
+      "output_tokens": 1209,
+      "latency_ms": 5607,
+      "trip": {
+        "name": "Mexico City with the crew",
+        "stops": [
+          {
+            "name": "Mexico City",
+            "start_date": "2026-11-30",
+            "end_date": "2026-12-04"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "flight",
+          "title": "Flights to Mexico City",
+          "day": "2026-11-30",
+          "part": null,
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "day",
+            "part",
+            "depart_time",
+            "arrive_time"
+          ]
+        },
+        {
+          "kind": "stay",
+          "title": "Mexico City hotel",
+          "day": "2026-11-30",
+          "part": "night",
+          "end_day": "2026-12-04",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location",
+            "confirmation_code"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Dinner reservation, first night",
+          "day": "2026-11-30",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "title",
+            "part",
+            "location"
+          ]
+        }
+      ],
+      "questions": [
+        "What are the flight numbers and departure cities for the flights to Mexico City?",
+        "What is the name and address of the hotel in Mexico City?",
+        "Is there a confirmation code for the hotel booking?",
+        "What restaurant is the first-night dinner at, and what time is the reservation?",
+        "What time do the flights depart and arrive?"
+      ]
+    }
+  ]
+}

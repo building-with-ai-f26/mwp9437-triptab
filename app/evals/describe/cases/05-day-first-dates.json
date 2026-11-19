@@ -1,0 +1,49 @@
+{
+  "id": "05-day-first-dates",
+  "group": "messy",
+  "what": "Dates written day first, a day trip that is not a stop, and a 24-hour reservation time.",
+  "text": "Amalfi coast 14/06 to 21/06, staying in Positano the whole week. Boat day to Capri on the 17th, and a dinner reservation at La Sponda on the 19th at 20:30.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Positano",
+            "Amalfi"
+          ],
+          "start": "2027-06-14",
+          "end": "2027-06-21"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "activity",
+          "transport"
+        ],
+        "day": [
+          "2027-06-17"
+        ]
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": [
+          "2027-06-19"
+        ],
+        "part": [
+          "evening"
+        ]
+      }
+    ],
+    "questions": [],
+    "forbidden_words": [],
+    "forbidden_cents": [],
+    "not_a_stop": [
+      "capri"
+    ]
+  },
+  "today": "2026-11-18"
+}

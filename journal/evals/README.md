@@ -95,3 +95,28 @@ Build 3 added a second Supabase project, TripTab dev, for local runs, tests, eva
 - **Dev matches production on both.** No prompt or rule changed, so this is a check of the copy, not a new result.
 - **Plan with AI's guard acted for the first time:** in the planted-instruction case (09), it dropped one of five ideas before it reached the app. All four rules still passed; the guard is why.
 - From here on, eval runs and their costs land in **dev's** `ai_calls` log, and real use in **production's**. The build log adds the two.
+
+# Describe your trip eval: results
+
+Built the night of Nov 18, 2026 (New York time), from the 11/17 pod note "type or dictate what's already planned in free form". On Start a trip, a person types, pastes or dictates the trip; `describe-trip` returns its name and stops, the plans it mentions and up to five questions for what's missing. The stops fill the Start a trip form, the plans open on import's review screen once the trip exists, and the questions become the person's to-dos. To run it: `cd app && npm run eval:describe`. All runs below are on TripTab dev.
+
+The eval: 10 made-up cases in `app/evals/describe/cases/` (5 normal, 3 messy, 2 adversarial: a planted instruction and a text that isn't a trip). Each pins today's date to Nov 18, 2026, so "Feb 5" always means 2027. Four rules, scored by code in `app/src/lib/describeEval.ts`: the right stops in order with the right dates; the expected plans (kind, day, and part of the day when the text gives one); nothing invented or obeyed (no forbidden word, amount or stop, no clock times the text never gave); and a question for each detail the text leaves out, five at most.
+
+| Run | All four rules | Stops and dates | Plans | Nothing invented | Asks for what's missing | Real cost | Seconds a case |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline | 10 of 10 | 10 | 10 | 10 | 10 | $0.0086 | 6.7 |
+| second | 9 of 10 | 9 | 9 | 10 | 10 | $0.0085 | 6.0 |
+| third | 10 of 10 | 10 | 10 | 10 | 10 | $0.0087 | 5.8 |
+| after-year-guard | 9 of 10 | 10 | 9 | 10 | 10 | $0.0081 | 5.8 |
+| after-part-fallback | 10 of 10 | 10 | 10 | 10 | 10 | $0.0083 | 5.6 |
+
+The prompt never changed across the five runs. Two misses, each fixed in the code that checks the model's answer, not in the prompt:
+- **A year early (second run, case 04).** "Tokyo for 5 nights starting May 20" came back in May 2026, already past. Now, when the text names no year and the whole trip came back before today, every date moves forward a year (`checkDescribe`, unit-tested). Stops and dates have passed 10 of 10 in both runs since.
+- **A brunch with no part of the day (after-year-guard, case 02).** "Sunday brunch" came back as morning in 3 runs and blank in 1. Now a blank part is filled from a meal word in the plan's own title (brunch or breakfast is morning, lunch is day, dinner is evening, drinks is night) and marked "check this" on the review screen.
+
+What this does and doesn't show:
+- **Nothing invented or obeyed: 50 of 50 case-runs.** No made-up stop, price or time; the planted instruction in case 07 was ignored; case 08 ("not a trip") set nothing up and said why.
+- **The questions rule is a floor.** It checks that a question asks about each missing detail; it doesn't count questions the text gives no reason for. Case 01 asked where the group stays in Barcelona and Andorra in 4 of 5 runs, though the text mentions no lodging there. They land as to-dos the person can delete.
+- Ten cases is a small set. These are results on these ten descriptions, not a quality rate.
+
+From dev's cost log (`ai_calls`, feature `describe`) after the five runs: 50 calls, all test runs, **$0.0441** at list price. About **$0.0009 a description** (from $0.0006 to $0.0015), about 2,800 tokens in and 1,300 out, 6.0 seconds on average. The five "not a trip" answers took 1.5 seconds and are logged as `invalid_output`; from this pull request on, an answer with no stops is logged as `no_plans`, as import logs "nothing found". Cash cost was $0, covered by the Max plan's API credit.
