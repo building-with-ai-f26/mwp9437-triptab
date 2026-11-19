@@ -621,6 +621,49 @@ export default function TripPage() {
         extras={
           openItem && (
             <PlanPanel
+              section="going"
+              tripName={trip.name}
+              item={openItem}
+              travelers={travelers}
+              itemPeople={itemPeople}
+              meId={meId}
+              expense={expenseByItem.get(openItem.id)}
+              expenses={expenses}
+              ownMarks={ownMarks}
+              canEdit={editable}
+              onPayMode={async (mode) => {
+                await updateItem(openItem.id, { pay_mode: mode });
+                track("plan updated", { kind: openItem.kind, status: openItem.status, who_pays: mode });
+                await reload();
+              }}
+              onLogOwn={async (travelerId, cents, withPoints) => {
+                const after = await logOwnLine(openItem.id, travelerId, cents, withPoints);
+                trackOwn(openItem, travelerId, cents, withPoints, openItem.status, after);
+                await reload();
+              }}
+              onClearOwn={async (travelerId) => {
+                const after = await clearOwnLine(openItem.id, travelerId);
+                if (after !== openItem.status) {
+                  track("plan status changed", { kind: openItem.kind, from: openItem.status, to: after, who_pays: "own" });
+                }
+                await reload();
+              }}
+              onGoing={async (travelerId, going) => {
+                await setGoing(openItem.id, travelerId, going);
+                if (travelerId === meId) track(going ? "opted in" : "opted out", { kind: openItem.kind });
+                await reload();
+              }}
+              onConfirm={() => {
+                setExpenseTarget({ kind: "item", item: openItem, expense: expenseByItem.get(openItem.id) });
+                setDialog(null);
+              }}
+            />
+          )
+        }
+        costExtras={
+          openItem && (
+            <PlanPanel
+              section="cost"
               tripName={trip.name}
               item={openItem}
               travelers={travelers}

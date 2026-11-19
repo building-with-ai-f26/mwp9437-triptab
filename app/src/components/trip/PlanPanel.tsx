@@ -27,6 +27,7 @@ export function PlanPanel({
   onPayMode,
   onLogOwn,
   onClearOwn,
+  section,
 }: {
   tripName: string;
   item: Item;
@@ -44,6 +45,12 @@ export function PlanPanel({
   onPayMode: (mode: PayMode) => Promise<void>;
   onLogOwn: (travelerId: string, cents: number, withPoints: boolean) => Promise<void>;
   onClearOwn: (travelerId: string) => Promise<void>;
+  /**
+   * Which half to show (Mike's 11/19 review: lead with the plan, disclose cost on a tap). "cost" is
+   * who pays, Confirm with the real cost and own costs, inside the dialog's Cost and who pays;
+   * "going" is who's in and Add to calendar, always in view. Both when left out.
+   */
+  section?: "cost" | "going";
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +88,12 @@ export function PlanPanel({
     setBusy(null);
   };
 
+  const showCost = section !== "going";
+  const showGoing = section !== "cost";
   return (
-    <div className="mb-4 space-y-3 border-b border-white/10 pb-4">
+    <div className={section === "cost" ? "space-y-3" : "mb-4 space-y-3 border-b border-white/10 pb-4"}>
+      {showCost && (
+      <>
       <div>
         <p className="label-luxury mb-1.5 text-white/80">Who pays</p>
         {canEdit && !logged ? (
@@ -222,7 +233,10 @@ export function PlanPanel({
         </div>
       )}
 
-      {meId && (
+      </>
+      )}
+
+      {showGoing && meId && (
         <div>
           <p className="label-luxury mb-1.5 text-white/80">{flight ? "Are you on this flight?" : "Are you in?"}</p>
           <Segmented
@@ -237,6 +251,7 @@ export function PlanPanel({
         </div>
       )}
 
+      {showGoing && (
       <div>
         <p className="label-luxury mb-1.5 text-white/80">
           {flight ? "On this flight" : "Who's in"} ({going.length} of {travelers.length})
@@ -265,6 +280,8 @@ export function PlanPanel({
           <p className="text-sm text-white/80">{going.length ? going.map((t) => t.name).join(", ") : "Nobody yet"}</p>
         )}
       </div>
+      )}
+      {showGoing && (
       <Button
         size="sm"
         variant="light"
@@ -275,6 +292,7 @@ export function PlanPanel({
       >
         <CalendarPlus /> Add to calendar
       </Button>
+      )}
       {error && (
         <p role="alert" className="rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
           {error}

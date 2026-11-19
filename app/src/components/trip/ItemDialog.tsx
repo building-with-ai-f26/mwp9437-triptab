@@ -60,6 +60,7 @@ export function ItemDialog({
   meId,
   canEdit,
   extras,
+  costExtras,
   onClose,
   onSave,
   onDelete,
@@ -71,6 +72,8 @@ export function ItemDialog({
   canEdit: boolean;
   /** Shown above the form for an existing plan: its cost, your in or out, who's going (Build 3). */
   extras?: ReactNode;
+  /** The cost half of the plan panel, shown inside Cost and who pays. */
+  costExtras?: ReactNode;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -92,7 +95,8 @@ export function ItemDialog({
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
           {...{ state, trip, travelers, meId, canEdit, onClose, onSave, onDelete }}
-          costExtras={state.item ? extras : undefined}
+          goingExtras={state.item ? extras : undefined}
+          costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
           registerClose={(fn) => {
             closer.current = fn;
@@ -114,6 +118,7 @@ function ItemForm({
   onDelete,
   onRequestClose,
   registerClose,
+  goingExtras,
   costExtras,
 }: {
   state: ItemDialogState;
@@ -126,7 +131,9 @@ function ItemForm({
   onDelete: (item: Item) => Promise<void>;
   onRequestClose: () => void;
   registerClose: (fn: (() => Promise<boolean>) | null) => void;
-  /** An existing plan's who pays, confirm and own costs (PlanPanel): inside the cost section. */
+  /** An existing plan's who's in and Add to calendar (PlanPanel, going): in view, under status. */
+  goingExtras?: ReactNode;
+  /** An existing plan's who pays, confirm and own costs (PlanPanel, cost): inside the cost section. */
   costExtras?: ReactNode;
 }) {
   const it = state.item;
@@ -335,6 +342,7 @@ function ItemForm({
           </p>
         )}
         <p className="text-xs text-white/70">Only the trip's owners can change plans.</p>
+        {goingExtras}
         {costExtras}
       </div>
     );
@@ -627,6 +635,8 @@ function ItemForm({
       ) : (
         <p className="mb-3 text-sm text-white/70">Confirmed and paid. Undo the confirmation to change its status.</p>
       )}
+
+      {goingExtras}
 
       <div className="mb-3 rounded-2xl border border-white/15 bg-white/5">
         <button
