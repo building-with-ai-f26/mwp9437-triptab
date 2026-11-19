@@ -43,7 +43,7 @@ The runbook is a Claude Docs doc: https://claude.ai/artifact/UKfiqc1zX1vRdFo1shM
 - **Build history**: done steps.
 - **For Claude**, which Mike doesn't read: the table rules, the session block, the prompts, the app's public settings, and Decided calls (the archive).
 
-- Anything Mike has to do goes in the Steps table, with the detail on the For Claude tab. Keep the column widths as Mike set them (Target 88, Who 130). Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
+- Anything Mike has to do goes in the Steps table, with the detail on the For Claude tab. Keep the column widths as Mike set them (Target 88, Who 130). Target holds only the class deadline a row counts toward, never a day-by-day plan, and there are no time estimates (Mike's call, 11/19: we're just building). Keep the Steps table in the order things come up: put each new row where it falls, move done rows to Build history, then renumber the open rows top to bottom starting after the highest number in Build history, and refer to other rows by name, never by number.
 - Mike's decisions are in Decided calls and on the Product Vision tab. Don't re-ask them.
 - If this session can't reach the Claude Docs connector, list what Mike has to do under "For Mike" at the top of the current `journal/build-0N` file and say so in chat.
 

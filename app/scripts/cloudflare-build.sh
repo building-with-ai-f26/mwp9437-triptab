@@ -4,6 +4,8 @@
 #
 # 1. The tests, always against TripTab dev: lint, unit tests, type check, and the live database
 #    security tests. If any fails, the script stops, so nothing is built and nothing deploys.
+#    On a pull request's build, the branch's Edge Functions and migrations go to TripTab dev first,
+#    just before the live tests, so those test what the branch changes (C15, Mike's 11/19 call).
 # 2. On main only: production's Edge Functions and migrations, from the repo (supabase-deploy.sh;
 #    C12, Mike's 11/18 call: production changes only through merges).
 # 3. The build: production's values on main (Cloudflare then deploys it to triptab.org), and
@@ -31,10 +33,13 @@ export VITE_SUPABASE_URL="$DEV_SUPABASE_URL" VITE_SUPABASE_PUBLISHABLE_KEY="$DEV
 npm run lint
 npm test
 npx tsc -b
+# A pull request's Cloudflare build (a branch other than main) deploys to dev with Previews Base's
+# key; GitHub Actions has no branch name here and no key, so it skips this.
+if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ]; then bash scripts/supabase-deploy.sh dev; fi
 npm run test:rls
 
 if [ "$BRANCH" = "main" ]; then
-  bash scripts/supabase-deploy.sh
+  bash scripts/supabase-deploy.sh production
   echo "== Build for production (triptab.org) =="
   export VITE_SUPABASE_URL="$PROD_SUPABASE_URL" VITE_SUPABASE_PUBLISHABLE_KEY="$PROD_SUPABASE_KEY" VITE_POSTHOG_KEY="$PROD_POSTHOG_KEY"
   npm run build
