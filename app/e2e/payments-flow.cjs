@@ -55,6 +55,8 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
     const venmo = row.getByRole('link', { name: 'Pay with Venmo' });
     const href = new URL(await venmo.getAttribute('href'));
     result.venmoLink = { host: href.host, recipients: href.searchParams.get('recipients'), amount: href.searchParams.get('amount'), note: href.searchParams.get('note') };
+    // Venmo shows a + as it is, so spaces go as %20 (Mike's 11/19 review).
+    result.venmoNoPlus = !href.search.includes('+');
     result.opensElsewhere = (await venmo.getAttribute('target')) === '_blank';
     result.settleOverflow = await h.overflowX(v);
     await h.shot(v, 'settle-up-pay-phone');
@@ -86,7 +88,7 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
       /You owe \$100/.test(result.vicBefore) &&
       /You.*Mike.*\$100/.test(result.transfer) &&
       result.venmoLink.host === 'venmo.com' && result.venmoLink.recipients === 'mike-p-tt' && result.venmoLink.amount === '100.00' &&
-      result.venmoLink.note === 'TripTab · Euro ski trip · Feb 5 to 16, 2027' && result.opensElsewhere &&
+      result.venmoLink.note === 'TripTab · Euro ski trip' && result.venmoNoPlus && result.opensElsewhere &&
       result.prefilled === '100.00' && /even/i.test(result.vicAfter) && /You paid Mike.*Cash.*\$100/.test(result.vicSees) &&
       /Vic paid you.*Cash.*\$100/.test(result.ownerSees) && /even/i.test(result.ownerAfter) && /owed \$100/.test(result.ownerAfterRemove) &&
       result.settleOverflow <= 0 && result.ownerOverflow <= 0;
