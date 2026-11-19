@@ -4,9 +4,21 @@
 // use import's exact format and checks (supabase/functions/import-bookings/rules.ts), so the app
 // reviews them on import's screen. No imports beyond those rules, so the app's unit tests
 // (app/src/lib/describeRules.test.ts) run this same file.
-import { checkProposals, PROPOSE_TOOL, type Proposal } from "../import-bookings/rules.ts";
+import { capDecision as importCap, checkProposals, PROPOSE_TOOL, USER_DAILY_IMPORTS, type Blocked, type Proposal } from "../import-bookings/rules.ts";
 
-export { capDecision, costUsd, EFFORT, MODEL, nyDayStart, readCap, TIMEOUT_MS, WORST_CASE_CALL_USD, type Usage } from "../import-bookings/rules.ts";
+export { costUsd, EFFORT, MODEL, nyDayStart, readCap, TIMEOUT_MS, WORST_CASE_CALL_USD, type Usage } from "../import-bookings/rules.ts";
+
+/** Import's caps, in words for Start a trip, where the way round them is the form. */
+export function capDecision(capUsd: number, spentTodayUsd: number, userCallsToday: number): Blocked | null {
+  const blocked = importCap(capUsd, spentTodayUsd, userCallsToday);
+  if (!blocked) return null;
+  const message = {
+    off: "TripTab's AI is turned off right now. Fill in the form instead.",
+    capped_daily: "TripTab has reached its AI budget for today. Fill in the form, or try again tomorrow.",
+    capped_user: `You've used today's ${USER_DAILY_IMPORTS} AI requests (AI help and Describe your trip share them). Fill in the form, or try again tomorrow.`,
+  }[blocked.code];
+  return { ...blocked, message };
+}
 
 /** A description is the traveler's own words: a paragraph or a dictated note, not a pasted inbox. */
 export const MAX_DESCRIBE_CHARS = 5_000;

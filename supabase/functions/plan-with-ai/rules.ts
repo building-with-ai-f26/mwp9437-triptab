@@ -57,7 +57,7 @@ export function capDecision(capUsd: number, spentTodayUsd: number, userCallsToda
     return { code: "capped_daily", message: "TripTab has reached its AI budget for today. Add plans by hand, or try again tomorrow." };
   }
   if (userCallsToday >= USER_DAILY_CALLS) {
-    return { code: "capped_user", message: `You've used today's ${USER_DAILY_CALLS} AI requests. Add plans by hand, or try again tomorrow.` };
+    return { code: "capped_user", message: `You've used today's ${USER_DAILY_CALLS} AI requests (AI help and Describe your trip share them). Add plans by hand, or try again tomorrow.` };
   }
   return null;
 }

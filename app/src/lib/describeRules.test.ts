@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
+import { capDecision, checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
 
 const TEXT =
   "Euro ski trip! Chamonix Feb 5 to 12, then Barcelona for a night, then Andorra till the 16th. Skiing every day in Chamonix, dinner reservation Thursday, flights and the Airbnb are booked.";
@@ -83,6 +83,14 @@ describe("describe your trip: checking the answer", () => {
     expect(r.plans.map((p) => p.part)).toEqual(["morning", "day", "night", null]);
     expect(r.plans[0].unsure).toContain("part");
     expect(r.plans[2].unsure).not.toContain("part");
+  });
+
+  it("says the AI limits in Start a trip's words, and counts every AI call together", () => {
+    expect(capDecision(7, 0, 0)).toBeNull();
+    expect(capDecision(0, 0, 0)).toMatchObject({ code: "off", message: expect.stringContaining("Fill in the form") });
+    const user = capDecision(7, 0, 20)!;
+    expect(user.code).toBe("capped_user");
+    expect(user.message).toMatch(/20 AI requests \(AI help and Describe your trip share them\)\. Fill in the form/);
   });
 
   it("moves a trip that came back in the past to next year, unless the text names the year", () => {

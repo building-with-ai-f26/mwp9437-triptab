@@ -57,12 +57,13 @@ export type Blocked = { code: "off" | "capped_daily" | "capped_user"; message: s
 
 /** Whether a call may go ahead, given today's spend across the app and this person's imports today. */
 export function capDecision(capUsd: number, spentTodayUsd: number, userImportsToday: number): Blocked | null {
-  if (capUsd <= 0) return { code: "off", message: "AI import is turned off right now. Add the plan by hand, or ask Mike to turn it back on." };
+  if (capUsd <= 0) return { code: "off", message: "TripTab's AI is turned off right now. Add the plan by hand, or ask Mike to turn it back on." };
   if (spentTodayUsd + WORST_CASE_CALL_USD > capUsd) {
     return { code: "capped_daily", message: "TripTab has reached its AI budget for today. Add the plan by hand, or try again tomorrow." };
   }
+  // The count is every AI call this person made today (import, ideas, describing a trip), not imports alone.
   if (userImportsToday >= USER_DAILY_IMPORTS) {
-    return { code: "capped_user", message: `You've used today's ${USER_DAILY_IMPORTS} imports. Add the plan by hand, or try again tomorrow.` };
+    return { code: "capped_user", message: `You've used today's ${USER_DAILY_IMPORTS} AI requests (AI help and Describe your trip share them). Add the plan by hand, or try again tomorrow.` };
   }
   return null;
 }
