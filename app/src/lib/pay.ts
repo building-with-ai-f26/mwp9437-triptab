@@ -1,6 +1,6 @@
 // How people pay you (Mike's notes, 11/18): cleaning and checking a Venmo username and a Zelle
 // phone or email, and showing them. No imports, so unit tests (pay.test.ts) run it as is. The
-// database checks the same formats (supabase/migrations/20261119020000_pay_info.sql).
+// database checks the same formats (supabase/migrations/20261119002546_pay_info.sql).
 
 export const VENMO_FORMAT = "A Venmo username is 5 to 30 letters, numbers, - or _.";
 /** "@Jordan-B" or " jordan-b " becomes "Jordan-B"; blank becomes null. */

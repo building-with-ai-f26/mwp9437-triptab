@@ -1,0 +1,14 @@
+# TripTab's Supabase settings that the Supabase CLI reads when it deploys from this repo (C12, Mike's
+# 11/18 call: production changes only through merges). Only what differs from the defaults is here.
+project_id = "triptab"
+
+# Called before anyone has signed in, so Supabase's own sign-in check is off; each function checks
+# what it needs itself (sign-up: its rate limit; confirm-email: the one-time token in the link).
+[functions.sign-up]
+verify_jwt = false
+
+[functions.confirm-email]
+verify_jwt = false
+
+# Every other function (ai-status, describe-trip, import-bookings, plan-with-ai, send-invite) keeps
+# the default: a signed-in caller only.
