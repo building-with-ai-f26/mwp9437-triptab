@@ -106,6 +106,9 @@ async function addPlan(page, day, slot, f) {
   let d = o.locator('dialog[open]');
   await d.getByLabel('Name').fill('Vic');
   await d.getByLabel('Email (optional)').fill(`vic-${run}@example.com`);
+  // Not a real inbox: no invite email (invite-email-flow checks those, with Resend faked).
+  const inviteNow = d.getByLabel('Email them an invite now');
+  if (await inviteNow.count()) await inviteNow.uncheck();
   await d.getByRole('radio', { name: 'Viewer' }).click();
   await shot(o, 'add-person-desktop');
   await d.getByRole('button', { name: 'Add to trip' }).click();
