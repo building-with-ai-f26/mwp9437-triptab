@@ -42,7 +42,7 @@ async function run(browser, label, opts, result) {
       ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(CANNED) })
       : route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: 'ok' }),
   );
-  await p.getByRole('button', { name: 'Import' }).click();
+  await h.openAi(p, 'I have bookings');
   await h.dlg(p).getByLabel('Paste it here').fill('Flying DL 44 on Wed Feb 3 at 6:10 PM.');
   await h.dlg(p).getByRole('button', { name: 'Find the plans' }).click();
   const card = h.dlg(p).getByTestId('proposal').first();

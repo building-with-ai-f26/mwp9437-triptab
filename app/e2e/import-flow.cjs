@@ -54,7 +54,7 @@ async function run(browser, label, opts, result) {
     );
   }
 
-  await p.getByRole('button', { name: 'Import' }).click();
+  await h.openAi(p, 'I have bookings');
   await h.dlg(p).getByLabel('Paste it here').fill(PASTED);
   await h.shot(p, `${SHOTS}-paste-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Find the plans' }).click();

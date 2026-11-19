@@ -5,7 +5,7 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const { joinTrip, withEmail } = require('./helpers.cjs');
-const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
+const OUT = (process.env.E2E_SHOTS || path.join(__dirname, '..', '..', 'docs', 'screenshots'));
 const BASE = 'http://localhost:5173';
 const run = Math.random().toString(36).slice(2, 7);
 const PW = `demo-${run}-Passw0rd`;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet, Wand2 } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -16,6 +16,7 @@ import { ExpenseDialog, FlightsCard, MoneyCard, type ExpenseTarget } from "../co
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
+import { AiChoiceDialog } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
 import { draftCents, type Draft } from "../lib/importPlans";
 import type { ItemInput } from "../lib/api";
@@ -53,7 +54,7 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, type Item, type ItemStatus, type Traveler } from "../lib/model";
+import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, suggestedBy, type Item, type ItemStatus, type Traveler } from "../lib/model";
 import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
@@ -84,6 +85,8 @@ export default function TripPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [planning, setPlanning] = useState(false);
+  // One AI button, two choices (Mike's 11/18 call): I have bookings (Import) or Give me ideas (Plan with AI).
+  const [choosingAi, setChoosingAi] = useState(false);
 
   const reload = useCallback(
     () =>
@@ -163,6 +166,7 @@ export default function TripPage() {
         ? (ownLineOf(expenses, item.id, meId)?.total_cents ?? null)
         : (expenseByItem.get(item.id)?.total_cents ?? null),
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
+    suggestedBy: (item) => suggestedBy(item, travelers, user?.id ?? null),
     aboard: (item) => {
       const on = goingList(item, travelers, itemPeople);
       return { names: on.map((t) => (t.id === meId ? "you" : t.name)), everyone: on.length === travelers.length && travelers.length > 0 };
@@ -356,11 +360,8 @@ export default function TripPage() {
               </div>
               {editable && (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setPlanning(true)}>
-                    <Wand2 /> Plan with AI
-                  </Button>
-                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setImporting(true)}>
-                    <Sparkles /> Import
+                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setChoosingAi(true)}>
+                    <Sparkles /> AI help
                   </Button>
                   <Button size="sm" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
                     <Plus /> Add a plan
@@ -547,6 +548,18 @@ export default function TripPage() {
           await reload();
         }}
       />
+      {editable && (
+        <AiChoiceDialog
+          open={choosingAi}
+          onClose={() => setChoosingAi(false)}
+          onPick={(choice) => {
+            setChoosingAi(false);
+            track("ai help opened", { choice });
+            if (choice === "bookings") setImporting(true);
+            else setPlanning(true);
+          }}
+        />
+      )}
       {editable && (
         <ImportDialog
           open={importing}

@@ -345,3 +345,18 @@ export function validateItem(d: ItemDraft, trip: Pick<Trip, "start_date" | "end_
   }
   return errors;
 }
+
+/**
+ * Who suggested a Suggested plan (the 11/17 pod test: "suggested plans show who suggested them"):
+ * "Suggested by Jordan", "Suggested by you", or, for an idea kept from Plan with AI (its notes end
+ * with the "Found on:" line that review writes), "AI idea, kept by Jordan". Null for other statuses,
+ * or when the person who added it has left the trip.
+ */
+export function suggestedBy(item: Pick<Item, "status" | "created_by" | "notes">, travelers: Pick<Traveler, "user_id" | "name">[], myUserId: string | null): string | null {
+  if (item.status !== "suggested") return null;
+  const who = item.created_by ? travelers.find((t) => t.user_id === item.created_by) : undefined;
+  const name = who ? (myUserId && who.user_id === myUserId ? "you" : who.name) : null;
+  const fromAi = /^Found on: https?:\/\//m.test(item.notes ?? "");
+  if (fromAi) return name ? `AI idea, kept by ${name}` : "AI idea";
+  return name ? `Suggested by ${name}` : null;
+}

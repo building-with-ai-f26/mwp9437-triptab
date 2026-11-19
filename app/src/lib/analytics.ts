@@ -61,6 +61,7 @@ export type EventName =
   | "venmo added"
   | "pay info saved"
   | "pay info skipped"
+  | "ai help opened"
   | "confirm email resent"
   | "email confirmed"
   | "opted out"

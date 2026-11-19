@@ -33,7 +33,13 @@ async function run(browser, label, opts, result) {
         : route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: 'ok' }),
     );
   }
-  await p.getByRole('button', { name: 'Plan with AI' }).click();
+  // One AI button, two choices (Mike's 11/18 call).
+  await p.getByRole('button', { name: 'AI help' }).click();
+  await h.dlg(p).getByRole('button', { name: /^Give me ideas/ }).waitFor();
+  r.choices = (await h.dlg(p).locator('button span.font-display').allInnerTexts()).map((t) => t.trim());
+  r.choicesOverflow = await h.overflowX(p);
+  await h.shot(p, `ai-help-choices-${label}`);
+  await h.dlg(p).getByRole('button', { name: /^Give me ideas/ }).click();
   await h.dlg(p).getByLabel(/What would the group like/).fill('A nice dinner in Chamonix, and something for the non-skiers on Sunday.');
   await h.shot(p, `${SHOTS}-ask-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Find ideas' }).click();
@@ -46,8 +52,16 @@ async function run(browser, label, opts, result) {
   await h.shot(p, `${SHOTS}-review-${label}`);
   if (r.ideas === 0) return;
 
-  // Untick the last idea, keep the rest.
+  // Move the first idea to the last morning of the trip (the 11/17 pod test: pick a day for each
+  // idea), untick the last, keep the rest.
+  const first = r.titles[0];
+  const daySelect = cards.first().getByLabel(`Day for ${first}`, { exact: true });
+  const lastDay = await daySelect.locator('option').last().getAttribute('value');
+  await daySelect.selectOption(lastDay);
+  await cards.first().getByLabel(`Part of the day for ${first}`).selectOption('morning');
+  r.movedTo = lastDay;
   await cards.last().getByRole('checkbox').uncheck();
+  r.untickedHidesPickers = (await cards.last().getByRole('combobox').count()) === 0;
   const keep = r.ideas - 1;
   if (keep > 0) {
     await h.dlg(p).getByRole('button', { name: `Add ${keep} as Suggested` }).click();
@@ -57,6 +71,11 @@ async function run(browser, label, opts, result) {
     await added.first().waitFor();
     r.addedAsSuggested = await added.count();
     r.uncheckedLeftOut = (await p.locator('.item-card').filter({ hasText: r.titles[r.titles.length - 1] }).count()) === 0;
+    // Suggested plans say who suggested them; a kept idea says it came from AI.
+    r.suggestedBy = (await added.first().getByTestId('status-label').innerText()).trim();
+    // The moved idea sits on the last day, in the morning.
+    const movedCard = p.locator(`section[data-date="${lastDay}"] .item-card`).filter({ hasText: first });
+    r.movedPlaced = (await movedCard.count()) > 0;
     // The why and the source are in the plan's notes.
     await added.first().click();
     r.notes = (await h.dlg(p).getByLabel(/Notes/).inputValue()).replace(/\s+/g, ' ');
@@ -73,8 +92,18 @@ async function run(browser, label, opts, result) {
   await run(browser, 'desktop', h.DESKTOP, result);
   await run(browser, 'phone', h.PHONE, result);
   result.errors = h.errors;
+  if (!LIVE) {
+    for (const [label, r] of Object.entries(result)) {
+      if (label === 'errors') continue;
+      const ok =
+        r.choices.join('|') === 'I have bookings|Give me ideas' && r.choicesOverflow <= 0 && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
+        /^ai idea, kept by you$/i.test(r.suggestedBy) && r.movedPlaced && r.overflow <= 0;
+      if (!ok) result.failure = `${label}: a check failed`;
+    }
+  }
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
+  if (result.failure || result.errors.length) process.exit(1);
 })().catch((e) => {
   console.error('FLOW FAILED:', e.message.split('\n').slice(0, 4).join(' | '));
   console.error('errors so far:', h.errors);

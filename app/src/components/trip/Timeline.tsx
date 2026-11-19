@@ -34,6 +34,8 @@ export interface TimelineActions {
   note?: (item: Item) => string | null;
   /** Who's on a flight or transfer, and whether that's the whole group: on an overnight one, they need no bed. */
   aboard?: (item: Item) => { names: string[]; everyone: boolean };
+  /** On a Suggested plan: "Suggested by Jordan", or "AI idea, kept by you". */
+  suggestedBy?: (item: Item) => string | null;
 }
 
 /** "Everyone's on it" covers tonight: no prompt for a stay. */
@@ -146,7 +148,9 @@ function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; a
               </span>
             )}
             {item.status !== "confirmed" && (
-              <span className="label-luxury text-[9px] text-muted-foreground">{STATUS_LABEL[item.status]}</span>
+              <span className="label-luxury text-[9px] text-muted-foreground" data-testid="status-label">
+                {(item.status === "suggested" && actions.suggestedBy?.(item)) || STATUS_LABEL[item.status]}
+              </span>
             )}
             {placed?.label && <span className="text-[11px] font-medium text-foreground/80">{placed.label}</span>}
             {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}

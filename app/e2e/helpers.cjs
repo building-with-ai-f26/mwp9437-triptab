@@ -4,7 +4,8 @@
 const path = require('path');
 const { devices } = require('playwright');
 
-const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
+// E2E_SHOTS sends a run's screenshots elsewhere (a full re-run that shouldn't rewrite the committed ones).
+const OUT = process.env.E2E_SHOTS || path.join(__dirname, '..', '..', 'docs', 'screenshots');
 // E2E_BASE points the flows at another copy of the app, such as a pull request's Preview (which
 // uses TripTab dev). Don't point a flow that signs people up at https://triptab.org: production is
 // for real users, and the flows make accounts.
@@ -99,6 +100,12 @@ async function joinTrip(page) {
   return true;
 }
 
+/** The trip's one AI button (Mike's 11/18 call), then a choice: 'I have bookings' or 'Give me ideas'. */
+async function openAi(page, choice) {
+  await page.getByRole('button', { name: 'AI help' }).click();
+  await dlg(page).getByRole('button', { name: new RegExp(`^${choice}`) }).click();
+}
+
 async function signIn(page, who) {
   await withEmail(page);
   await page.getByRole('tab', { name: 'Sign in' }).click();
@@ -107,4 +114,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { run, PW, signIn, joinTrip, withEmail, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
