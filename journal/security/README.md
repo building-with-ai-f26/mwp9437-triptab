@@ -11,8 +11,8 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
 | 2 | 11/19 | The same stranger writes to that trip: rename it, join as an Owner, add a plan, delete it | triptab.org, production | Refused: 0 rows changed, or "new row violates row-level security policy". The trip came through untouched |
 | 3 | 11/19 | Signed out, with only the public key the site ships, read trips and group links | triptab.org, production | Refused: 401, permission denied |
 | 4 | 11/19 | The stranger calls the 12 functions that run with raised rights against that trip (rename, stretch the dates, reset the group link, add an expense, confirm or undo a plan, log or clear someone's cost, tick off a to-do, join with a made-up link, take the Owner's spot with the real link) | TripTab dev | **11 of 12 refused. `set_action_done` let anyone signed in tick off a to-do nobody was assigned to, on any trip, given its id.** Fixed (below); after the fix, 12 of 12 refused and nothing changed |
-| 6 | 11/19 | Read group links out of the analytics: a group link works like an Owner's key (whoever joins through one gets the link's role, Owner by default), so look for tokens in what PostHog receives | PostHog (TripTab project), and a local run with PostHog caught in the browser | **Found: every visit to a group link sent its token to PostHog in the page address, and replays recorded the link shown in People.** PostHog holds 1,329 such events from 11/15 to 11/18 (66 tokens; 10 from the live sites). Fixed (below); after the fix, 17 captured requests at 1280 and 390, with the link opened, copied and texted, held no token |
 | 5 | 11/19 | Look for secret keys in the live site's code: all 15 JavaScript files triptab.org serves, for Supabase secret and service-role keys, Anthropic, Resend and Google keys, webhook secrets and private keys | triptab.org | None. Only the two keys meant to be public: Supabase's publishable key and PostHog's project key |
+| 6 | 11/19 | Read group links out of the analytics: a group link works like an Owner's key (whoever joins through one gets the link's role, Owner by default), so look for tokens in what PostHog receives | PostHog (TripTab project), and a local run with PostHog caught in the browser | **Found: every visit to a group link sent its token to PostHog in the page address, and replays recorded the link shown in People.** PostHog holds 1,329 such events from 11/15 to 11/18 (66 tokens; 10 from the live sites). Fixed (below); after the fix, 17 captured requests at 1280 and 390, with the link opened, copied and texted, held no token |
 
 ## Found and fixed
 
@@ -50,7 +50,6 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
 
 - Production holds 405 accounts, 401 of them `@example.com` test accounts from the click-throughs
   that ran against it before TripTab dev existed (the last on 11/17), and their test trips (C18).
-
 - A refusal that means "not found" (`P0002`) reaches the browser as HTTP 500. It's cosmetic (the
   app shows the message), but a 404 would read better in logs.
 - One 502 showed in the browser console during the production run, from a request outside
