@@ -2,7 +2,7 @@
 // flight, settle up, and a viewer's own view (their share, opting out). Run with the dev server
 // up (npm run dev): node e2e/build3-flow.cjs. Events are tagged test_run in PostHog.
 const path = require('path');
-const { joinTrip, withEmail } = require('./helpers.cjs');
+const { joinTrip, withEmail, openCost } = require('./helpers.cjs');
 const { chromium, devices } = require('playwright');
 const OUT = (process.env.E2E_SHOTS || path.join(__dirname, '..', '..', 'docs', 'screenshots'));
 const BASE = 'http://localhost:5173';
@@ -83,6 +83,7 @@ async function addPlan(page, day, slot, f) {
 
   // Confirm the fondue: $120 total, Mike paid, everyone in, even.
   await o.locator('#day-2027-02-06').getByText('Fondue at La Caleche').click();
+  await openCost(dlg(o));
   await dlg(o).getByRole('button', { name: 'Confirm with the real cost' }).click();
   const c = dlg(o);
   await c.getByLabel('What it cost').fill('120');
@@ -151,6 +152,7 @@ async function addPlan(page, day, slot, f) {
   watch(op, 'owner-phone');
   await op.goto(result.tripUrl);
   await op.locator('#day-2027-02-06').getByText('Ski school').click();
+  await openCost(dlg(op));
   await dlg(op).getByRole('button', { name: 'Confirm with the real cost' }).click();
   await dlg(op).getByLabel('What it cost').fill('90');
   await op.waitForTimeout(400);

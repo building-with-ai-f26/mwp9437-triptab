@@ -40,6 +40,7 @@ async function run(browser, label, opts, result) {
   // 2 and 4. Ski school, 9 to 4, three days, about $60 a person.
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   await d.getByLabel('What').fill('Ski school');
+  await h.openTimes(d);
   await d.getByLabel('Starts at (optional)').fill('09:00');
   await d.getByLabel('Ends at (optional)').fill('16:00');
   r.timesPickParts = await pressed(d);

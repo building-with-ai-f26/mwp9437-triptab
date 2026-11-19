@@ -20,8 +20,9 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByRole('radio', { name: 'Planned' }).click();
   // Parts of the day are select all that apply (11/17): Morning is on, add Day.
   await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { name: 'Day', exact: true }).click();
+  await h.openTimes(h.dlg(p));
   await h.dlg(p).getByLabel('Every day through').selectOption('2027-02-11');
-  await h.dlg(p).getByRole('button', { name: /^Cost/ }).click();
+  await h.openCost(h.dlg(p));
   await h.dlg(p).getByLabel(/Estimated/).fill('84');
   await h.dlg(p).getByRole('radio', { name: 'Per person' }).click();
   await h.dlg(p).getByLabel('Every day through').scrollIntoViewIfNeeded();
@@ -38,6 +39,7 @@ async function run(browser, label, opts, result) {
   await p.locator('#day-2027-02-05').getByRole('button', { name: 'Add to evening' }).click();
   await h.dlg(p).getByLabel('What').fill('UA 57 Newark to Geneva');
   await h.dlg(p).getByRole('radio', { name: 'Flight' }).click();
+  await h.openTimes(h.dlg(p));
   await h.dlg(p).getByLabel('Departs at (optional)').fill('17:05');
   await h.dlg(p).getByLabel('Lands at (optional)').fill('07:10');
   await h.dlg(p).getByLabel('Lands on').selectOption('2027-02-06');
@@ -70,6 +72,7 @@ async function run(browser, label, opts, result) {
     await h.dlg(p).getByLabel('Every day through').inputValue(),
   ];
   // One cost for the whole plan: confirm it once.
+  await h.openCost(h.dlg(p));
   await h.dlg(p).getByRole('button', { name: 'Confirm with the real cost' }).click();
   await h.dlg(p).getByLabel('What it cost').fill('504');
   await h.dlg(p).getByRole('radio', { name: 'Total' }).click();
