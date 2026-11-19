@@ -214,9 +214,11 @@ export function PeopleCard({
                         {copied === t.id ? <Check className="size-3" /> : <Copy className="size-3" />}
                         {copied === t.id ? "Copied" : "Copy invite"}
                       </button>
+                      {/* ph-no-capture: the link's token stays out of PostHog's replays and clicks (analytics.ts). */}
                       <a
-                        className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
+                        className="ph-no-capture inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
                         href={`sms:${t.phone ?? ""}?&body=${encodeURIComponent(inviteText(trip, url, t.name))}`}
+                        onClick={() => track("group link texted", { kind: "personal" })}
                       >
                         <MessageSquare className="size-3" /> Text
                       </a>
@@ -319,7 +321,8 @@ function GroupLinkSection({
       {link.enabled ? (
         <>
           <div className="mb-2 flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-white/40 px-3 py-2 text-xs">{url}</code>
+            {/* ph-no-capture: the link's token stays out of PostHog's replays and clicks (analytics.ts). */}
+            <code className="ph-no-capture min-w-0 flex-1 truncate rounded-xl bg-white/40 px-3 py-2 text-xs">{url}</code>
             <Button
               size="sm"
               onClick={() => {
@@ -332,7 +335,8 @@ function GroupLinkSection({
           </div>
           <a
             href={`sms:?&body=${encodeURIComponent(inviteText(trip, url))}`}
-            className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-3 text-xs hover:bg-white/50"
+            className="ph-no-capture inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-3 text-xs hover:bg-white/50"
+            onClick={() => track("group link texted", { kind: "group" })}
           >
             <MessageSquare className="size-3" /> Text it to the group
           </a>
