@@ -105,9 +105,27 @@ async function addPlan(page, day, slot, f) {
   await g.getByText('Logs $84, paid by Priya, split 3 ways').waitFor();
   await shot(o, 'expense-shares-desktop');
   await g.getByRole('button', { name: 'Add to the tab' }).click();
-  await o.getByText('Groceries for the chalet').waitFor();
+  await dlg(o).waitFor({ state: 'detached' });
   await o.waitForTimeout(600);
   result.ownerBalance = await o.locator('section[aria-labelledby="money-title"] .font-display.text-2xl').innerText();
+  // Every cost and payment, plans included, takes the main column on desktop (Mike's 11/19 review).
+  await o.locator('section[aria-labelledby="money-title"]').getByRole('button', { name: /Every cost and payment \(2\)/ }).click();
+  const ownerLines = o.locator('section[aria-labelledby="money-lines-title"]');
+  await ownerLines.getByText('Groceries for the chalet').waitFor();
+  result.ownerLines = (await ownerLines.locator('[data-testid="money-lines"] > li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
+  if (!/Fondue at La Caleche.*You paid.*\$120.*you lent \$80/.test(result.ownerLines[0] ?? '')) throw new Error(`the fondue line: ${result.ownerLines[0]}`);
+  if (!/Groceries for the chalet.*Priya paid.*\$84.*you borrowed \$42/.test(result.ownerLines[1] ?? '')) throw new Error(`the groceries line: ${result.ownerLines[1]}`);
+  await ownerLines.getByRole('button', { name: /^Plans/ }).click();
+  result.ownerOtherOnly = (await ownerLines.locator('[data-testid="money-lines"] > li').allInnerTexts()).length;
+  if (result.ownerOtherOnly !== 1) throw new Error(`Plans filtered out should leave 1 line, left ${result.ownerOtherOnly}`);
+  await ownerLines.getByRole('button', { name: /^Plans/ }).click();
+  await shot(o, 'money-list-desktop');
+  await ownerLines.getByText('Fondue at La Caleche').click();
+  await dlg(o).getByRole('heading', { name: 'Edit plan' }).waitFor();
+  result.openedFromList = await dlg(o).getByLabel('What').inputValue();
+  if (result.openedFromList !== 'Fondue at La Caleche') throw new Error(`the list opened ${result.openedFromList}`);
+  await dlg(o).getByRole('button', { name: 'Close' }).click();
+  await o.getByRole('button', { name: 'Back to the itinerary' }).first().click();
   await o.locator('#day-2027-02-06').scrollIntoViewIfNeeded();
   await o.waitForTimeout(500);
   await shot(o, 'trip-money-desktop');
@@ -142,9 +160,18 @@ async function addPlan(page, day, slot, f) {
   result.vicCanAddExpense = await v.getByRole('button', { name: 'Expense' }).count();
   result.vicOverflow = await v.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   await shot(v, 'viewer-money-phone');
-  await v.getByRole('button', { name: 'See everyone\'s flights' }).click();
-  await dlg(v).getByText('Flight JFK to Geneva').waitFor();
-  await shot(v, 'everyones-flights-phone');
+  // On a phone the list sits under the summary, in the Money tab.
+  const vicLines = v.locator('section[aria-labelledby="money-lines-title"]');
+  result.vicLines = (await vicLines.locator('[data-testid="money-lines"] > li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
+  if (!/Fondue at La Caleche.*you borrowed \$40/.test(result.vicLines[0] ?? '')) throw new Error(`Vic's fondue line: ${result.vicLines[0]}`);
+  if (!/Groceries for the chalet.*you borrowed \$21/.test(result.vicLines[1] ?? '')) throw new Error(`Vic's groceries line: ${result.vicLines[1]}`);
+  await vicLines.scrollIntoViewIfNeeded();
+  await shot(v, 'viewer-money-list-phone');
+  // Travel and lodging sits atop the itinerary on a phone.
+  await v.getByRole('tab', { name: 'Itinerary' }).click();
+  await v.locator('section[aria-labelledby="travel-title"]').getByRole('button', { name: "See everyone's" }).click();
+  await dlg(v).getByText(/Flight JFK to Geneva/).waitFor();
+  await shot(v, 'everyones-travel-phone');
 
   // Owner on a phone: the confirm dialog.
   const opCtx = await prep(await browser.newContext({ ...PHONE, storageState: await ownerCtx.storageState() }));

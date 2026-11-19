@@ -95,6 +95,7 @@ export type EventName =
   | "ai plan"
   | "expense added"
   | "settle up viewed"
+  | "money list opened"
   | "payment recorded"
   | "payment removed"
   | "venmo added"

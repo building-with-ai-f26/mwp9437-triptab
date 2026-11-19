@@ -7,6 +7,7 @@ const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 
 const money = (page) => page.locator('section[aria-labelledby="money-title"]');
+const lines = (page) => page.locator('section[aria-labelledby="money-lines-title"]');
 const balance = async (page) => (await money(page).locator('.font-display.text-2xl').innerText()).trim();
 
 (async () => {
@@ -29,7 +30,10 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
     await h.dlg(o).getByLabel('What for').fill('Airbnb deposit');
     await h.dlg(o).getByLabel('Amount').fill('200');
     await h.dlg(o).getByRole('button', { name: 'Add to the tab' }).click();
-    await o.getByText('Airbnb deposit').waitFor();
+    await h.dlg(o).waitFor({ state: 'detached' });
+    // Desktop: the whole list opens in the main column; it stays open for the payment below.
+    await money(o).getByRole('button', { name: /Every cost and payment/ }).click();
+    await lines(o).getByText('Airbnb deposit').waitFor();
 
     // Mike adds his Venmo in Settle up.
     await money(o).getByRole('button', { name: 'Settle up' }).click();
@@ -70,17 +74,22 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
     await h.dlg(v).getByText("Everyone's even.").waitFor();
     await h.dlg(v).getByRole('button', { name: 'Done' }).click();
     result.vicAfter = await balance(v);
-    result.vicSees = (await money(v).getByTestId('payment').first().innerText()).replace(/\s+/g, ' ');
+    result.vicSees = (await lines(v).getByTestId('payment').first().innerText()).replace(/\s+/g, ' ');
 
     // Mike sees it at once (live updates), then removes it.
-    await money(o).getByTestId('payment').first().waitFor();
-    result.ownerSees = (await money(o).getByTestId('payment').first().innerText()).replace(/\s+/g, ' ');
+    await lines(o).getByTestId('payment').first().waitFor();
+    result.ownerSees = (await lines(o).getByTestId('payment').first().innerText()).replace(/\s+/g, ' ');
     result.ownerAfter = await balance(o);
-    await money(o).scrollIntoViewIfNeeded();
+    // The chips show any mix: payments off leaves the deposit, and back on brings the payment back.
+    await lines(o).getByRole('button', { name: /^Payments/ }).click();
+    await lines(o).getByTestId('payment').waitFor({ state: 'detached' });
+    result.withoutPayments = (await lines(o).locator('[data-testid="money-lines"] > li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
+    await lines(o).getByRole('button', { name: /^Payments/ }).click();
+    await lines(o).getByTestId('payment').waitFor();
     await h.shot(o, 'payments-list-desktop');
     o.once('dialog', (d) => d.accept());
-    await money(o).getByRole('button', { name: /Remove the \$100 payment from Vic/ }).click();
-    await money(o).getByTestId('payment').waitFor({ state: 'detached' });
+    await lines(o).getByRole('button', { name: /Remove the \$100 payment from Vic/ }).click();
+    await lines(o).getByTestId('payment').waitFor({ state: 'detached' });
     result.ownerAfterRemove = await balance(o);
     result.ownerOverflow = await h.overflowX(o);
 
@@ -90,7 +99,8 @@ const balance = async (page) => (await money(page).locator('.font-display.text-2
       result.venmoLink.host === 'venmo.com' && result.venmoLink.recipients === 'mike-p-tt' && result.venmoLink.amount === '100.00' &&
       result.venmoLink.note === 'TripTab · Euro ski trip' && result.venmoNoPlus && result.opensElsewhere &&
       result.prefilled === '100.00' && /even/i.test(result.vicAfter) && /You paid Mike.*Cash.*\$100/.test(result.vicSees) &&
-      /Vic paid you.*Cash.*\$100/.test(result.ownerSees) && /even/i.test(result.ownerAfter) && /owed \$100/.test(result.ownerAfterRemove) &&
+      /Vic paid you.*Cash.*\$100.*you got \$100/.test(result.ownerSees) &&
+      result.withoutPayments.length === 1 && /Airbnb deposit.*You paid.*\$200.*you lent \$100/.test(result.withoutPayments[0]) && /even/i.test(result.ownerAfter) && /owed \$100/.test(result.ownerAfterRemove) &&
       result.settleOverflow <= 0 && result.ownerOverflow <= 0;
     if (!ok) result.failure = 'a payments check failed';
   } catch (e) {

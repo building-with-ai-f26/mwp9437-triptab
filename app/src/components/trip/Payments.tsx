@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Banknote, X } from "lucide-react";
+import { ArrowRight, Banknote } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import type { Payment, PaymentDraft, PaymentMethod } from "../../lib/api";
+import type { PaymentDraft, PaymentMethod } from "../../lib/api";
 import { zelleLabel } from "../../lib/pay";
 import { venmoLink, venmoNote } from "../../lib/ledger";
+import { METHOD_LABEL, nameOf } from "../../lib/moneyLines";
 import { PayInfoForm, ZelleCopy } from "./PayInfo";
-import { dollars, longDay, todayIso, type Traveler } from "../../lib/model";
+import { dollars, todayIso, type Traveler } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import type { Transfer } from "../../types";
 
@@ -14,11 +15,8 @@ import type { Transfer } from "../../types";
  * on each payment, recording one by hand (cash, Zelle), and the list of what's been paid.
  * TripTab never moves money; it keeps the record so balances are right mid-trip.
  */
-const METHOD_LABEL: Record<PaymentMethod, string> = { venmo: "Venmo", cash: "Cash", zelle: "Zelle", other: "Other" };
 const METHODS: PaymentMethod[] = ["venmo", "cash", "zelle", "other"];
 
-const nameOf = (travelers: Traveler[], id: string, meId: string | null) =>
-  id === meId ? "You" : (travelers.find((t) => t.id === id)?.name ?? "?");
 
 export function SettleDialog({
   open,
@@ -351,71 +349,5 @@ function PaymentForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-/** What's been paid back so far, newest first, in the Money card. */
-export function PaymentsList({
-  payments,
-  travelers,
-  meId,
-  myUserId,
-  canEdit,
-  onRemove,
-}: {
-  payments: Payment[];
-  travelers: Traveler[];
-  meId: string | null;
-  myUserId: string | null;
-  canEdit: boolean;
-  onRemove: (p: Payment) => Promise<void>;
-}) {
-  const [error, setError] = useState<string | null>(null);
-  if (payments.length === 0) return null;
-  const name = (id: string) => nameOf(travelers, id, meId);
-  return (
-    <div className="mb-3 border-t border-foreground/10 pt-2" aria-label="Payments">
-      <p className="label-luxury mb-1 text-muted-foreground">Payments</p>
-      <ul>
-        {[...payments].reverse().map((p) => (
-          <li key={p.id} className="flex items-center gap-2 py-1 text-sm" data-testid="payment">
-            <Banknote className="size-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">
-                {name(p.from_traveler)} paid {name(p.to_traveler) === "You" ? "you" : name(p.to_traveler)}
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {METHOD_LABEL[p.method]} · {longDay(p.paid_on)}
-                {p.note ? ` · ${p.note}` : ""}
-              </span>
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums">{dollars(p.amount_cents)}</span>
-            {(canEdit || (myUserId && p.created_by === myUserId)) && (
-              <button
-                type="button"
-                aria-label={`Remove the ${dollars(p.amount_cents)} payment from ${name(p.from_traveler)}`}
-                className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-white/40 hover:text-foreground"
-                onClick={async () => {
-                  if (!window.confirm(`Remove this ${dollars(p.amount_cents)} payment? Balances go back to before it.`)) return;
-                  setError(null);
-                  try {
-                    await onRemove(p);
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      {error && (
-        <p role="alert" className="text-xs font-medium text-red-900">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Check, Plane, Plus, Receipt, Scale, Undo2 } from "lucide-react";
+import { Check, List as ListIcon, Luggage, Plus, Scale, Undo2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, Payment, ShareInput } from "../../lib/api";
-import { PaymentsList } from "./Payments";
+import { KIND_ICON } from "./Timeline";
 import { goingList, groupExpenses, isGoing, myNumbers } from "../../lib/ledger";
-import { dollars, longDay, tripDays, type CostType, type Item, type Traveler, type Trip } from "../../lib/model";
+import { clock, dollars, longDay, tripDays, type CostType, type Item, type Traveler, type Trip } from "../../lib/model";
 import { parseDollars, toCents, totalCents } from "../../lib/money";
 import { computeSplit, SPLIT_LABEL, type SplitMode } from "../../lib/split";
 
@@ -328,7 +328,11 @@ function ExpenseForm({
   );
 }
 
-/** The glass money sidebar: your balance first, then the group's, then Settle up (spring ExpensesPanel). */
+/**
+ * The Money summary: your balance first, then the group's, then Settle up (spring ExpensesPanel).
+ * Every line behind it is in MoneyList; on desktop "Every cost and payment" opens that list in the
+ * main column (Mike's 11/19 review: the summary stays a summary).
+ */
 export function MoneyCard({
   travelers,
   expenses,
@@ -336,11 +340,11 @@ export function MoneyCard({
   meId,
   canEdit,
   payments,
-  myUserId,
+  lineCount,
+  showingAll,
+  onShowAll,
   onAdd,
-  onOpen,
   onSettle,
-  onRemovePayment,
 }: {
   travelers: Traveler[];
   expenses: ExpenseRow[];
@@ -349,16 +353,17 @@ export function MoneyCard({
   canEdit: boolean;
   /** Null on a database without payments yet. */
   payments: Payment[] | null;
-  myUserId: string | null;
+  /** How many lines the full list has. */
+  lineCount: number;
+  /** Desktop only: the full list is open in the main column. */
+  showingAll?: boolean;
+  /** Desktop only: open or close the full list. Left out on a phone, where the list sits below. */
+  onShowAll?: () => void;
   onAdd: () => void;
-  onOpen: (e: ExpenseRow) => void;
   onSettle: () => void;
-  onRemovePayment: (p: Payment) => Promise<void>;
 }) {
   const mine = myNumbers(expenses, meId, payments ?? []);
   const anyMoney = groupExpenses(expenses).length > 0 || (payments?.length ?? 0) > 0;
-  const general = expenses.filter((e) => !e.item_id);
-  const name = (id: string) => travelers.find((t) => t.id === id)?.name ?? "?";
 
   return (
     <section className="glass-card-solid rounded-2xl p-4" aria-labelledby="money-title">
@@ -411,82 +416,68 @@ export function MoneyCard({
         <p className="mb-3 text-sm text-muted-foreground">Nothing on the tab yet. Confirm a plan with its cost, or add an expense.</p>
       )}
 
-      {general.length > 0 && (
-        <div className="mb-3 border-t border-foreground/10 pt-2">
-          <p className="label-luxury mb-1 text-muted-foreground">Other expenses</p>
-          <ul>
-            {general.map((e) => (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  onClick={() => onOpen(e)}
-                  className="flex w-full items-center gap-2 rounded-xl px-1 py-1.5 text-left text-sm hover:bg-white/30"
-                >
-                  <Receipt className="size-4 shrink-0 text-primary" />
-                  <span className="min-w-0 flex-1 truncate">{e.description}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{name(e.paid_by)} paid</span>
-                  <span className="shrink-0 font-semibold tabular-nums">{dollars(e.total_cents)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {payments && <PaymentsList {...{ payments, travelers, meId, myUserId, canEdit }} onRemove={onRemovePayment} />}
-
-      <Button className="w-full" onClick={onSettle} disabled={!anyMoney}>
-        <Scale /> Settle up
-      </Button>
+      <div className="flex flex-col gap-2">
+        {onShowAll && lineCount > 0 && (
+          <Button variant="glass" className="w-full" onClick={onShowAll} aria-pressed={showingAll}>
+            <ListIcon /> {showingAll ? "Back to the itinerary" : `Every cost and payment (${lineCount})`}
+          </Button>
+        )}
+        <Button className="w-full" onClick={onSettle} disabled={!anyMoney}>
+          <Scale /> Settle up
+        </Button>
+      </div>
     </section>
   );
 }
 
-/** Your flights, and everyone's one tap away (vision, principle 6). */
-export function FlightsCard({
+const TRAVEL_KINDS = ["flight", "transport", "stay"] as const;
+
+/** "Fri, Feb 5, 9:30 AM", or for a stay "Fri, Feb 5 to Sun, Feb 7". */
+function when(i: Item): string {
+  if (i.kind === "stay" && i.end_day) return `${longDay(i.day)} to ${longDay(i.end_day)}`;
+  const at = i.start_time ? `, ${clock(i.start_time)}` : "";
+  const arrive = i.end_day && i.end_day !== i.day ? ` to ${longDay(i.end_day)}${i.end_time ? `, ${clock(i.end_time)}` : ""}` : "";
+  return `${longDay(i.day)}${at}${arrive}`;
+}
+
+/**
+ * Travel and lodging: your flights, cars, trains and stays by date, and everyone's one tap away
+ * (vision, principle 6). Was "Your flights" on the Money tab; Mike's 11/19 review: a Thanksgiving
+ * drive has car rentals and a stay at his parents', not flights, and it isn't money.
+ */
+export function TravelCard({
   items,
   travelers,
   itemPeople,
   meId,
+  compact = false,
   onOpen,
 }: {
   items: Item[];
   travelers: Traveler[];
   itemPeople: ItemPerson[];
   meId: string | null;
+  /** A phone, atop the itinerary: nothing on a trip with no travel, one line when none is yours. */
+  compact?: boolean;
   onOpen: (item: Item) => void;
 }) {
   const [everyone, setEveryone] = useState(false);
-  const flights = items.filter((i) => i.kind === "flight").sort((a, b) => a.day.localeCompare(b.day));
-  const mine = flights.filter((f) => meId && isGoing(f, meId, itemPeople));
+  const travel = items
+    .filter((i) => (TRAVEL_KINDS as readonly string[]).includes(i.kind) && i.status !== "suggested")
+    .sort((a, b) => a.day.localeCompare(b.day) || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+  const mine = travel.filter((f) => meId && isGoing(f, meId, itemPeople));
+  if (compact && travel.length === 0) return null;
 
-  return (
-    <section className="glass-card-solid rounded-2xl p-4" aria-labelledby="flights-title">
-      <h2 id="flights-title" className="mb-2 flex items-center gap-2 font-display text-lg font-bold">
-        <Plane className="size-4 text-primary" /> Your flights
-      </h2>
-      {mine.length ? (
-        <ul className="mb-2 space-y-1">
-          {mine.map((f) => (
-            <li key={f.id}>
-              <button type="button" onClick={() => onOpen(f)} className="w-full rounded-xl px-1 py-1.5 text-left text-sm hover:bg-white/30">
-                <span className="font-medium">{f.title}</span>
-                <span className="block text-xs text-muted-foreground">{longDay(f.day)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mb-2 text-sm text-muted-foreground">No flight of yours on the trip yet.</p>
-      )}
-      <Button variant="glass" size="sm" onClick={() => setEveryone(true)} disabled={flights.length === 0}>
-        See everyone's flights
+  const seeEveryone = (
+    <>
+      <Button variant="glass" size="sm" onClick={() => setEveryone(true)} disabled={travel.length === 0}>
+        See everyone's
       </Button>
-      <Dialog open={everyone} onClose={() => setEveryone(false)} title="Everyone's flights">
+      <Dialog open={everyone} onClose={() => setEveryone(false)} title="Everyone's travel and lodging">
         {everyone && (
           <ul className="space-y-3">
             {travelers.map((t) => {
-              const theirs = flights.filter((f) => isGoing(f, t.id, itemPeople));
+              const theirs = travel.filter((f) => isGoing(f, t.id, itemPeople));
               return (
                 <li key={t.id} className="rounded-2xl bg-white/5 px-4 py-3 text-white">
                   <p className="font-semibold">
@@ -496,11 +487,11 @@ export function FlightsCard({
                   {theirs.length ? (
                     theirs.map((f) => (
                       <p key={f.id} className="text-sm text-white/75">
-                        {longDay(f.day)}: {f.title}
+                        {when(f)}: {f.title}
                       </p>
                     ))
                   ) : (
-                    <p className="text-sm italic text-white/70">No flight added yet</p>
+                    <p className="text-sm italic text-white/70">Nothing added yet</p>
                   )}
                 </li>
               );
@@ -508,6 +499,49 @@ export function FlightsCard({
           </ul>
         )}
       </Dialog>
+    </>
+  );
+
+  if (compact && mine.length === 0) {
+    return (
+      <section className="glass-card-solid mt-4 flex items-center justify-between gap-2 rounded-2xl px-4 py-2" aria-labelledby="travel-title">
+        <h2 id="travel-title" className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+          <Luggage className="size-4 shrink-0 text-primary" />
+          <span className="truncate">
+            Travel and lodging <span className="font-normal text-muted-foreground">· none of yours yet</span>
+          </span>
+        </h2>
+        {seeEveryone}
+      </section>
+    );
+  }
+
+  return (
+    <section className={`glass-card-solid rounded-2xl p-4 ${compact ? "mt-4" : ""}`} aria-labelledby="travel-title">
+      <h2 id="travel-title" className="mb-2 flex items-center gap-2 font-display text-lg font-bold">
+        <Luggage className="size-4 text-primary" /> Travel and lodging
+      </h2>
+      {mine.length ? (
+        <ul className="mb-2 space-y-1">
+          {mine.map((f) => {
+            const Icon = KIND_ICON[f.kind];
+            return (
+              <li key={f.id}>
+                <button type="button" onClick={() => onOpen(f)} className="flex w-full items-start gap-2 rounded-xl px-1 py-1.5 text-left text-sm hover:bg-white/30">
+                  <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span className="min-w-0">
+                    <span className="block font-medium">{f.title}</span>
+                    <span className="block text-xs text-muted-foreground">{when(f)}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mb-2 text-sm text-muted-foreground">No flight, car or stay of yours on the trip yet.</p>
+      )}
+      {seeEveryone}
     </section>
   );
 }

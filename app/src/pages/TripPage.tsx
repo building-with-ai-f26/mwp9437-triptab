@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -14,7 +14,10 @@ import { movePlan, type MovePatch } from "../lib/move";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { splitEqually } from "../lib/money";
 import { AddPersonDialog, PeopleCard } from "../components/trip/People";
-import { ExpenseDialog, FlightsCard, MoneyCard, type ExpenseTarget } from "../components/trip/Money";
+import { ExpenseDialog, MoneyCard, TravelCard, type ExpenseTarget } from "../components/trip/Money";
+import { MoneyList } from "../components/trip/MoneyList";
+import { moneyLines } from "../lib/moneyLines";
+import { useWide } from "../lib/useWide";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
@@ -92,6 +95,9 @@ export default function TripPage() {
   const [bundle, setBundle] = useState<TripBundle | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("itinerary");
+  // Desktop: every cost and payment takes the main column in place of the itinerary (11/19 review).
+  const [moneyOpen, setMoneyOpen] = useState(false);
+  const wide = useWide();
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
   // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
   const trackedEdit = useRef<string | null>(null);
@@ -388,6 +394,31 @@ export default function TripPage() {
     return end <= limit ? end : null;
   };
 
+  const openPlan = (item: Item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind });
+  const lineCount = moneyLines(expenses, payments, meId).length;
+  // Each renders once, where the layout puts it: a phone shows the list under the Money summary and
+  // Travel and lodging atop the itinerary; desktop shows them in the main column and the sidebar.
+  const moneyList = (id: string) => (
+    <MoneyList
+      id={id}
+      expenses={expenses}
+      payments={payments}
+      items={items}
+      travelers={travelers}
+      meId={meId}
+      myUserId={user?.id ?? null}
+      canEdit={editable}
+      onOpenPlan={openPlan}
+      onOpenExpense={(e) => setExpenseTarget({ kind: "general", expense: e })}
+      onRemovePayment={async (p) => {
+        await deletePayment(p.id);
+        track("payment removed", { method: p.method });
+        await reload();
+      }}
+    />
+  );
+  const travelCard = <TravelCard items={items} travelers={travelers} itemPeople={itemPeople} meId={meId} compact={!wide} onOpen={openPlan} />;
+
   const peopleCard = (
     <PeopleCard
       trip={trip}
@@ -490,6 +521,16 @@ export default function TripPage() {
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
           <main className={tab === "itinerary" ? "" : "hidden lg:block"}>
+            {wide && moneyOpen ? (
+              <div className="space-y-3 pb-16 pt-4 sm:pt-6">
+                <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setMoneyOpen(false)}>
+                  <ArrowLeft /> Back to the itinerary
+                </Button>
+                {moneyList("money-lines-title")}
+              </div>
+            ) : (
+            <>
+            {!wide && travelCard}
             <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
               <div>
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
@@ -540,38 +581,11 @@ export default function TripPage() {
                 </div>
               </MovePlans>
             )}
+            </>
+            )}
           </main>
 
           <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "itinerary" ? "hidden" : ""}`}>
-            <div className={`space-y-4 ${tab === "money" ? "" : "hidden lg:block"}`}>
-              <MoneyCard
-                travelers={travelers}
-                expenses={expenses}
-                balances={balances}
-                meId={meId}
-                canEdit={editable}
-                payments={payments}
-                myUserId={user?.id ?? null}
-                onRemovePayment={async (p) => {
-                  await deletePayment(p.id);
-                  track("payment removed", { method: p.method });
-                  await reload();
-                }}
-                onAdd={() => setExpenseTarget({ kind: "general" })}
-                onOpen={(e) => setExpenseTarget({ kind: "general", expense: e })}
-                onSettle={() => {
-                  setSettling(true);
-                  track("settle up viewed", { transfers: transfers.length, people: travelers.length });
-                }}
-              />
-              <FlightsCard
-                items={items}
-                travelers={travelers}
-                itemPeople={itemPeople}
-                meId={meId}
-                onOpen={(item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind })}
-              />
-            </div>
             <div className={tab === "todo" ? "" : "hidden lg:block"}>
               <ActionsCard
                 trip={trip}
@@ -598,6 +612,29 @@ export default function TripPage() {
                   await reload();
                 }}
               />
+            </div>
+            {wide && travelCard}
+            <div className={`space-y-4 ${tab === "money" ? "" : "hidden lg:block"}`}>
+              <MoneyCard
+                travelers={travelers}
+                expenses={expenses}
+                balances={balances}
+                meId={meId}
+                canEdit={editable}
+                payments={payments}
+                lineCount={lineCount}
+                showingAll={moneyOpen}
+                onShowAll={wide ? () => {
+                  setMoneyOpen((o) => !o);
+                  if (!moneyOpen) track("money list opened", { lines: lineCount });
+                } : undefined}
+                onAdd={() => setExpenseTarget({ kind: "general" })}
+                onSettle={() => {
+                  setSettling(true);
+                  track("settle up viewed", { transfers: transfers.length, people: travelers.length });
+                }}
+              />
+              {!wide && moneyList("money-lines-title")}
             </div>
             <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
             {peopleCard}
