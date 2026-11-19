@@ -1,0 +1,43 @@
+{
+  "id": "09-next-january",
+  "group": "normal",
+  "what": "A month already past this year, so the trip is next year; lift tickets bought.",
+  "text": "Ski weekend in Stowe, Vermont, January 15 to 18. Lift tickets are bought, staying at the Trapp Family Lodge.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Stowe",
+            "Vermont"
+          ],
+          "start": "2027-01-15",
+          "end": "2027-01-18"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": [
+          "2027-01-15"
+        ]
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": [
+          "2027-01-15",
+          "2027-01-16"
+        ]
+      }
+    ],
+    "questions": [],
+    "forbidden_words": [],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

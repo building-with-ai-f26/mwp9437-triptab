@@ -1,0 +1,59 @@
+{
+  "id": "10-details-missing",
+  "group": "normal",
+  "what": "Everything booked, nothing given: plans with what they said, and questions for the rest.",
+  "text": "Mexico City with the crew, Nov 30 to Dec 4. Flights booked, hotel booked, and we have a dinner reservation the first night.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Mexico City",
+            "Ciudad de"
+          ],
+          "start": "2026-11-30",
+          "end": "2026-12-04"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": [
+          "2026-11-30"
+        ]
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": [
+          "2026-11-30"
+        ],
+        "part": [
+          "evening",
+          "night"
+        ]
+      }
+    ],
+    "questions": [
+      [
+        "flight"
+      ],
+      [
+        "hotel"
+      ],
+      [
+        "restaurant",
+        "dinner",
+        "reservation",
+        "time"
+      ]
+    ],
+    "forbidden_words": [],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

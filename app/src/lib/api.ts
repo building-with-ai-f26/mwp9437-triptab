@@ -648,6 +648,43 @@ export async function planWithAi(tripId: string, request: string): Promise<PlanA
   return data as PlanAiResult;
 }
 
+/** What describing a trip hands back: the trip's name and stops, plans in import's format, and follow-up questions. */
+export interface DescribeResult extends ImportResult {
+  trip: { name: string; stops: { name: string; start_date: string; end_date: string }[] };
+  questions: string[];
+}
+
+/**
+ * Describe your trip (Start a trip): the person's own words become a trip, its plans and a few
+ * questions. Nothing is saved; the app shows it all for review first.
+ */
+/** Where Start a trip leaves a description's plans and questions for the new trip's page, which picks them up once. */
+export const describedKey = (tripId: string) => `triptab.described.${tripId}`;
+
+export async function describeTrip(text: string): Promise<DescribeResult> {
+  let testRun = false;
+  try {
+    testRun = localStorage.getItem("triptab.test_run") === "1";
+  } catch {
+    // storage can be unavailable
+  }
+  const { data, error } = await supabase.functions.invoke("describe-trip", { body: { text, test_run: testRun } });
+  if (error) {
+    let message = "Can't reach TripTab right now. Check your connection and try again, or fill in the form.";
+    const response = (error as { context?: unknown }).context;
+    if (response instanceof Response) {
+      try {
+        const body = (await response.json()) as { error?: string };
+        if (body?.error) message = body.error;
+      } catch {
+        // not JSON; keep the general message
+      }
+    }
+    throw new Error(message);
+  }
+  return data as DescribeResult;
+}
+
 export async function importBookings(
   tripId: string,
   text: string,

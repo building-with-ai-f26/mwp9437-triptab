@@ -1,0 +1,80 @@
+{
+  "id": "01-ski-trip-dictated",
+  "group": "normal",
+  "what": "The pod note's own example: three stops, skiing every day, a dinner, flights and an Airbnb booked without details.",
+  "text": "Euro ski trip: Chamonix Feb 5 to 12, then Barcelona for one night, then Andorra till the 16th. Skiing every day in Chamonix, a dinner reservation Thursday, and the flights and the Airbnb are booked.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Chamonix"
+          ],
+          "start": "2027-02-05",
+          "end": "2027-02-12"
+        },
+        {
+          "names": [
+            "Barcelona"
+          ],
+          "start": "2027-02-12",
+          "end": "2027-02-13"
+        },
+        {
+          "names": [
+            "Andorra"
+          ],
+          "start": "2027-02-13",
+          "end": "2027-02-16"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": [
+          "2027-02-05",
+          "2027-02-06"
+        ]
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": [
+          "2027-02-11"
+        ],
+        "part": [
+          "evening"
+        ]
+      },
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": [
+          "2027-02-05"
+        ]
+      }
+    ],
+    "questions": [
+      [
+        "flight"
+      ],
+      [
+        "airbnb",
+        "address",
+        "link",
+        "where"
+      ]
+    ],
+    "forbidden_words": [
+      "hotel",
+      "geneva"
+    ],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

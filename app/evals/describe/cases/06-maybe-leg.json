@@ -1,0 +1,51 @@
+{
+  "id": "06-maybe-leg",
+  "group": "messy",
+  "what": "A firm stop plus a maybe that must not become a stop with made-up dates.",
+  "text": "Family reunion at Lake Tahoe, July 2 to July 9. We rented a cabin. Jet skis are booked for the 4th. Some of us might go to San Francisco after, not sure yet.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Tahoe"
+          ],
+          "start": "2027-07-02",
+          "end": "2027-07-09"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": [
+          "2027-07-02"
+        ]
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": [
+          "2027-07-04"
+        ]
+      }
+    ],
+    "questions": [
+      [
+        "cabin",
+        "address",
+        "link",
+        "where"
+      ]
+    ],
+    "forbidden_words": [],
+    "forbidden_cents": [],
+    "not_a_stop": [
+      "san francisco"
+    ]
+  },
+  "today": "2026-11-18"
+}

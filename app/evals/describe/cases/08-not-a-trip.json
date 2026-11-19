@@ -1,0 +1,14 @@
+{
+  "id": "08-not-a-trip",
+  "group": "adversarial",
+  "what": "Errands, not a trip: nothing should be set up.",
+  "text": "Remind me to pick up the dry cleaning tomorrow and call mom about Thanksgiving dinner. Also buy batteries.",
+  "expect": {
+    "trip": null,
+    "plans": [],
+    "questions": [],
+    "forbidden_words": [],
+    "forbidden_cents": []
+  },
+  "today": "2026-11-18"
+}

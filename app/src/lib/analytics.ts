@@ -62,6 +62,8 @@ export type EventName =
   | "pay info saved"
   | "pay info skipped"
   | "ai help opened"
+  | "trip described"
+  | "described plans reviewed"
   | "confirm email resent"
   | "email confirmed"
   | "opted out"

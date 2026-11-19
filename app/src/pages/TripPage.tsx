@@ -19,11 +19,12 @@ import { PlanPanel } from "../components/trip/PlanPanel";
 import { AiChoiceDialog } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
 import { draftCents, type Draft } from "../lib/importPlans";
-import type { ItemInput } from "../lib/api";
+import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
 import {
   addItem,
   addAction,
+  describedKey,
   addTraveler,
   clearOwnLine,
   confirmItem,
@@ -87,6 +88,9 @@ export default function TripPage() {
   const [planning, setPlanning] = useState(false);
   // One AI button, two choices (Mike's 11/18 call): I have bookings (Import) or Give me ideas (Plan with AI).
   const [choosingAi, setChoosingAi] = useState(false);
+  // Describe your trip: what Start a trip found, picked up once when this new trip first loads.
+  const [described, setDescribed] = useState<DescribeResult | null>(null);
+  const pickedUp = useRef(false);
 
   const reload = useCallback(
     () =>
@@ -113,6 +117,29 @@ export default function TripPage() {
   // A database with Zelle and the lock answers pay_locked for every person.
   const zelleReady = (bundle?.travelers ?? []).some((t) => t.pay_locked !== undefined);
   useEffect(() => (loaded ? subscribeToTrip(id, reload, { payments: paymentsReady }) : undefined), [id, loaded, reload, paymentsReady]);
+
+  // A trip just set up from a description: its follow-up questions become your to-dos, and its
+  // plans open on import's review (once; the hand-off is removed as it's read).
+  useEffect(() => {
+    if (!bundle || pickedUp.current) return;
+    pickedUp.current = true;
+    let handoff: DescribeResult | null = null;
+    try {
+      const raw = sessionStorage.getItem(describedKey(id));
+      sessionStorage.removeItem(describedKey(id));
+      handoff = raw ? (JSON.parse(raw) as DescribeResult) : null;
+    } catch {
+      handoff = null;
+    }
+    if (!handoff) return;
+    const mine = bundle.travelers.find((t) => t.user_id === user?.id) ?? null;
+    if (handoff.questions.length && mine) {
+      Promise.all(handoff.questions.map((q) => addAction(id, q, mine.id, null)))
+        .then(reload)
+        .catch(() => {});
+    }
+    if (handoff.plans.length) setDescribed(handoff);
+  }, [bundle, id, user, reload]);
 
   const days = useMemo(
     () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items) : []),
@@ -156,6 +183,41 @@ export default function TripPage() {
   const expenseByItem = new Map(expenses.filter((e) => e.item_id && !e.own).map((e) => [e.item_id as string, e]));
   const { balances, transfers } = settle(expenses, travelers, payments ?? []);
   const openItem = dialog?.item ? (items.find((i) => i.id === dialog.item!.id) ?? dialog.item) : null;
+
+  /** Saves the plans kept on import's review (an import, or a trip's description), with what was paid. */
+  const saveImported = async (kept: Draft[], via: "import" | "description" = "import") => {
+    for (const d of kept) {
+      const cents = draftCents(d);
+      const stay = d.kind === "stay";
+      const paid: PaidNow | undefined =
+        d.paid && cents != null && meId
+          ? d.payMode === "own"
+            ? { mode: "own", cents, withPoints: false }
+            : { mode: "split", totalCents: d.perPerson && !stay ? cents * travelers.length : cents, paidBy: meId }
+          : undefined;
+      await createPlan(
+        {
+          kind: d.kind,
+          title: d.title.trim(),
+          day: d.day,
+          part: stay ? "night" : d.part,
+          end_day: stay ? d.end_day : spanEnd(d),
+          end_part: !stay && travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null,
+          start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
+          end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
+          location: d.location.trim() || null,
+          notes: d.notes.trim() || null,
+          status: "planned",
+          est_cents: paid ? null : cents,
+          cost_type: d.perPerson && !stay ? "per_person" : "total",
+          pay_mode: d.payMode,
+        },
+        paid,
+        via,
+      );
+    }
+    await reload();
+  };
 
   const actions: TimelineActions = {
     canEdit: editable,
@@ -208,7 +270,7 @@ export default function TripPage() {
    * Adds a plan, and when it's already paid logs the one bill (split evenly among who's in) or
    * your own line in the same step. Used by Add a plan and by AI import.
    */
-  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import" | "ai plan") => {
+  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import" | "ai plan" | "description") => {
     const added = await addItem(trip.id, input);
     // Flights are per person: whoever adds one is on it.
     if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
@@ -548,6 +610,24 @@ export default function TripPage() {
           await reload();
         }}
       />
+      {editable && described && (
+        <ImportDialog
+          key="described"
+          open
+          initial={described}
+          heading="Plans from your description"
+          trip={trip}
+          items={items}
+          onClose={() => setDescribed(null)}
+          onExtend={async (day) => {
+            await extendTrip(trip.id, day);
+            track("trip extended", { via: "description", side: day < trip.start_date ? "before" : "after" });
+            await reload();
+          }}
+          onSave={(kept) => saveImported(kept, "description")}
+          onDone={(result, keptCount) => track("described plans reviewed", { plans_proposed: result.plans.length, plans_kept: keptCount })}
+        />
+      )}
       {editable && (
         <AiChoiceDialog
           open={choosingAi}
@@ -571,39 +651,7 @@ export default function TripPage() {
             track("trip extended", { via: "import", side: day < trip.start_date ? "before" : "after" });
             await reload();
           }}
-          onSave={async (kept) => {
-            for (const d of kept) {
-              const cents = draftCents(d);
-              const stay = d.kind === "stay";
-              const paid: PaidNow | undefined =
-                d.paid && cents != null && meId
-                  ? d.payMode === "own"
-                    ? { mode: "own", cents, withPoints: false }
-                    : { mode: "split", totalCents: d.perPerson && !stay ? cents * travelers.length : cents, paidBy: meId }
-                  : undefined;
-              await createPlan(
-                {
-                  kind: d.kind,
-                  title: d.title.trim(),
-                  day: d.day,
-                  part: stay ? "night" : d.part,
-                  end_day: stay ? d.end_day : spanEnd(d),
-                  end_part: !stay && travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null,
-                  start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
-                  end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
-                  location: d.location.trim() || null,
-                  notes: d.notes.trim() || null,
-                  status: "planned",
-                  est_cents: paid ? null : cents,
-                  cost_type: d.perPerson && !stay ? "per_person" : "total",
-                  pay_mode: d.payMode,
-                },
-                paid,
-                "import",
-              );
-            }
-            await reload();
-          }}
+          onSave={saveImported}
           onDone={(result, keptCount) =>
             track("ai import", {
               plans_proposed: result.plans.length,

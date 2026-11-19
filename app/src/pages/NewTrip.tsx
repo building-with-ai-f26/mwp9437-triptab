@@ -1,16 +1,36 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { MapPin, Plus, Trash2 } from "lucide-react";
+import { MapPin, Plus, Sparkles, Trash2 } from "lucide-react";
 import { TopBar } from "../components/TopBar";
-import { Button, ErrorNote, Field, PhotoFrame } from "../components/ui";
+import { Button, ErrorNote, Field, PhotoFrame, Segmented } from "../components/ui";
 import { PlaceInput } from "../components/PlaceInput";
-import { createTrip } from "../lib/api";
+import { createTrip, describedKey, describeTrip, type DescribeResult } from "../lib/api";
 import { nameOf, useAuth } from "../lib/auth";
 import { dateRange, nightsBetween, tripSpan, validateTrip, type StopDraft } from "../lib/model";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
 const blankStop = (start = ""): StopDraft => ({ name: "", start_date: start, end_date: "" });
+
+/** What you typed in Describe it, kept on this device before any AI call, so nothing is lost. */
+const DRAFT = "triptab.describe_draft";
+const MAX_DESCRIBE = 5000;
+const readDraft = () => {
+  try {
+    return localStorage.getItem(DRAFT) ?? "";
+  } catch {
+    return "";
+  }
+};
+const writeDraft = (text: string) => {
+  try {
+    if (text) localStorage.setItem(DRAFT, text);
+    else localStorage.removeItem(DRAFT);
+  } catch {
+    // storage can be unavailable; the text stays in the box
+  }
+};
+
 
 /** The vision's example trip, one tap away for demos and pod tests. */
 const SKI_EXAMPLE = {
@@ -33,6 +53,12 @@ export default function NewTrip() {
   const [error, setError] = useState<string | null>(null);
   // The photo follows places you've picked or finished typing, not every keystroke (11/17 pod).
   const [photoText, setPhotoText] = useState("");
+  // Describe your trip (the 11/17 pod notes): type, paste or dictate what's planned; AI fills the form.
+  const [mode, setMode] = useState<"form" | "describe">("form");
+  const [describeText, setDescribeText] = useState(readDraft);
+  const [describing, setDescribing] = useState(false);
+  const [describeError, setDescribeError] = useState<string | null>(null);
+  const [described, setDescribed] = useState<DescribeResult | null>(null);
   const showPhotoFor = (tripName: string, list: StopDraft[]) => setPhotoText(`${list.map((s) => s.name).join(" ")} ${tripName}`.trim());
 
   const problems = validateTrip(name, stops);
@@ -50,12 +76,42 @@ export default function NewTrip() {
     setError(null);
     try {
       const id = await createTrip(name, stops, myName || nameOf(user));
-      track("trip created", { stops: stops.length, days: span ? nightsBetween(span.start, span.end) + 1 : 0 });
+      track("trip created", { stops: stops.length, days: span ? nightsBetween(span.start, span.end) + 1 : 0, via: described ? "description" : "form" });
+      if (described) {
+        try {
+          sessionStorage.setItem(describedKey(id), JSON.stringify(described));
+        } catch {
+          // storage can be unavailable; the trip is made, the plans can be imported by hand
+        }
+        writeDraft("");
+      }
       navigate(`/trips/${id}`, { replace: true });
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
     }
+  };
+
+  const describe = async () => {
+    setDescribeError(null);
+    const text = describeText.trim();
+    if (!text) return setDescribeError("Say where you're going and when, and anything already booked.");
+    if (text.length > MAX_DESCRIBE) return setDescribeError(`Keep it under ${MAX_DESCRIBE.toLocaleString("en-US")} characters.`);
+    writeDraft(describeText);
+    setDescribing(true);
+    try {
+      const r = await describeTrip(text);
+      const next = r.trip.stops.map((s) => ({ name: s.name, start_date: s.start_date, end_date: s.end_date }));
+      setName(r.trip.name);
+      setStops(next);
+      showPhotoFor(r.trip.name, next);
+      setDescribed(r);
+      setMode("form");
+      track("trip described", { stops: next.length, plans: r.plans.length, questions: r.questions.length, cost_usd: r.usage.cost_usd, latency_ms: r.usage.latency_ms });
+    } catch (e) {
+      setDescribeError((e as Error).message);
+    }
+    setDescribing(false);
   };
 
   return (
@@ -80,6 +136,68 @@ export default function NewTrip() {
                 Fill in the ski trip example
               </button>
             </p>
+
+            <div className="mb-5">
+              <Segmented
+                dark={false}
+                label="How to start"
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: "form", label: "Fill it in" },
+                  { value: "describe", label: "Describe it" },
+                ]}
+              />
+            </div>
+
+            {mode === "describe" && (
+              <div>
+                <Field label="What's planned so far?" hint="Type, paste or dictate (your phone's mic key works). Dates, places, and anything booked. Nothing is saved until you check it.">
+                  <textarea
+                    className="field min-h-[160px] resize-y"
+                    value={describeText}
+                    onChange={(e) => {
+                      setDescribeText(e.target.value);
+                      writeDraft(e.target.value);
+                    }}
+                    placeholder={'"Chamonix Feb 5 to 12, then Andorra till the 16th. Skiing every day in Chamonix, a dinner reservation Thursday, flights and the Airbnb are booked."'}
+                    maxLength={MAX_DESCRIBE + 500}
+                  />
+                </Field>
+                {describeError && <ErrorNote>{describeError}</ErrorNote>}
+                <Button type="button" size="lg" className="mt-2 w-full" onClick={describe} disabled={describing}>
+                  <Sparkles /> {describing ? "Setting it up..." : "Set it up"}
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">Uses Claude; it costs TripTab about a tenth of a cent and is logged.</p>
+              </div>
+            )}
+
+            {mode === "form" && described && (
+              <div role="status" className="mb-5 rounded-2xl border border-primary/30 bg-white/40 px-4 py-3 text-sm" data-testid="described-note">
+                <p className="font-semibold">From your description</p>
+                <p className="text-foreground/80">
+                  Check the name, dates and stops below, then start the trip.
+                  {described.plans.length > 0 &&
+                    ` Next you'll review ${described.plans.length} ${described.plans.length === 1 ? "plan" : "plans"} it found`}
+                  {described.questions.length > 0 &&
+                    `${described.plans.length > 0 ? "," : " Next,"} and ${described.questions.length} ${described.questions.length === 1 ? "question" : "questions"} for what's missing become to-dos for you`}
+                  {described.plans.length > 0 || described.questions.length > 0 ? "." : ""}
+                </p>
+                <button
+                  type="button"
+                  className="mt-1 text-xs font-semibold underline underline-offset-4"
+                  onClick={() => {
+                    setDescribed(null);
+                    setMode("describe");
+                  }}
+                >
+                  Change the description
+                </button>
+              </div>
+            )}
+
+            {mode === "form" && (
+              <>
 
             <Field label="Trip name">
               <input
@@ -179,6 +297,8 @@ export default function NewTrip() {
             <Button type="submit" size="lg" className="mt-4 w-full" disabled={busy}>
               {busy ? "Starting the trip..." : "Start the trip"}
             </Button>
+              </>
+            )}
           </form>
         </main>
       </div>

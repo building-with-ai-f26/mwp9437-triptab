@@ -1,0 +1,46 @@
+{
+  "id": "04-nights-and-a-flight-number",
+  "group": "normal",
+  "what": "Stops given as numbers of nights, and a flight with its number but no times.",
+  "text": "Japan in May: Tokyo for 5 nights starting May 20, then Kyoto for 3 nights. We fly in on JL 5 on the 20th.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": [
+            "Tokyo"
+          ],
+          "start": "2027-05-20",
+          "end": "2027-05-25"
+        },
+        {
+          "names": [
+            "Kyoto"
+          ],
+          "start": "2027-05-25",
+          "end": "2027-05-28"
+        }
+      ]
+    },
+    "plans": [
+      {
+        "kind": [
+          "flight"
+        ],
+        "day": [
+          "2027-05-20",
+          "2027-05-19"
+        ]
+      }
+    ],
+    "questions": [],
+    "forbidden_words": [
+      "osaka",
+      "narita",
+      "haneda"
+    ],
+    "forbidden_cents": [],
+    "no_times": true
+  },
+  "today": "2026-11-18"
+}

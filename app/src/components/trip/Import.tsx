@@ -32,6 +32,8 @@ export function ImportDialog({
   onSave,
   onDone,
   onExtend,
+  initial = null,
+  heading,
 }: {
   open: boolean;
   trip: Trip;
@@ -43,13 +45,20 @@ export function ImportDialog({
   onDone: (result: ImportResult, kept: number) => void;
   /** Stretches the trip to include a day just outside it; returns once the trip is reloaded. */
   onExtend?: (day: string) => Promise<void>;
+  /**
+   * Plans already read (from describing the trip when starting it): the dialog opens straight on
+   * the review, with the same keep, edit and drop as an import. Mount a fresh dialog for them.
+   */
+  initial?: ImportResult | null;
+  /** The review's title, in place of "Review what was found". */
+  heading?: string;
 }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [result, setResult] = useState<ImportResult | null>(initial);
+  const [drafts, setDrafts] = useState<Draft[]>(() => (initial ? initial.plans.map((p) => toDraft(p, trip, items)) : []));
   const [tried, setTried] = useState(false);
 
   const reset = () => {
@@ -130,7 +139,7 @@ export function ImportDialog({
   const days = tripDays(trip.start_date, trip.end_date);
 
   return (
-    <Dialog open={open} onClose={close} title={result ? "Review what was found" : "Import bookings"}>
+    <Dialog open={open} onClose={close} title={result ? (heading ?? "Review what was found") : "Import bookings"}>
       {open && !result && (
         <div>
           <p className="mb-3 text-sm text-white/75">
