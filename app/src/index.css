@@ -232,3 +232,48 @@
     opacity: 0.5;
   }
 }
+
+/* Drag and drop (Build 3 polish): a plan an Owner can drag. On a phone a press and hold picks it
+   up, so the long-press menu and text selection stay out of the way; a mouse sees a grab cursor. */
+.draggable-card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+@media (hover: hover) {
+  .draggable-card {
+    cursor: grab;
+  }
+}
+/* While a finger holds a plan, it presses in a little; when the hold lifts it, the plan pops out
+   (Mike's 11/18 note: tap and hold, the bubble pops out and follows the finger). */
+.draggable-card:active {
+  transform: scale(0.97);
+  transition: transform 280ms ease-out;
+}
+.drag-ghost {
+  transform: rotate(-2deg);
+  animation: ghost-pop 180ms ease-out;
+}
+@keyframes ghost-pop {
+  0% {
+    transform: rotate(0deg) scale(0.9);
+    opacity: 0.7;
+  }
+  60% {
+    transform: rotate(-2deg) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .draggable-card:active {
+    transform: none;
+  }
+  .drag-ghost {
+    animation: none;
+  }
+}
