@@ -32,6 +32,8 @@ function watch(page, who) {
   (global.__pages ||= []).push(page);
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${who}: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`${who}: ${e}`));
+  // A server error names its address (without the query, which can hold a token).
+  page.on('response', (r) => { if (r.status() >= 500) errors.push(`${who}: ${r.status()} from ${r.url().split('?')[0]}`); });
 }
 const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 80 });
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: devices['iPhone 13'].userAgent };
