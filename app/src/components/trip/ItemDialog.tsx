@@ -30,6 +30,8 @@ import {
 import { parseDollars, toCents } from "../../lib/money";
 import type { ItemInput } from "../../lib/api";
 import { whenText } from "../../lib/timeline";
+import { PlaceInput } from "../PlaceInput";
+import { searchAddresses, type AddressPlace } from "../../lib/places";
 
 export interface ItemDialogState {
   /** The item being edited, or null for a new one. */
@@ -61,6 +63,7 @@ export function ItemDialog({
   canEdit,
   extras,
   costExtras,
+  stopOn,
   onClose,
   onSave,
   onDelete,
@@ -74,6 +77,8 @@ export function ItemDialog({
   extras?: ReactNode;
   /** The cost half of the plan panel, shown inside Cost and who pays. */
   costExtras?: ReactNode;
+  /** The stop a day is at, so Where's suggestions lean toward it (11/19). */
+  stopOn?: (day: string) => string | null;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -94,7 +99,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, onClose, onSave, onDelete }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, onClose, onSave, onDelete }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -120,6 +125,7 @@ function ItemForm({
   registerClose,
   goingExtras,
   costExtras,
+  stopOn,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -135,6 +141,7 @@ function ItemForm({
   goingExtras?: ReactNode;
   /** An existing plan's who pays, confirm and own costs (PlanPanel, cost): inside the cost section. */
   costExtras?: ReactNode;
+  stopOn?: (day: string) => string | null;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -397,7 +404,17 @@ function ItemForm({
       </DarkField>
 
       <DarkField label="Where (optional)">
-        <input className="field-dark" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Address or place" />
+        {/* Addresses and places as you type, near the day's stop (Mike's 11/19 review). */}
+        <PlaceInput<AddressPlace>
+          dark
+          label="Where (optional)"
+          value={location}
+          onChange={setLocation}
+          onPick={(p) => setLocation(p.value)}
+          search={(text, signal) => searchAddresses(text, stopOn?.(day) ?? null, signal)}
+          credit="Places from OpenStreetMap, via Photon"
+          placeholder="Address or place"
+        />
       </DarkField>
 
       {isStay ? (

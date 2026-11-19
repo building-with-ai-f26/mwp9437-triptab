@@ -662,6 +662,7 @@ export default function TripPage() {
       <ItemDialog
         state={dialog}
         trip={trip}
+        stopOn={(day) => (stops.find((s) => day >= s.start_date && day < s.end_date) ?? stops[stops.length - 1])?.name ?? null}
         travelers={travelers}
         meId={meId}
         canEdit={editable}

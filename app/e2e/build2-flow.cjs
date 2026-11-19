@@ -54,7 +54,11 @@ async function addPlan(page, day, slot, f) {
   if (f.est || f.perPerson) await d.getByRole('button', { name: /^Cost/ }).click();
   if (f.est) await d.getByLabel(/Estimated/).fill(f.est);
   if (f.perPerson) await d.getByRole('radio', { name: 'Per person' }).click();
-  if (f.where) await d.getByLabel('Where (optional)').fill(f.where);
+  // Where suggests places as you type (11/19): Tab moves on, closing the list, as a person would.
+  if (f.where) {
+    await d.getByLabel('Where (optional)').fill(f.where);
+    await d.getByLabel('Where (optional)').press('Tab');
+  }
   if (f.shot) await shot(page, f.shot);
   await d.getByRole('button', { name: 'Add to trip' }).click();
   await page.locator('dialog[open]').waitFor({ state: 'detached' }).catch(() => {});

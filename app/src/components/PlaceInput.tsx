@@ -3,28 +3,35 @@ import { MapPin } from "lucide-react";
 import { searchPlaces, type Place } from "../lib/places";
 
 /**
- * A stop's place, with suggestions as you type (src/lib/places.ts). Arrow keys and Enter pick
- * one, Escape closes the list, and any typed name still works. `onPick` fires when a place is
- * chosen from the list; `onCommit` when you leave the box, so the page can update its photo only
- * once there's a place, not on every keystroke (the 11/17 pod feedback).
+ * A place, with suggestions as you type (src/lib/places.ts): a stop's town by default, or with
+ * `search` any other list (a plan's Where: addresses and places). Arrow keys and Enter pick one,
+ * Escape closes the list, and any typed text still works. `onPick` fires when a place is chosen
+ * from the list; `onCommit` when you leave the box, so the page can update its photo only once
+ * there's a place, not on every keystroke (the 11/17 pod feedback). `dark` is for the dialogs.
  */
-export function PlaceInput({
+export function PlaceInput<P extends Place = Place>({
   value,
   onChange,
   onPick,
   onCommit,
   label,
   placeholder,
+  search = searchPlaces as (text: string, signal: AbortSignal) => Promise<P[]>,
+  credit = "Places from GeoNames, via Open-Meteo",
+  dark = false,
 }: {
   value: string;
   onChange: (text: string) => void;
-  onPick: (place: Place) => void;
-  onCommit: () => void;
+  onPick: (place: P) => void;
+  onCommit?: () => void;
   label: string;
   placeholder?: string;
+  search?: (text: string, signal: AbortSignal) => Promise<P[]>;
+  credit?: string;
+  dark?: boolean;
 }) {
   const listId = useId();
-  const [places, setPlaces] = useState<Place[]>([]);
+  const [places, setPlaces] = useState<P[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   // Look up only what the person is typing in this box now, not a name filled in by a pick or
@@ -37,7 +44,7 @@ export function PlaceInput({
     if (!typingHere()) return;
     const ctrl = new AbortController();
     const timer = window.setTimeout(() => {
-      searchPlaces(value, ctrl.signal)
+      search(value, ctrl.signal)
         .then((found) => {
           if (!typingHere()) return;
           setPlaces(found);
@@ -50,9 +57,11 @@ export function PlaceInput({
       window.clearTimeout(timer);
       ctrl.abort();
     };
+    // The search is the caller's; only what's typed starts a lookup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  const pick = (p: Place) => {
+  const pick = (p: P) => {
     typed.current = false;
     setOpen(false);
     setPlaces([]);
@@ -63,7 +72,7 @@ export function PlaceInput({
     <div className="relative min-w-0 flex-1">
       <input
         ref={input}
-        className="field"
+        className={dark ? "field-dark" : "field"}
         role="combobox"
         aria-label={label}
         aria-expanded={open}
@@ -81,7 +90,7 @@ export function PlaceInput({
         onBlur={() => {
           typed.current = false;
           setOpen(false);
-          onCommit();
+          onCommit?.();
         }}
         onKeyDown={(e) => {
           if (!open || places.length === 0) return;
@@ -126,7 +135,7 @@ export function PlaceInput({
             </li>
           ))}
           <li role="presentation" className="px-3 pb-1 pt-1.5 text-[10px] text-muted-foreground">
-            Places from GeoNames, via Open-Meteo
+            {credit}
           </li>
         </ul>
       )}

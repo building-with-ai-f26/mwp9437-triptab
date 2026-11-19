@@ -97,6 +97,11 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           with no account or trip attached.
         </li>
         <li>
+          <b>Photon</b>, komoot's search over OpenStreetMap, suggests addresses and places as you type a plan's Where.
+          It gets only what you've typed in that box and the rough location of that day's stop, with no account or
+          trip attached.
+        </li>
+        <li>
           <b>Google Fonts</b> and <b>Unsplash</b> supply the type and the destination photos, so your browser asks
           them for those files.
         </li>
