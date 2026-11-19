@@ -31,7 +31,8 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
   carry `ph-no-capture`, so replays and click capture leave them out; PostHog compresses page
   snapshots before `before_send` sees them, so the scrub alone wouldn't cover replays. A new
   `group link texted` event keeps the signal that click capture used to give. Unit tests in
-  `app/src/lib/analytics.test.ts`. **Left:** the tokens PostHog already holds (C17).
+  `app/src/lib/analytics.test.ts`. The tokens PostHog already holds stop working once every link is
+  rotated: migration `20261119162226_rotate_group_links.sql` (C17, Mike's 11/19 call).
 
 ## Checked, nothing to fix
 
@@ -48,8 +49,11 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
 
 ## Notes for SECURITY.md
 
-- Production holds 405 accounts, 401 of them `@example.com` test accounts from the click-throughs
-  that ran against it before TripTab dev existed (the last on 11/17), and their test trips (C18).
+- Production held 405 accounts, 401 of them `@example.com` test accounts from the click-throughs
+  that ran against it before TripTab dev existed (the last on 11/17), and 133 test trips. Migration
+  `20261119162212_clear_test_data.sql` (C18, Mike's 11/19 call) deletes them, keeping the 4 real
+  accounts, their 3 trips and the whole `ai_calls` cost log. On dev it left 1 account and 0 trips,
+  and every live database test still passed.
 - A refusal that means "not found" (`P0002`) reaches the browser as HTTP 500. It's cosmetic (the
   app shows the message), but a 404 would read better in logs.
 - One 502 showed in the browser console during the production run, from a request outside
