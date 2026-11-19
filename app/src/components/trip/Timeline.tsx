@@ -318,7 +318,10 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
           const items = day.parts[part];
           return (
             <div key={part} className="grid grid-cols-[60px_1fr] gap-4 py-1">
-              <div className="label-luxury pt-3.5 text-foreground">{PART_LABEL[part]}</div>
+              {/* A faint light backing: on darker photos the bare label fell just under 4.5:1. */}
+              <div className="pt-3">
+                <span className="label-luxury -ml-1.5 inline-block rounded-md bg-background/45 px-1.5 py-0.5 text-foreground">{PART_LABEL[part]}</span>
+              </div>
               <Slot day={day.date} part={part}>
                 {items.map((item) => {
                   const placed = day.placed[part][item.id];

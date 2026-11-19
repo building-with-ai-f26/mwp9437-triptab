@@ -115,7 +115,7 @@ async function measure(page, screen) {
     await p.getByRole('button', { name: 'Start a trip' }).waitFor();
     low += await measure(p, `${label}: landing`);
     await p.goto(`${h.BASE}/sign-in?next=/trips/new`);
-    await p.getByLabel('Email').waitFor();
+    await h.withEmail(p);
     low += await measure(p, `${label}: create account`);
     await h.signUp(p, 'Mike', `contrast-${label}`);
     await p.waitForURL(/\/trips\/new/);
