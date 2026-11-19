@@ -9,7 +9,7 @@
 - **Roles:** Owner and Viewer, stored in `travelers.role` and enforced by the database. Owners change the trip and its money; Viewers read it, opt themselves in or out, and log their own cost on plans where everyone pays their own.
 
 ## 2. Commands
-- **Install dependencies:** `cd app && npm install`
+- **Install dependencies:** `cd app && npm install`. To add or upgrade a package, use `npx -y npm@11.6.2 install ...`: npm 10.9 (Node 22's own) fails on Vitest's optional peers with "Cannot read properties of null (reading 'edgesOut')" (11/19). The lockfile it writes installs fine with `npm ci` on npm 10. `npm audit` should stay at 0; it was cleared 11/19 (Vitest 3 to 4.1.12, typescript-eslint 8.73).
 - **Run locally:** `cd app && npm run dev`, then open http://localhost:5173, click **Start a trip**, create an account, and use **Fill in the ski trip example**.
 - **Run deterministic tests:** `cd app && npm test` (money math, data model, timeline; offline).
 - **Run the database security tests:** `cd app && npm run test:rls` against TripTab dev (113 tests of row-level security, who can send invite emails, the money rules, who can write and read own costs, who can call AI import, plans that span time and extending a trip, against the Supabase project in `app/.env.local`, which is TripTab dev; 102 run every time, and the AI daily-cap test runs only with `VITE_CAP_FIXTURE=1`; needs `app/.env.local`; creates throwaway `rls-...@example.com` accounts).
