@@ -11,6 +11,7 @@
 #   dry-run  report the migrations production doesn't have yet and check the functions can be
 #            reached, changing nothing; a failure here is reported but doesn't stop the build.
 #   on       deploy every Edge Function and apply new migrations; a failure stops the build.
+#            Then it downloads each function back and compares it with the repo, reporting only.
 # A pull request with a new migration still waits for Mike's go before it merges (AGENTS.md).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -49,3 +50,35 @@ echo "== Supabase: apply new migrations to production =="
 "${SB[@]}" db push --workdir . --remote="$PROD_REF" --yes
 echo "== Supabase: deploy Edge Functions to production: ${functions[*]} =="
 "${SB[@]}" functions deploy "${functions[@]}" --workdir . --remote="$PROD_REF" --use-api --yes
+
+# Check what landed (AGENTS.md rule 7): download each function as production now has it and
+# compare every file with the repo. It reports and never stops the build: the deploy is done by
+# now, and a difference here means look at the log, not that the app shouldn't ship.
+echo "== Supabase: check what landed against the repo =="
+tmp=$(mktemp -d)
+problems=0
+for fn in "${functions[@]}"; do
+  dir="$tmp/$fn"
+  mkdir -p "$dir/supabase"
+  cp supabase/config.toml "$dir/supabase/"
+  if ! "${SB[@]}" functions download "$fn" --workdir "$dir" --remote="$PROD_REF" --use-api > "$dir.log" 2>&1; then
+    echo "!! $fn: couldn't download it to check:"; tail -n 5 "$dir.log"; problems=$((problems + 1)); continue
+  fi
+  files=0; diffs=0
+  while IFS= read -r f; do
+    rel="supabase/functions/${f#"$dir/supabase/functions/"}"
+    files=$((files + 1))
+    if [ ! -f "$rel" ]; then echo "!! $fn: $rel is deployed but isn't in the repo"; diffs=$((diffs + 1))
+    elif ! cmp -s "$f" "$rel"; then echo "!! $fn: $rel differs from the repo"; diffs=$((diffs + 1)); fi
+  done < <(find "$dir/supabase/functions" -type f 2>/dev/null | sort)
+  if [ "$files" -eq 0 ] || [ ! -f "$dir/supabase/functions/$fn/index.ts" ]; then
+    echo "!! $fn: the download held no supabase/functions/$fn/index.ts; it wrote:"; (cd "$dir" && find . -type f | head -n 10)
+    problems=$((problems + 1))
+  elif [ "$diffs" -gt 0 ]; then
+    problems=$((problems + 1))
+  else
+    echo "   $fn: $files files, each the same as the repo"
+  fi
+done
+rm -rf "$tmp"
+if [ "$problems" -eq 0 ]; then echo "== Every function on production matches the repo =="; else echo "!! $problems of ${#functions[@]} functions need a look (above)"; fi
