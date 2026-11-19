@@ -145,7 +145,7 @@ export function ActionsCard({
               className="field min-w-0 flex-1"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Book the Barcelona flight"
+              placeholder="Add a to-do, like a dinner reservation"
               aria-label="New action item"
             />
             <Button type="submit" className="!h-11 shrink-0" disabled={busy || !title.trim()}>

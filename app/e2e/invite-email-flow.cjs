@@ -5,15 +5,21 @@
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 
-async function addPerson(page, name, email) {
+// Adding someone with an email sends their invite unless the box is unticked (Mike's 11/19 review).
+async function addPerson(page, name, email, invite = false) {
   await page.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
   const d = h.dlg(page);
   await d.getByLabel('Name').fill(name);
   await d.getByLabel('Email (optional)').fill(email);
+  const box = d.getByLabel('Email them an invite now');
+  const ticked = await box.isChecked();
+  if (!invite) await box.uncheck();
   await d.getByRole('radio', { name: 'Viewer' }).click();
   await d.getByRole('button', { name: 'Add to trip' }).click();
   await d.getByText(`Added ${name}`).waitFor();
+  const note = (await d.getByTestId('added-note').innerText()).trim();
   await d.getByRole('button', { name: 'Done' }).click();
+  return { tickedByDefault: ticked, note };
 }
 
 // A person's row, by the name line itself (a plain text match would also find "Jo" in "joined").
@@ -29,7 +35,7 @@ const row = (page, name) =>
     await ctx.route('**/functions/v1/send-invite', async (route) => {
       const body = route.request().postDataJSON();
       sent.push(body);
-      const capped = sent.length > 1;
+      const capped = sent.length === 2; // the second email (Kim's) hits the limit
       await route.fulfill({
         status: capped ? 429 : 200,
         contentType: 'application/json',
@@ -52,6 +58,12 @@ const row = (page, name) =>
     await row(o, 'Kim').getByRole('alert').waitFor();
     result.kimNote = (await row(o, 'Kim').getByRole('alert').textContent()).trim();
     result.kimCanRetry = await row(o, 'Kim').getByRole('button', { name: 'Email' }).isEnabled();
+
+    // Added with an email and the box left ticked: the invite goes out at once.
+    const lee = await addPerson(o, 'Lee', `lee-${h.run}@example.com`, true);
+    result.leeTickedByDefault = lee.tickedByDefault;
+    result.leeNote = lee.note;
+    result.leeSent = sent.length === 3 && Boolean(sent[2].traveler_id);
     await row(o, 'Kim').scrollIntoViewIfNeeded();
     await h.shot(o, 'people-email-desktop');
 
@@ -71,6 +83,7 @@ const row = (page, name) =>
     result.errors = h.errors.filter((e) => !e.includes('status of 429'));
     console.log(JSON.stringify(result, null, 2));
     await browser.close();
-    if (result.failure || result.errors.length) process.exit(1);
+    const ok = result.joEmailed && result.kimCanRetry && result.leeTickedByDefault && /emailed them their invite/.test(result.leeNote) && result.leeSent && result.phoneOverflow <= 0;
+    if (result.failure || result.errors.length || !ok) process.exit(1);
   }
 })();

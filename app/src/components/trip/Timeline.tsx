@@ -14,7 +14,7 @@ import {
   type ItemKind,
 } from "../../lib/model";
 import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
-import { canDrag, chipId, justDropped, slotId } from "../../lib/move";
+import { canDrag, chipId, justDropped, slotId, quietPress } from "../../lib/move";
 
 export const KIND_ICON: Record<ItemKind, LucideIcon> = {
   activity: Palmtree,
@@ -146,6 +146,14 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
       type="button"
       ref={drag?.ref}
       {...drag?.listeners}
+      onTouchStart={
+        drag
+          ? (e) => {
+              quietPress();
+              drag.listeners?.onTouchStart?.(e);
+            }
+          : undefined
+      }
       className={`item-card ${drag ? "draggable-card" : ""} ${drag?.isDragging ? "opacity-40" : ""}`}
       data-kind={item.kind}
       data-status={item.status}

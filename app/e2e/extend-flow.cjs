@@ -53,7 +53,7 @@ async function run(browser, label, opts, result) {
   await card.getByRole('button', { name: 'Add Wed, Feb 3 to the trip' }).click();
   await card.getByRole('button', { name: /Add Wed, Feb 3/ }).waitFor({ state: 'detached' });
   r.keptAfter = await card.getByLabel('Keep this one').isChecked();
-  r.dayAfter = await card.getByLabel('Day', { exact: true }).inputValue();
+  r.dayAfter = await card.getByLabel('Date', { exact: true }).inputValue();
   await h.dlg(p).getByRole('button', { name: /Add 1 to the trip/ }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 }).catch(() => {});
   if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});

@@ -27,7 +27,6 @@ export function SettleDialog({
   meId,
   canEdit,
   tripName,
-  tripDates,
   paymentsReady,
   zelleReady,
   onRecord,
@@ -41,8 +40,6 @@ export function SettleDialog({
   meId: string | null;
   canEdit: boolean;
   tripName: string;
-  /** "Nov 20 to 22, 2026", for the note on a Venmo payment. */
-  tripDates: string;
   /** False on a database without payments yet: Settle up only lists who pays whom. */
   paymentsReady: boolean;
   /** False on a database without Zelle yet: Venmo only, and no lock. */
@@ -57,7 +54,7 @@ export function SettleDialog({
   const person = (id: string) => travelers.find((t) => t.id === id);
   const venmoOf = (id: string) => person(id)?.venmo ?? null;
   const me = meId ? person(meId) : undefined;
-  const note = venmoNote(tripName, tripDates);
+  const note = venmoNote(tripName);
   // Offer "Add Jordan's Venmo" once, on the first line paying Jordan.
   const firstLineTo = new Map<string, number>();
   transfers.forEach((t, i) => {

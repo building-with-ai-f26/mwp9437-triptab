@@ -59,14 +59,16 @@ export function settle(
  * "Pay with Venmo": opens Venmo (the app on a phone) with the person, amount and note filled in.
  * TripTab never sees or moves the money; recording the payment is a separate tap.
  */
-/** The note on a Venmo payment: "TripTab · Pod test · Nov 20 to 22, 2026" (Mike's 11/18 ask). */
-export function venmoNote(tripName: string, dates: string): string {
-  return ["TripTab", tripName.trim(), dates].filter(Boolean).join(" · ");
+/** The note on a Venmo payment: "TripTab · Pod test". No dates: the trip's read as the payment's
+ *  (Mike's 11/19 review). */
+export function venmoNote(tripName: string): string {
+  return ["TripTab", tripName.trim()].filter(Boolean).join(" · ");
 }
 
+/** Spaces go as %20, never "+": Venmo shows a "+" as it is (Mike's 11/19 review). */
 export function venmoLink(handle: string, cents: number, note: string): string {
-  const q = new URLSearchParams({ txn: "pay", audience: "private", recipients: handle, amount: (cents / 100).toFixed(2), note });
-  return `https://venmo.com/?${q.toString()}`;
+  const q = { txn: "pay", audience: "private", recipients: handle, amount: (cents / 100).toFixed(2), note };
+  return `https://venmo.com/?${Object.entries(q).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`;
 }
 
 export interface MyNumbers {
@@ -127,7 +129,12 @@ export function ownProgress(item: Pick<Item, "id" | "kind">, travelers: Traveler
 }
 
 /** "2 of 5 booked" */
-export const bookedLabel = (p: OwnProgress): string => `${p.booked.size} of ${p.going.length} booked`;
+/** "Each pays their own · 2 of 3 booked". Names the mode, since a bare "0 of 2 booked" on a plan
+ *  with no cost yet read as a mistake (Mike's 11/19 review). */
+export const bookedLabel = (p: OwnProgress): string =>
+  p.booked.size === 0
+    ? `Each pays their own · none of ${p.going.length} booked yet`
+    : `Each pays their own · ${p.booked.size} of ${p.going.length} booked`;
 
 /** Your part of one expense, or null if you're not in it. */
 export function myShareOf(expense: ExpenseRow | undefined, meId: string | null): number | null {

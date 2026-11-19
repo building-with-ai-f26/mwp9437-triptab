@@ -241,6 +241,13 @@
   user-select: none;
   touch-action: manipulation;
 }
+/* While a finger is down on a plan (MovePlans quietPress): no selection, no iOS menu, anywhere. */
+.press-quiet,
+.press-quiet * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 @media (hover: hover) {
   .draggable-card {
     cursor: grab;

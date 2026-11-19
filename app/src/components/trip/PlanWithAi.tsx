@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Check, ExternalLink, Wand2 } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { planWithAi, type PlanAiResult, type PlanIdea } from "../../lib/api";
-import { usdCost } from "../../lib/importPlans";
 import { dollars, longDay, PART_LABEL, PARTS, tripDays, type DayPart, type Trip } from "../../lib/model";
 
 const MAX_REQUEST = 1000;
@@ -189,10 +188,7 @@ export function PlanWithAiDialog({
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-white/70" data-testid="plan-ai-cost">
-            This cost {usdCost(result.usage.cost_usd)} at list price
-            {result.usage.searches ? `, with ${result.usage.searches} web ${result.usage.searches === 1 ? "search" : "searches"}` : ""}.
-          </p>
+          {/* The AI cost is logged (ai_calls) but never shown: people would read it as a charge (Mike's 11/19 review). */}
           {error && (
             <p role="alert" className="mt-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
               {error}

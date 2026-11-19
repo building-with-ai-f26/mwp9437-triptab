@@ -28,6 +28,7 @@ import {
   addAction,
   describedKey,
   addTraveler,
+  sendInviteEmail,
   clearOwnLine,
   confirmItem,
   logOwnLine,
@@ -878,7 +879,6 @@ export default function TripPage() {
         meId={meId}
         canEdit={editable}
         tripName={trip.name}
-        tripDates={dateRange(trip.start_date, trip.end_date)}
         paymentsReady={paymentsReady}
         zelleReady={zelleReady}
         onRecord={(prefill) => {
@@ -926,11 +926,19 @@ export default function TripPage() {
       <AddPersonDialog
         open={addingPerson}
         defaultRole={link?.default_role ?? "owner"}
+        canInvite={Boolean(link?.enabled)}
         onClose={() => setAddingPerson(false)}
-        onAdd={async (p) => {
-          await addTraveler(trip.id, p);
-          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()), has_venmo: Boolean(p.venmo?.trim()) });
+        onAdd={async (p, invite) => {
+          const added = await addTraveler(trip.id, p);
+          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()), has_venmo: Boolean(p.venmo?.trim()), invited: invite });
+          let note: string | null = null;
+          if (invite) {
+            const r = await sendInviteEmail(trip.id, added.id);
+            track("invite emailed", { ok: r.ok, when: "added", ...(r.ok ? {} : { code: r.code }) });
+            note = r.ok ? "We emailed them their invite." : `Their invite didn't go out: ${r.error}`;
+          }
           await reload();
+          return note;
         }}
       />
     </div>
