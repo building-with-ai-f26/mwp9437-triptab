@@ -31,6 +31,8 @@ async function context(browser, opts) {
 
 function watch(page, who) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${who}: ${m.text()}`); });
+  // A server error names its address (without the query, which can hold a token), so a 502 says where it came from.
+  page.on('response', (r) => { if (r.status() >= 500) errors.push(`${who}: ${r.status()} from ${r.url().split('?')[0]}`); });
   page.on('pageerror', (e) => errors.push(`${who}: ${e}`));
   return page;
 }

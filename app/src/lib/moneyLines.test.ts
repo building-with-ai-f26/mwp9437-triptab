@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExpenseRow, Payment } from "./api";
-import { filterLines, moneyLines, type MoneyKind } from "./moneyLines";
+import { filterLines, moneyLines, yourPart, type MoneyKind } from "./moneyLines";
 
 const expense = (id: string, over: Partial<ExpenseRow>): ExpenseRow =>
   ({
@@ -51,5 +51,36 @@ describe("every cost and payment in one list (Mike's 11/19 review)", () => {
     expect(only("plans")).toEqual(["Car rental", "Dinner"]);
     expect(only("expenses", "payments")).toEqual(["Payment", "Groceries"]);
     expect(only()).toEqual([]);
+  });
+});
+
+describe("what each line means for you", () => {
+  const lines = moneyLines(
+    [
+      expense("Dinner", { day: "2027-02-06" }),
+      expense("Lift tickets", { day: "2027-02-07", paid_by: "vic" }),
+      expense("Taxi", { day: "2027-02-08", paid_by: "vic", expense_shares: [{ traveler_id: "vic", amount_cents: 1000, weight: null }] }),
+      expense("My flight", { item_id: "f1", day: "2027-02-05", own: true, total_cents: 30000, expense_shares: [{ traveler_id: "mike", amount_cents: 30000, weight: null }] }),
+      expense("Vic's flight", { item_id: "f1", day: "2027-02-05", own: true, paid_by: "vic", total_cents: 28000, expense_shares: [{ traveler_id: "vic", amount_cents: 28000, weight: null }] }),
+    ],
+    [payment("p1", "2027-02-09")],
+    "mike",
+  );
+  const part = (title: string) => yourPart(lines.find((l) => l.title === title)!, "mike");
+
+  it("you lent the others their part of what you paid, and borrowed yours of what they paid", () => {
+    expect(part("Dinner")).toEqual({ text: "you lent $5", tone: "lent" });
+    expect(part("Lift tickets")).toEqual({ text: "you borrowed $5", tone: "borrowed" });
+    expect(part("Taxi")).toEqual({ text: "you're not in it", tone: "none" });
+  });
+
+  it("shows your own costs as yours, and leaves out someone else's own line, as the balance does", () => {
+    expect(part("My flight").text).toBe("your own cost, not split");
+    expect(lines.some((l) => l.title === "Vic's flight")).toBe(false);
+  });
+
+  it("says which way a payment went", () => {
+    expect(part("Payment").text).toBe("you got $20");
+    expect(yourPart(lines.find((l) => l.kind === "payments")!, "vic").text).toBe("you paid $20");
   });
 });
