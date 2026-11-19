@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { CalendarPlus, Check, CircleDollarSign, Pencil, Sparkles } from "lucide-react";
 import { Button, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, OwnMark } from "../../lib/api";
@@ -326,16 +326,16 @@ function OwnLineForm({
   const typed = price.trim() === "" ? (points ? 0 : NaN) : parseDollars(price);
   const bad = Number.isNaN(typed) || typed < 0;
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const submit = () => {
     setTried(true);
     if (bad) return;
     onSave(toCents(typed), points);
   };
 
+  // A group, not a form: it sits inside the plan dialog's own form (in Cost and who pays, since
+  // 11/19), and a form inside a form submits the wrong one. Enter saves it here instead.
   return (
-    <form onSubmit={submit} className="mt-2 space-y-2 pb-1">
+    <div role="group" aria-label={who === "you" ? "Log what you paid" : `Log what ${who} paid`} className="mt-2 space-y-2 pb-1">
       <label className="block">
         <span className="label-luxury mb-1 block text-white/80">
           {points ? "Cash value or fees (optional)" : who === "you" ? "What you paid" : `What ${who} paid`}
@@ -348,6 +348,12 @@ function OwnLineForm({
           placeholder="$"
           autoFocus
           aria-label={who === "you" ? "Your own cost" : `${who}'s own cost`}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            e.stopPropagation();
+            submit();
+          }}
         />
       </label>
       <label className="flex min-h-9 items-center gap-2.5 text-sm text-white">
@@ -369,10 +375,10 @@ function OwnLineForm({
         <Button type="button" size="sm" variant="light" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="button" size="sm" disabled={busy} onClick={submit}>
           <Check /> {busy ? "Saving..." : line || onClear ? "Save" : "Mark as booked"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
