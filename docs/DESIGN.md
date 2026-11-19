@@ -106,7 +106,7 @@ From `Dashboard.tsx` (the item card and the stay row) and `EditablePrice.tsx`.
 - **Confirmed (paid):** spring's confirmed style with both badges together as the green "$ ✓", since confirming and logging the expense are now one step.
 - Opted out: what's on the card fades to 50%; the card itself stays opaque (since 11/19).
 - **Every plan card is opaque white (Mike's 11/19 review),** across the board: the day view, stays, overnight rows, the week view and the card you drag. `.item-card` is `#fff` with a hairline `rgba(0,0,0,.07)` border, the kind's 4px stripe and a soft `0 4px 16px rgba(0,0,0,.08)` shadow; no backdrop blur, so the trip photo never shows through. A slot a plan runs on into keeps the white, drops the shadow and sets its text at 75%.
-- **Who's going (11/19):** on a trip of two or more, each card ends with the initials of who's in, as 24px opaque circles (`#efe6da`, 9px bold, a 2px white ring, overlapping by 2px), you first, up to four, or three and a `+N`. When the whole group is in it says Everyone instead. The card's label reads the names ("Julia Bell, Vic and you are in"). The old "3 of 4 in" and "1 on it" counts are gone on those trips.
+- **Who's going (11/19):** on a trip of two or more, each card ends with the initials of who's in, as 24px opaque circles (`#efe6da`, 9px bold, a 2px white ring, overlapping by 2px), you first, up to four, or three and a `+N`. When the whole group is in it says Everyone instead. The card's label reads the names ("You, Julia Bell and Vic are in"). The old "3 of 4 in" and "1 on it" counts are gone on those trips.
 
 ## 8. Dialogs
 
