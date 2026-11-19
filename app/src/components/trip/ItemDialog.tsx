@@ -60,6 +60,7 @@ export function ItemDialog({
   meId,
   canEdit,
   extras,
+  costExtras,
   onClose,
   onSave,
   onDelete,
@@ -71,6 +72,8 @@ export function ItemDialog({
   canEdit: boolean;
   /** Shown above the form for an existing plan: its cost, your in or out, who's going (Build 3). */
   extras?: ReactNode;
+  /** The cost half of the plan panel, shown inside Cost and who pays. */
+  costExtras?: ReactNode;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -88,11 +91,12 @@ export function ItemDialog({
       onClose={requestClose}
       title={state?.item ? (canEdit ? "Edit plan" : state.item.title) : state?.kind === "stay" ? "Add a stay" : "Add a plan"}
     >
-      {state?.item && extras}
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
           {...{ state, trip, travelers, meId, canEdit, onClose, onSave, onDelete }}
+          goingExtras={state.item ? extras : undefined}
+          costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
           registerClose={(fn) => {
             closer.current = fn;
@@ -114,6 +118,8 @@ function ItemForm({
   onDelete,
   onRequestClose,
   registerClose,
+  goingExtras,
+  costExtras,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -125,6 +131,10 @@ function ItemForm({
   onDelete: (item: Item) => Promise<void>;
   onRequestClose: () => void;
   registerClose: (fn: (() => Promise<boolean>) | null) => void;
+  /** An existing plan's who's in and Add to calendar (PlanPanel, going): in view, under status. */
+  goingExtras?: ReactNode;
+  /** An existing plan's who pays, confirm and own costs (PlanPanel, cost): inside the cost section. */
+  costExtras?: ReactNode;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -152,6 +162,9 @@ function ItemForm({
   // Cost starts folded, so a plan with no cost (skiing on a season pass) doesn't face five
   // money questions (11/17 pod feedback).
   const [costOpen, setCostOpen] = useState(false);
+  // Times and more days fold away too, until a plan has them (Mike's 11/19 review: the card was
+  // overwhelming; lead with what, when and status, and disclose the rest on a tap).
+  const [timesOpen, setTimesOpen] = useState(Boolean(it?.start_time || it?.end_time || (it && it.kind !== "stay" && it.end_day && it.end_day > it.day)));
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,6 +299,14 @@ function ItemForm({
     return () => registerClose(null);
   });
 
+  const timesSummary =
+    [
+      startTime && endTime ? `${startTime} to ${endTime}` : startTime ? `from ${startTime}` : endTime ? `until ${endTime}` : "",
+      spanLastDay ? (travel ? `arrives ${longDay(spanLastDay)}` : `every day through ${longDay(spanLastDay)}`) : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || (travel ? "Leaves and arrives the same day" : "Just this day, no set times");
+
   const costSummary = paidNow
     ? "paid, logging it now"
     : estCents != null
@@ -321,6 +342,8 @@ function ItemForm({
           </p>
         )}
         <p className="text-xs text-white/70">Only the trip's owners can change plans.</p>
+        {goingExtras}
+        {costExtras}
       </div>
     );
   }
@@ -371,6 +394,10 @@ function ItemForm({
           }}
           options={KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
         />
+      </DarkField>
+
+      <DarkField label="Where (optional)">
+        <input className="field-dark" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Address or place" />
       </DarkField>
 
       {isStay ? (
@@ -431,12 +458,20 @@ function ItemForm({
               {longDay(day)} is {day < trip.start_date ? "before" : "after"} the trip. Saving adds it, so the trip {day < trip.start_date ? "starts" : "ends"} {longDay(day)}.
             </p>
           )}
-          {travel ? (
+          {travel && spanLastDay ? (
             <DarkField label={flight ? "Departs in the" : "Leaves in the"} group>
               <Segmented label="Part of the day" value={part} onChange={setPart} options={PARTS.map((p) => ({ value: p, label: PART_LABEL[p] }))} />
             </DarkField>
           ) : (
-            <DarkField label="Part of the day" group hint="Pick all that apply. It covers every part from the first to the last.">
+            <DarkField
+              label="Part of the day"
+              group
+              hint={
+                travel
+                  ? "Pick all that apply, from leaving to arriving. Arriving another day? Open times below."
+                  : "Pick all that apply. It covers every part from the first to the last."
+              }
+            >
               <div role="group" aria-label="Part of the day" className="flex flex-wrap gap-1.5">
                 {PARTS.map((p, i) => {
                   const on = i >= fromIdx && i <= toIdx;
@@ -461,6 +496,22 @@ function ItemForm({
             </DarkField>
           )}
 
+          <div className="mb-3 rounded-2xl border border-white/15 bg-white/5">
+            <button
+              type="button"
+              aria-expanded={timesOpen}
+              aria-controls="plan-times"
+              onClick={() => setTimesOpen((o) => !o)}
+              className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left"
+            >
+              <span className="min-w-0">
+                <span className="label-luxury block text-white/80">{travel ? "Times, or arriving another day" : "Times, or more days"}</span>
+                <span className="block truncate text-sm text-white">{timesSummary}</span>
+              </span>
+              <ChevronDown className={`size-5 shrink-0 text-white/70 transition-transform ${timesOpen ? "rotate-180" : ""}`} />
+            </button>
+            {timesOpen && (
+            <div id="plan-times" className="border-t border-white/10 px-3 pt-3">
           {travel ? (
             <div className="grid grid-cols-2 gap-x-2">
               <DarkField label={flight ? "Departs at (optional)" : "Leaves at (optional)"}>
@@ -559,6 +610,9 @@ function ItemForm({
                 : "One plan with one cost, shown in every slot it covers. Use this for skiing every day of a stop, not a plan per day."}
             </p>
           )}
+            </div>
+            )}
+          </div>
         </>
       )}
 
@@ -567,7 +621,7 @@ function ItemForm({
 
 
       {paidNow ? null : status !== "confirmed" ? (
-        <DarkField group label="Status" hint="Suggested has a dotted outline until the group decides. Confirm it with the real cost from the button above once it's saved.">
+        <DarkField group label="Status" hint="Suggested has a dotted outline until the group decides. Confirm it with the real cost under Cost and who pays, below.">
           <Segmented
             label="Status"
             value={status}
@@ -582,6 +636,8 @@ function ItemForm({
         <p className="mb-3 text-sm text-white/70">Confirmed and paid. Undo the confirmation to change its status.</p>
       )}
 
+      {goingExtras}
+
       <div className="mb-3 rounded-2xl border border-white/15 bg-white/5">
         <button
           type="button"
@@ -591,16 +647,20 @@ function ItemForm({
           className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left"
         >
           <span className="min-w-0">
-            <span className="label-luxury block text-white/80">Cost</span>
+            <span className="label-luxury block text-white/80">{it ? "Cost and who pays" : "Cost"}</span>
             <span className="block truncate text-sm text-white">
-              {costSummary}
-              {!it && !paidNow ? ` · ${PAY_MODE_LABEL[payMode]}` : ""}
+              {it
+                ? it.status === "confirmed"
+                  ? "Confirmed and paid"
+                  : `${PAY_MODE_LABEL[it.pay_mode]} · ${costSummary}`
+                : `${costSummary}${!paidNow ? ` · ${PAY_MODE_LABEL[payMode]}` : ""}`}
             </span>
           </span>
           <ChevronDown className={`size-5 shrink-0 text-white/70 transition-transform ${costOpen ? "rotate-180" : ""}`} />
         </button>
         {costOpen && (
           <div id="plan-cost" className="border-t border-white/10 px-3 pt-3">
+          {costExtras && <div className="mb-3">{costExtras}</div>}
           {!it && (
             <>
               <DarkField
@@ -708,9 +768,6 @@ function ItemForm({
         )}
       </div>
 
-      <DarkField label="Where (optional)">
-        <input className="field-dark" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Address or place" />
-      </DarkField>
       <DarkField label="Notes (optional)">
         <textarea className="field-dark min-h-[72px] resize-y" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </DarkField>

@@ -70,6 +70,17 @@ async function startSkiTrip(page, who = 'owner') {
   return page.url();
 }
 
+/**
+ * The plan dialog folds cost (with who pays and Confirm) and times away until they're used (Mike's
+ * 11/19 review). These open a fold if it's shut, and leave it alone if it's open.
+ */
+async function openFold(d, name) {
+  const b = d.getByRole('button', { name });
+  if ((await b.getAttribute('aria-expanded')) === 'false') await b.click();
+}
+const openCost = (d) => openFold(d, /^Cost/);
+const openTimes = (d) => openFold(d, /^Times/);
+
 async function addPlan(page, day, slot, f) {
   await page.locator(`#day-${day}`).getByRole('button', { name: slot }).click();
   const d = dlg(page);
@@ -78,7 +89,7 @@ async function addPlan(page, day, slot, f) {
   if (f.checkout) await d.getByLabel('Check out').selectOption(f.checkout);
   if (f.status) await d.getByRole('radio', { name: f.status }).click();
   // Cost starts folded (11/17): open it only when the plan has one.
-  if (f.est || f.perPerson) await d.getByRole('button', { name: /^Cost/ }).click();
+  if (f.est || f.perPerson) await openCost(d);
   if (f.est) await d.getByLabel(/Estimated/).fill(f.est);
   if (f.perPerson) await d.getByRole('radio', { name: 'Per person' }).click();
   await d.getByRole('button', { name: 'Add to trip' }).click();
@@ -114,4 +125,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

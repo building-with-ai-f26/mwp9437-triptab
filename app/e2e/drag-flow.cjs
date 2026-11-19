@@ -25,7 +25,10 @@ async function addTimedPlan(p, day, slotLabel, title, kind, time) {
   await d.getByLabel('What').fill(title);
   await d.getByRole('radio', { name: kind }).click();
   await d.getByRole('radio', { name: 'Planned' }).click();
-  if (time) await d.getByLabel('Starts at (optional)').fill(time);
+  if (time) {
+    await h.openTimes(d);
+    await d.getByLabel('Starts at (optional)').fill(time);
+  }
   await d.getByRole('button', { name: 'Add to trip' }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached' });
   await p.locator(`#day-${day}`).getByText(title).first().waitFor();

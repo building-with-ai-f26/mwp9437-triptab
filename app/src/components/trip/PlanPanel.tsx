@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { CalendarPlus, Check, CircleDollarSign, Pencil, Sparkles } from "lucide-react";
 import { Button, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, OwnMark } from "../../lib/api";
@@ -27,6 +27,7 @@ export function PlanPanel({
   onPayMode,
   onLogOwn,
   onClearOwn,
+  section,
 }: {
   tripName: string;
   item: Item;
@@ -44,6 +45,12 @@ export function PlanPanel({
   onPayMode: (mode: PayMode) => Promise<void>;
   onLogOwn: (travelerId: string, cents: number, withPoints: boolean) => Promise<void>;
   onClearOwn: (travelerId: string) => Promise<void>;
+  /**
+   * Which half to show (Mike's 11/19 review: lead with the plan, disclose cost on a tap). "cost" is
+   * who pays, Confirm with the real cost and own costs, inside the dialog's Cost and who pays;
+   * "going" is who's in and Add to calendar, always in view. Both when left out.
+   */
+  section?: "cost" | "going";
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +88,12 @@ export function PlanPanel({
     setBusy(null);
   };
 
+  const showCost = section !== "going";
+  const showGoing = section !== "cost";
   return (
-    <div className="mb-4 space-y-3 border-b border-white/10 pb-4">
+    <div className={section === "cost" ? "space-y-3" : "mb-4 space-y-3 border-b border-white/10 pb-4"}>
+      {showCost && (
+      <>
       <div>
         <p className="label-luxury mb-1.5 text-white/80">Who pays</p>
         {canEdit && !logged ? (
@@ -222,7 +233,10 @@ export function PlanPanel({
         </div>
       )}
 
-      {meId && (
+      </>
+      )}
+
+      {showGoing && meId && (
         <div>
           <p className="label-luxury mb-1.5 text-white/80">{flight ? "Are you on this flight?" : "Are you in?"}</p>
           <Segmented
@@ -237,6 +251,7 @@ export function PlanPanel({
         </div>
       )}
 
+      {showGoing && (
       <div>
         <p className="label-luxury mb-1.5 text-white/80">
           {flight ? "On this flight" : "Who's in"} ({going.length} of {travelers.length})
@@ -265,6 +280,8 @@ export function PlanPanel({
           <p className="text-sm text-white/80">{going.length ? going.map((t) => t.name).join(", ") : "Nobody yet"}</p>
         )}
       </div>
+      )}
+      {showGoing && (
       <Button
         size="sm"
         variant="light"
@@ -275,6 +292,7 @@ export function PlanPanel({
       >
         <CalendarPlus /> Add to calendar
       </Button>
+      )}
       {error && (
         <p role="alert" className="rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
           {error}
@@ -308,16 +326,16 @@ function OwnLineForm({
   const typed = price.trim() === "" ? (points ? 0 : NaN) : parseDollars(price);
   const bad = Number.isNaN(typed) || typed < 0;
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const submit = () => {
     setTried(true);
     if (bad) return;
     onSave(toCents(typed), points);
   };
 
+  // A group, not a form: it sits inside the plan dialog's own form (in Cost and who pays, since
+  // 11/19), and a form inside a form submits the wrong one. Enter saves it here instead.
   return (
-    <form onSubmit={submit} className="mt-2 space-y-2 pb-1">
+    <div role="group" aria-label={who === "you" ? "Log what you paid" : `Log what ${who} paid`} className="mt-2 space-y-2 pb-1">
       <label className="block">
         <span className="label-luxury mb-1 block text-white/80">
           {points ? "Cash value or fees (optional)" : who === "you" ? "What you paid" : `What ${who} paid`}
@@ -330,6 +348,12 @@ function OwnLineForm({
           placeholder="$"
           autoFocus
           aria-label={who === "you" ? "Your own cost" : `${who}'s own cost`}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            e.stopPropagation();
+            submit();
+          }}
         />
       </label>
       <label className="flex min-h-9 items-center gap-2.5 text-sm text-white">
@@ -351,10 +375,10 @@ function OwnLineForm({
         <Button type="button" size="sm" variant="light" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="button" size="sm" disabled={busy} onClick={submit}>
           <Check /> {busy ? "Saving..." : line || onClear ? "Save" : "Mark as booked"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

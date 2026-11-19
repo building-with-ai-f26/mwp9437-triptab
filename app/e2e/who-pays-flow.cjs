@@ -72,6 +72,7 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   // 2. Lift passes: an activity is one bill by default; one tap makes it everyone pays their own.
   await h.addPlan(o, '2027-02-06', 'Add to morning', { title: 'Lift passes', status: 'Planned', est: '80', perPerson: true });
   await card(o, '2027-02-06', 'Lift passes').click();
+  await h.openCost(h.dlg(o));
   result.activityDefaultsToSplit = (await h.dlg(o).getByRole('radio', { name: 'One bill, split' }).getAttribute('aria-checked')) === 'true';
   await h.dlg(o).getByRole('radio', { name: 'Everyone pays their own' }).click();
   await status(o).waitFor();
@@ -120,6 +121,7 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   // 4. The owner's screen follows: Confirmed, Vic's price hidden, his own and Priya's readable.
   await card(o, '2027-02-06', 'Lift passes').locator('[title="Confirmed and paid"]').waitFor({ timeout: 15000 });
   await card(o, '2027-02-06', 'Lift passes').click();
+  await h.openCost(h.dlg(o));
   const ownerSees = await panel(o).innerText();
   result.ownerSeesVicsPrice = /\$25|points/.test(ownerSees);
   result.ownerSeesOwnAndPriyas = /\$80/.test(ownerSees) && /\$90/.test(ownerSees);
