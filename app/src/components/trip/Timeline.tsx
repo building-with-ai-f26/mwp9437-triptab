@@ -15,6 +15,7 @@ import {
 } from "../../lib/model";
 import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
 import { canDrag, chipId, justDropped, slotId, quietPress } from "../../lib/move";
+import type { GoingBadge } from "../../lib/initials";
 
 export const KIND_ICON: Record<ItemKind, LucideIcon> = {
   activity: Palmtree,
@@ -36,6 +37,8 @@ export interface TimelineActions {
   note?: (item: Item) => string | null;
   /** Who's on a flight or transfer, and whether that's the whole group: on an overnight one, they need no bed. */
   aboard?: (item: Item) => { names: string[]; everyone: boolean };
+  /** Who's in, as initials on the card, or Everyone (Mike's 11/19 review); null on a trip of one. */
+  going?: (item: Item) => GoingBadge | null;
   /** On a Suggested plan: "Suggested by Jordan", or "AI idea, kept by you". */
   suggestedBy?: (item: Item) => string | null;
   /** Drag and drop (Owners, Day by day view): move a plan to a day and part. */
@@ -135,11 +138,39 @@ interface Drag {
   isDragging: boolean;
 }
 
+/** Who's in, at the end of a card's details: a few initials and +N, or Everyone. */
+function GoingFaces({ badge }: { badge: GoingBadge }) {
+  return (
+    <span className="ml-auto flex items-center" role="img" aria-label={badge.label} title={badge.label} data-testid="going">
+      {badge.everyone ? (
+        <span className="text-[11px] font-medium text-foreground/75">Everyone</span>
+      ) : (
+        <span className="flex -space-x-0.5">
+          {badge.shown.map((p) => (
+            <span
+              key={p.id}
+              className="grid size-6 place-items-center rounded-full bg-[#efe6da] text-[9px] font-bold tracking-tight text-foreground ring-2 ring-white"
+            >
+              {p.initials}
+            </span>
+          ))}
+          {badge.more > 0 && (
+            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#e9e7e3] px-1 text-[9px] font-bold text-foreground ring-2 ring-white">
+              +{badge.more}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Placement; actions: TimelineActions; drag?: Drag }) {
   const Icon = item.status === "suggested" ? Sparkles : KIND_ICON[item.kind];
   const price = priceLabel(item, actions.exactCents?.(item));
   const out = actions.isOut?.(item) ?? false;
   const confirmed = item.status === "confirmed";
+  const going = actions.going?.(item) ?? null;
 
   return (
     <button
@@ -160,7 +191,7 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
       data-out={out}
       data-draggable={drag ? "true" : undefined}
       onClick={() => open(actions, item)}
-      aria-label={`${item.title}, ${STATUS_LABEL[item.status]}${out ? ", you're out" : ""}`}
+      aria-label={`${item.title}, ${STATUS_LABEL[item.status]}${out ? ", you're out" : ""}${going ? `. ${going.label}` : ""}`}
     >
       {confirmed && (
         <span
@@ -199,6 +230,7 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
             {placed?.label && <span className="text-[11px] font-medium text-foreground/80">{placed.label}</span>}
             {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}
             {!out && actions.note?.(item) && <span className="text-[11px] text-foreground/75">{actions.note(item)}</span>}
+            {going && <GoingFaces badge={going} />}
           </div>
         </div>
       </div>

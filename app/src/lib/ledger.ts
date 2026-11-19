@@ -132,8 +132,9 @@ export function ownProgress(item: Pick<Item, "id" | "kind">, travelers: Traveler
 /** "Each pays their own · 2 of 3 booked". Names the mode, since a bare "0 of 2 booked" on a plan
  *  with no cost yet read as a mistake (Mike's 11/19 review). */
 export const bookedLabel = (p: OwnProgress): string =>
+  // "0 of 1 booked" read as confusing (Mike's 11/19 review): with nobody booked, say it plainly.
   p.booked.size === 0
-    ? `Each pays their own · none of ${p.going.length} booked yet`
+    ? `Each pays their own · ${p.going.length > 1 ? "nobody's booked yet" : "not booked yet"}`
     : `Each pays their own · ${p.booked.size} of ${p.going.length} booked`;
 
 /** Your part of one expense, or null if you're not in it. */

@@ -182,9 +182,10 @@
 }
 
 /* Itinerary item cards and their status styling: docs/DESIGN.md, section 7 (spring Dashboard.tsx).
-   Text is always dark and easy to read (Mike's call, 11/16). Planned and confirmed are glass with
-   the kind's colored stripe; suggested has the same glass and dark text, marked instead by a
-   dotted outline and no stripe color until it's decided. Paid is the $ check on top. */
+   Text is always dark and easy to read (Mike's call, 11/16), and every plan card is opaque white,
+   with no glass, so the photo behind never shows through (Mike's 11/19 review). Planned and
+   confirmed carry the kind's colored stripe; suggested is marked by a dotted outline and no stripe
+   color until it's decided. Paid is the $ check on top. */
 @layer components {
   .item-card {
     position: relative;
@@ -193,14 +194,10 @@
     text-align: left;
     border-radius: 1rem;
     padding: 0.75rem 0.875rem;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.07);
     border-left-width: 4px;
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4) brightness(1.05);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .item-card:hover {
@@ -225,10 +222,11 @@
   }
   /* A slot a plan runs on into (a red-eye's morning, day 2 of skiing): the same plan, lighter. */
   .item-card[data-continued="true"] {
-    background: rgba(255, 255, 255, 0.32);
     box-shadow: none;
+    color: color-mix(in oklab, var(--color-foreground) 75%, transparent);
   }
-  .item-card[data-out="true"] {
+  /* Opted out: the card stays opaque; what's on it fades. */
+  .item-card[data-out="true"] > * {
     opacity: 0.5;
   }
 }

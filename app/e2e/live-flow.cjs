@@ -41,7 +41,8 @@ const h = require('./helpers.cjs');
   await v.locator('#day-2027-02-06').getByText('Fondue at La Caleche').click();
   const t1 = Date.now();
   await h.dlg(v).getByRole('radio', { name: "I'm out" }).click();
-  await o.locator('#day-2027-02-06').getByText('1 of 2 in').waitFor({ timeout: 15000 });
+  // The card's initials say who's in (11/19): just the owner now.
+  await o.locator('#day-2027-02-06 [data-testid="going"][aria-label="You are in"]').waitFor({ timeout: 15000 });
   result.ownerSawOptOutAfterMs = Date.now() - t1;
   await v.locator('#day-2027-02-06').scrollIntoViewIfNeeded();
 
