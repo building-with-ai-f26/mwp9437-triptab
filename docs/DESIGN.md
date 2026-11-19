@@ -47,7 +47,7 @@ All from the `@layer utilities` block in `src/index.css`. The glass only works o
 | `.glass` | white 8% | `blur(8px) saturate(1.3)` | white 15% | inset top highlight white 20% | Small chips: day chips, icon buttons, the day-number tile |
 | `.glass-dark` | black 12% | `blur(8px) saturate(1.3)` | white 8% | inset white 10% | Dark chips (rare) |
 | `.glass-card` | white 12% | `blur(12px) saturate(1.4) brightness(1.05)` | white 25% | `0 8px 32px rgba(0,0,0,.08)` plus inset highlights | Sticky header, sticky day-chip bar, landing entry cards, trip cards |
-| `.glass-card-solid` | white 25% | `blur(16px) saturate(1.4) brightness(1.05)` | white 30% | same as `.glass-card` | Itinerary items and sidebar cards (the readable layer) |
+| `.glass-card-solid` | white 25% | `blur(16px) saturate(1.4) brightness(1.05)` | white 30% | same as `.glass-card` | Sidebar cards (the readable layer); itinerary items were glass until 11/19 and are opaque white now (section 7) |
 | `.glass-card-readable` | rgb(30,30,30) at 88% | `blur(20px) saturate(1.3)` | white 15% | `0 8px 32px rgba(0,0,0,.3)` | Dialogs and drawers: dark glass with white text |
 
 All four transition `all 0.3s cubic-bezier(0.4, 0, 0.2, 1)`.
@@ -104,7 +104,9 @@ From `Dashboard.tsx` (the item card and the stay row) and `EditablePrice.tsx`.
 - **Suggested:** changed 11/16 (Mike's walkthrough: faint text was hard to read). The same glass and dark text as Planned, marked by a 2px dotted outline in the text color at 55% and no kind stripe, with the brown sparkle icon. The price keeps `~` and "est.".
 - **Planned:** new. Solid glass and the kind's stripe, so it reads as decided, but the price keeps `~` and "est." and there is no badge yet.
 - **Confirmed (paid):** spring's confirmed style with both badges together as the green "$ ✓", since confirming and logging the expense are now one step.
-- Opted out stays at 50% opacity.
+- Opted out: what's on the card fades to 50%; the card itself stays opaque (since 11/19).
+- **Every plan card is opaque white (Mike's 11/19 review),** across the board: the day view, stays, overnight rows, the week view and the card you drag. `.item-card` is `#fff` with a hairline `rgba(0,0,0,.07)` border, the kind's 4px stripe and a soft `0 4px 16px rgba(0,0,0,.08)` shadow; no backdrop blur, so the trip photo never shows through. A slot a plan runs on into keeps the white, drops the shadow and sets its text at 75%.
+- **Who's going (11/19):** on a trip of two or more, each card ends with the initials of who's in, as 24px opaque circles (`#efe6da`, 9px bold, a 2px white ring, overlapping by 2px), you first, up to four, or three and a `+N`. When the whole group is in it says Everyone instead. The card's label reads the names ("Julia Bell, Vic and you are in"). The old "3 of 4 in" and "1 on it" counts are gone on those trips.
 
 ## 8. Dialogs
 

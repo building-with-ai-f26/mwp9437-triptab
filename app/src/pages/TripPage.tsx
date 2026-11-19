@@ -18,6 +18,7 @@ import { ExpenseDialog, MoneyCard, TravelCard, type ExpenseTarget } from "../com
 import { MoneyList } from "../components/trip/MoneyList";
 import { moneyLines } from "../lib/moneyLines";
 import { useWide } from "../lib/useWide";
+import { goingBadge } from "../lib/initials";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
@@ -332,10 +333,13 @@ export default function TripPage() {
       }
       const share = myShareOf(expenseByItem.get(item.id), meId);
       if (item.status === "confirmed" && share != null) return `Your share ${dollars(share)}`;
+      // With two or more on the trip, the initials on the card say who's in (11/19).
+      if (travelers.length > 1) return null;
       const n = goingList(item, travelers, itemPeople).length;
       if (item.kind === "flight") return `${n} on it`;
-      return n < travelers.length ? `${n} of ${travelers.length} in` : null;
+      return null;
     },
+    going: (item) => goingBadge(goingList(item, travelers, itemPeople), travelers.length, meId),
   };
 
   /** PostHog: an own line was logged; and the plan's status, which follows the lines, if it moved. */

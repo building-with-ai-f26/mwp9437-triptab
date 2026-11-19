@@ -192,7 +192,7 @@ describe("everyone pays their own", () => {
     const marks = [{ item_id: "lift", traveler_id: "mike" }, { item_id: "lift", traveler_id: "vic" }, { item_id: "other", traveler_id: "priya" }];
     const p = ownProgress(lift, people, [], marks);
     expect(bookedLabel(p)).toBe("Each pays their own · 2 of 3 booked");
-    expect(bookedLabel(ownProgress(lift, people, [], []))).toBe("Each pays their own · none of 3 booked yet");
+    expect(bookedLabel(ownProgress(lift, people, [], []))).toBe("Each pays their own · nobody's booked yet");
     expect(p.complete).toBe(false);
   });
 
@@ -208,7 +208,7 @@ describe("everyone pays their own", () => {
     const lift = { id: "lift", kind: "activity" as const };
     const marks = [{ item_id: "lift", traveler_id: "vic" }];
     const p = ownProgress(lift, people, [{ item_id: "lift", traveler_id: "vic", going: false }], marks);
-    expect(bookedLabel(p)).toBe("Each pays their own · none of 2 booked yet");
+    expect(bookedLabel(p)).toBe("Each pays their own · nobody's booked yet");
   });
 
   it("a flight counts only the people on it, and nobody going is never complete", () => {
