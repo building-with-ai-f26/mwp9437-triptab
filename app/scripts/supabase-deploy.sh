@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Production's Edge Functions and migrations change only through merges (C12, Mike's 11/18 call),
-# never by hand. cloudflare-build.sh runs this on main only, after the tests pass and before the
-# app is built, so a failed deploy means the app doesn't ship ahead of what it needs.
+# Edge Functions and migrations change only through the repo (C12, Mike's 11/18 call), never by
+# hand. cloudflare-build.sh runs this:
+#   bash scripts/supabase-deploy.sh             on main, after the tests pass: production
+#   bash scripts/supabase-deploy.sh dev         on a pull request's build, before the live database
+#                                               tests: TripTab dev (C15, Mike's 11/19 call), so dev
+#                                               gets every change before production does
 #
-# SUPABASE_ACCESS_TOKEN is a secret on Cloudflare's production builds only (Previews never get
-# it). Mike typed it; it is scoped to the TripTab project. Nobody reads its value; this script only
-# hands it to the Supabase CLI, which reads it from the environment.
+# SUPABASE_ACCESS_TOKEN is a build secret Mike typed, and nobody reads its value; this script only
+# hands it to the Supabase CLI, which reads it from the environment. There are two keys, one per
+# place: production's build settings hold a key scoped to TripTab, Previews Base one scoped to
+# TripTab dev. So a pull request's build can't reach production even by mistake: its key only
+# opens dev.
 #
 # supabase/DEPLOY says how far this goes:
-#   dry-run  report the migrations production doesn't have yet and check the functions can be
+#   dry-run  report the migrations the project doesn't have yet and check the functions can be
 #            reached, changing nothing; a failure here is reported but doesn't stop the build.
 #   on       deploy every Edge Function and apply new migrations; a failure stops the build.
 #            Then it downloads each function back and compares it with the repo, reporting only.
@@ -16,7 +21,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-PROD_REF=pptzbogslzicfyjooqra
+case "${1:-production}" in
+  production) REF=pptzbogslzicfyjooqra; WHERE=production ;;
+  dev) REF=iivseqkvixmvcpldarqy; WHERE="TripTab dev" ;;
+  *) echo "Usage: supabase-deploy.sh [production|dev]"; exit 2 ;;
+esac
 MODE=$(tr -d '[:space:]' < supabase/DEPLOY 2>/dev/null || echo off)
 SB=(npx --yes supabase@3.2.0)
 
@@ -25,8 +34,10 @@ if [ "$MODE" != "dry-run" ] && [ "$MODE" != "on" ]; then
   exit 0
 fi
 if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
-  echo "== Supabase deploy skipped: this build has no SUPABASE_ACCESS_TOKEN =="
-  [ "$MODE" = "on" ] && { echo "supabase/DEPLOY is on, so a missing key is an error."; exit 1; }
+  echo "== Supabase deploy to $WHERE skipped: this build has no SUPABASE_ACCESS_TOKEN =="
+  # Production must deploy once it's on. Dev can wait: until Previews Base has its key, dev keeps
+  # getting changes through the connector, and GitHub Actions never has one.
+  [ "$MODE" = "on" ] && [ "$REF" = pptzbogslzicfyjooqra ] && { echo "supabase/DEPLOY is on, so a missing key is an error."; exit 1; }
   exit 0
 fi
 
@@ -38,20 +49,20 @@ for dir in supabase/functions/*/; do
 done
 
 if [ "$MODE" = "dry-run" ]; then
-  echo "== Supabase (dry run): migrations production doesn't have yet =="
-  "${SB[@]}" db push --workdir . --remote="$PROD_REF" --dry-run || echo "!! dry run: db push failed (see above); nothing was changed"
-  echo "== Supabase (dry run): the functions production has now =="
-  "${SB[@]}" functions list --workdir . --remote="$PROD_REF" || echo "!! dry run: functions list failed (see above); nothing was changed"
+  echo "== Supabase (dry run): migrations $WHERE doesn't have yet =="
+  "${SB[@]}" db push --workdir . --remote="$REF" --dry-run || echo "!! dry run: db push failed (see above); nothing was changed"
+  echo "== Supabase (dry run): the functions $WHERE has now =="
+  "${SB[@]}" functions list --workdir . --remote="$REF" || echo "!! dry run: functions list failed (see above); nothing was changed"
   echo "== Supabase (dry run): would deploy ${functions[*]} =="
   exit 0
 fi
 
-echo "== Supabase: apply new migrations to production =="
-"${SB[@]}" db push --workdir . --remote="$PROD_REF" --yes
-echo "== Supabase: deploy Edge Functions to production: ${functions[*]} =="
-"${SB[@]}" functions deploy "${functions[@]}" --workdir . --remote="$PROD_REF" --use-api --yes
+echo "== Supabase: apply new migrations to $WHERE =="
+"${SB[@]}" db push --workdir . --remote="$REF" --yes
+echo "== Supabase: deploy Edge Functions to $WHERE: ${functions[*]} =="
+"${SB[@]}" functions deploy "${functions[@]}" --workdir . --remote="$REF" --use-api --yes
 
-# Check what landed (AGENTS.md rule 7): download each function as production now has it and
+# Check what landed (AGENTS.md rule 7): download each function as it now stands there and
 # compare every file with the repo. It reports and never stops the build: the deploy is done by
 # now, and a difference here means look at the log, not that the app shouldn't ship.
 echo "== Supabase: check what landed against the repo =="
@@ -61,7 +72,7 @@ for fn in "${functions[@]}"; do
   dir="$tmp/$fn"
   mkdir -p "$dir/supabase"
   cp supabase/config.toml "$dir/supabase/"
-  if ! "${SB[@]}" functions download "$fn" --workdir "$dir" --remote="$PROD_REF" --use-api > "$dir.log" 2>&1; then
+  if ! "${SB[@]}" functions download "$fn" --workdir "$dir" --remote="$REF" --use-api > "$dir.log" 2>&1; then
     echo "!! $fn: couldn't download it to check:"; tail -n 5 "$dir.log"; problems=$((problems + 1)); continue
   fi
   files=0; diffs=0
@@ -81,4 +92,4 @@ for fn in "${functions[@]}"; do
   fi
 done
 rm -rf "$tmp"
-if [ "$problems" -eq 0 ]; then echo "== Every function on production matches the repo =="; else echo "!! $problems of ${#functions[@]} functions need a look (above)"; fi
+if [ "$problems" -eq 0 ]; then echo "== Every function on $WHERE matches the repo =="; else echo "!! $problems of ${#functions[@]} functions need a look (above)"; fi
