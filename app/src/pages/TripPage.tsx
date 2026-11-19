@@ -18,6 +18,8 @@ import { ExpenseDialog, MoneyCard, TravelCard, type ExpenseTarget } from "../com
 import { MoneyList } from "../components/trip/MoneyList";
 import { moneyLines } from "../lib/moneyLines";
 import { useWide } from "../lib/useWide";
+import { Tour, type TourStep } from "../components/trip/Tour";
+import { markTourSeen, tourSeen } from "../lib/tour";
 import { goingBadge } from "../lib/initials";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
@@ -99,6 +101,8 @@ export default function TripPage() {
   // Desktop: every cost and payment takes the main column in place of the itinerary (11/19 review).
   const [moneyOpen, setMoneyOpen] = useState(false);
   const wide = useWide();
+  // Show me around (the 11/17 pod notes): once per device, the first time a trip opens.
+  const [touring, setTouring] = useState(false);
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
   // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
   const trackedEdit = useRef<string | null>(null);
@@ -176,6 +180,23 @@ export default function TripPage() {
         .catch(() => {});
     }
   }, [bundle, id, user, reload]);
+
+  // The guide starts on its own the first time a trip opens on this device, once nothing else is
+  // open (a review of plans from a description, the how-you-get-paid step after joining).
+  useEffect(() => {
+    if (!loaded || tourSeen()) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      if (tries > 120 || tourSeen()) return window.clearInterval(timer);
+      if (document.querySelector("dialog[open]")) return;
+      window.clearInterval(timer);
+      setMoneyOpen(false);
+      setTouring(true);
+      track("tour started", { auto: true });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [loaded]);
 
   const days = useMemo(
     () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items.map((i) => (moving[i.id] ? { ...i, ...moving[i.id] } : i))) : []),
@@ -427,6 +448,62 @@ export default function TripPage() {
       }}
     />
   );
+  const firstPlan = () => document.querySelector('main .item-card:not([data-continued="true"])');
+  const tourSteps: TourStep<Tab>[] = [
+    {
+      id: "itinerary",
+      tab: "itinerary",
+      title: "Your itinerary",
+      body: "Each day runs morning to night, with where everyone's staying at the end. Suggested plans are dotted, Planned ones are solid, and the green $ check means confirmed and paid.",
+      target: () => document.querySelector('[data-tour="itinerary"]'),
+    },
+    ...(editable
+      ? [
+          {
+            id: "add",
+            tab: "itinerary" as Tab,
+            title: "Add plans",
+            body: "Add a plan here, or tap any empty part of a day. AI help turns a pasted booking into plans, or finds ideas for the empty spots.",
+            target: () => document.querySelector('[data-tour="add"]'),
+          },
+        ]
+      : []),
+    ...(items.length
+      ? [
+          {
+            id: "plan",
+            tab: "itinerary" as Tab,
+            title: "Tap a plan",
+            body: `See who's going and opt in or out; its cost and who pays are inside.${editable ? (wide ? " Drag a plan to move it to another day or part of the day." : " Press and hold a plan to drag it to another day or part of the day.") : ""}`,
+            target: firstPlan,
+          },
+        ]
+      : []),
+    {
+      id: "todo",
+      tab: "todo",
+      title: "To do",
+      body: "What still needs doing before the trip, who's on it and by when.",
+      target: () => document.querySelector('section[aria-labelledby="actions-title"]'),
+    },
+    {
+      id: "money",
+      tab: "money",
+      title: "Money",
+      body: "Your balance and everyone's. Settle up shows the fewest payments to even out, with Pay with Venmo, and every cost and payment is a tap away. TripTab never moves money itself.",
+      target: () => document.querySelector('section[aria-labelledby="money-title"]'),
+    },
+    {
+      id: "people",
+      tab: "people",
+      title: "People",
+      body: editable
+        ? "Drop the group link in your group chat: each person picks their name and they're on the trip. Add how people pay you back here too."
+        : "Everyone on the trip, and how each of them gets paid back.",
+      target: () => document.querySelector('section[aria-labelledby="people-title"]'),
+    },
+  ];
+
   const travelCard = <TravelCard items={items} travelers={travelers} itemPeople={itemPeople} meId={meId} compact={!wide} onOpen={openPlan} />;
 
   const peopleCard = (
@@ -542,7 +619,7 @@ export default function TripPage() {
             <>
             {!wide && travelCard}
             <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
-              <div>
+              <div data-tour="itinerary">
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
                 <p className="mt-1.5 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-white/45 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">
                   <span className="inline-flex items-center gap-1.5 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-5 rounded-[4px] border-2 border-dotted border-foreground/55" />Suggested is dotted</span>
@@ -551,9 +628,20 @@ export default function TripPage() {
                     Confirmed (paid) <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
                   </span>
                 </p>
+                <button
+                  type="button"
+                  className="ml-1 mt-1 block text-xs font-semibold text-foreground/80 underline underline-offset-4"
+                  onClick={() => {
+                    setMoneyOpen(false);
+                    setTouring(true);
+                    track("tour started", { auto: false });
+                  }}
+                >
+                  Show me around
+                </button>
               </div>
               {editable && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" data-tour="add">
                   <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setChoosingAi(true)}>
                     <Sparkles /> AI help
                   </Button>
@@ -658,6 +746,19 @@ export default function TripPage() {
           </aside>
         </div>
       </div>
+
+      {touring && (
+        <Tour
+          steps={tourSteps}
+          onTab={setTab}
+          onClose={(finished, step) => {
+            setTouring(false);
+            markTourSeen();
+            setTab("itinerary");
+            track(finished ? "tour finished" : "tour skipped", { step: step + 1, steps: tourSteps.length });
+          }}
+        />
+      )}
 
       <ItemDialog
         state={dialog}
