@@ -160,7 +160,7 @@ export function PeopleCard({
                     )}
                     {canEdit && (t.email || t.phone) ? ` · ${t.email ?? t.phone}` : ""}
                   </p>
-                  {payReady && <PayLine person={t} />}
+                  {payReady && <PayLine person={t} isMe={me} />}
                 </div>
                 {canEdit && !me ? (
                   <select
@@ -388,34 +388,44 @@ function GroupLinkSection({
 export function AddPersonDialog({
   open,
   defaultRole,
+  canInvite,
   onClose,
   onAdd,
 }: {
   open: boolean;
   defaultRole: Role;
+  /** The group link is on, so an invite email has a link to carry. */
+  canInvite: boolean;
   onClose: () => void;
-  onAdd: (p: PersonDraft) => Promise<void>;
+  /** Adds them; with `invite`, emails them their invite too and says how that went. */
+  onAdd: (p: PersonDraft, invite: boolean) => Promise<string | null>;
 }) {
   return (
     <Dialog open={open} onClose={onClose} title="Add a person">
-      {open && <AddPersonForm defaultRole={defaultRole} onClose={onClose} onAdd={onAdd} />}
+      {open && <AddPersonForm defaultRole={defaultRole} canInvite={canInvite} onClose={onClose} onAdd={onAdd} />}
     </Dialog>
   );
 }
 
 function AddPersonForm({
   defaultRole,
+  canInvite,
   onClose,
   onAdd,
 }: {
   defaultRole: Role;
+  canInvite: boolean;
   onClose: () => void;
-  onAdd: (p: PersonDraft) => Promise<void>;
+  onAdd: (p: PersonDraft, invite: boolean) => Promise<string | null>;
 }) {
   const [p, setP] = useState<PersonDraft>({ name: "", email: "", phone: "", venmo: "", role: defaultRole });
+  // Adding someone's email sends their invite unless you untick this (Mike's 11/19 review: Julia
+  // was added with her email and got nothing, since invites only went from the People list).
+  const [invite, setInvite] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
+  const [emailNote, setEmailNote] = useState<string | null>(null);
 
   const submit = async () => {
     if (!p.name.trim()) {
@@ -433,7 +443,8 @@ function AddPersonForm({
     setBusy(true);
     setError(null);
     try {
-      await onAdd(p);
+      const sending = invite && canInvite && Boolean(p.email.trim());
+      setEmailNote(await onAdd(p, sending));
       setAdded((a) => [...a, p.name.trim()]);
       setP({ name: "", email: "", phone: "", venmo: "", role: p.role });
     } catch (e) {
@@ -450,27 +461,40 @@ function AddPersonForm({
       }}
     >
       <p className="mb-4 text-sm text-white/70">
-        They're on the trip right away, so you can put them on plans and costs before they ever open TripTab. Send them
-        their invite from the People list.
+        They're on the trip right away, so you can put them on plans and costs before they ever open TripTab. Add their
+        email and TripTab sends their invite, or send it later from the People list.
       </p>
       {added.length > 0 && (
-        <p className="mb-3 rounded-xl bg-green-500/15 px-3 py-2 text-sm text-green-200">
-          Added {added.join(", ")}. Add another, or close.
+        <p className="mb-3 rounded-xl bg-green-500/15 px-3 py-2 text-sm text-green-200" data-testid="added-note">
+          Added {added.join(", ")}.{emailNote ? ` ${emailNote}` : ""} Add another, or close.
         </p>
       )}
       <DarkField label="Name">
         <input className="field-dark" value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} autoFocus />
       </DarkField>
       <div className="grid gap-x-2 sm:grid-cols-2">
-        <DarkField label="Email (optional)">
-          <input
-            className="field-dark"
-            type="email"
-            inputMode="email"
-            value={p.email}
-            onChange={(e) => setP({ ...p, email: e.target.value })}
-          />
-        </DarkField>
+        <div>
+          <DarkField label="Email (optional)">
+            <input
+              className="field-dark"
+              type="email"
+              inputMode="email"
+              value={p.email}
+              onChange={(e) => setP({ ...p, email: e.target.value })}
+            />
+          </DarkField>
+          {p.email.trim() && (
+            <label className="-mt-2 mb-3 flex items-center gap-2 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={invite && canInvite}
+                disabled={!canInvite}
+                onChange={(e) => setInvite(e.target.checked)}
+              />
+              {canInvite ? "Email them an invite now" : "Turn the group link on to email invites"}
+            </label>
+          )}
+        </div>
         <DarkField label="Phone (optional)">
           <input
             className="field-dark"

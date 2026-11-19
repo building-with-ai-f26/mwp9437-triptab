@@ -123,6 +123,9 @@ describe("recorded payments", () => {
     const url = new URL(venmoLink("mike-p", 3850, "TripTab: Euro ski trip"));
     expect(url.origin).toBe("https://venmo.com");
     expect(Object.fromEntries(url.searchParams)).toEqual({ txn: "pay", audience: "private", recipients: "mike-p", amount: "38.50", note: "TripTab: Euro ski trip" });
+    // Venmo shows a "+" as it is, so spaces must go as %20 (Mike's 11/19 review).
+    expect(url.search).not.toContain("+");
+    expect(url.search).toContain("TripTab%3A%20Euro%20ski%20trip");
   });
 });
 
@@ -188,7 +191,8 @@ describe("everyone pays their own", () => {
     const lift = { id: "lift", kind: "activity" as const };
     const marks = [{ item_id: "lift", traveler_id: "mike" }, { item_id: "lift", traveler_id: "vic" }, { item_id: "other", traveler_id: "priya" }];
     const p = ownProgress(lift, people, [], marks);
-    expect(bookedLabel(p)).toBe("2 of 3 booked");
+    expect(bookedLabel(p)).toBe("Each pays their own · 2 of 3 booked");
+    expect(bookedLabel(ownProgress(lift, people, [], []))).toBe("Each pays their own · none of 3 booked yet");
     expect(p.complete).toBe(false);
   });
 
@@ -196,7 +200,7 @@ describe("everyone pays their own", () => {
     const lift = { id: "lift", kind: "activity" as const };
     const marks = [{ item_id: "lift", traveler_id: "mike" }, { item_id: "lift", traveler_id: "vic" }];
     const p = ownProgress(lift, people, [{ item_id: "lift", traveler_id: "priya", going: false }], marks);
-    expect(bookedLabel(p)).toBe("2 of 2 booked");
+    expect(bookedLabel(p)).toBe("Each pays their own · 2 of 2 booked");
     expect(p.complete).toBe(true);
   });
 
@@ -204,14 +208,14 @@ describe("everyone pays their own", () => {
     const lift = { id: "lift", kind: "activity" as const };
     const marks = [{ item_id: "lift", traveler_id: "vic" }];
     const p = ownProgress(lift, people, [{ item_id: "lift", traveler_id: "vic", going: false }], marks);
-    expect(bookedLabel(p)).toBe("0 of 2 booked");
+    expect(bookedLabel(p)).toBe("Each pays their own · none of 2 booked yet");
   });
 
   it("a flight counts only the people on it, and nobody going is never complete", () => {
     const flight = { id: "f", kind: "flight" as const };
     expect(ownProgress(flight, people, [], []).complete).toBe(false);
     const p = ownProgress(flight, people, [{ item_id: "f", traveler_id: "mike", going: true }], [{ item_id: "f", traveler_id: "mike" }]);
-    expect(bookedLabel(p)).toBe("1 of 1 booked");
+    expect(bookedLabel(p)).toBe("Each pays their own · 1 of 1 booked");
     expect(p.complete).toBe(true);
   });
 });

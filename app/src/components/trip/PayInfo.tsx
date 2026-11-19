@@ -212,20 +212,38 @@ function VenmoForForm({
   );
 }
 
-/** "Venmo @jordan-b · Zelle (555) 123-4567", with a lock once it's theirs. On light cards. */
-export function PayLine({ person }: { person: Traveler }) {
+/**
+ * "Venmo @jordan-b · Zelle (555) 123-4567", with a lock once it's theirs. On light cards. The lock
+ * is a button: tapping it says what it means (Mike's 11/19 review, where it seemed to do nothing).
+ */
+export function PayLine({ person, isMe = false }: { person: Traveler; isMe?: boolean }) {
+  const [why, setWhy] = useState(false);
   if (!person.venmo && !person.zelle) return null;
   const parts = [person.venmo ? `Venmo @${person.venmo}` : null, person.zelle ? `Zelle ${zelleLabel(person.zelle)}` : null].filter(Boolean);
   return (
-    <p className="flex min-w-0 items-start gap-1 text-xs text-muted-foreground" data-testid="pay-line">
-      {person.pay_locked && (
-        <>
-          <Lock className="mt-0.5 size-3 shrink-0" aria-hidden />
-          <span className="sr-only">Set by {person.name}: </span>
-        </>
+    <div className="min-w-0 text-xs text-muted-foreground" data-testid="pay-line">
+      <p className="flex min-w-0 items-start gap-1">
+        {person.pay_locked && (
+          <button
+            type="button"
+            className="-m-1.5 shrink-0 rounded-full p-1.5 hover:bg-white/50"
+            aria-label={isMe ? "Locked: only you can change this. What does that mean?" : `Locked: only ${person.name} can change this. What does that mean?`}
+            aria-expanded={why}
+            onClick={() => setWhy((w) => !w)}
+          >
+            <Lock className="size-3" aria-hidden />
+          </button>
+        )}
+        <span className="min-w-0 break-words">{parts.join(" · ")}</span>
+      </p>
+      {why && (
+        <p className="mt-1 rounded-lg bg-white/60 px-2 py-1 text-foreground" data-testid="pay-lock-why">
+          {isMe
+            ? "Locked to you: you set it, so only you can change it, here in your row. Nobody else on the trip can."
+            : `Locked: ${person.name} set it, so only ${person.name} can change it. Owners can't.`}
+        </p>
       )}
-      <span className="min-w-0 break-words">{parts.join(" · ")}</span>
-    </p>
+    </div>
   );
 }
 

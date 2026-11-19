@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { AlertTriangle, CalendarPlus, Check, ExternalLink, FileUp, Sparkles } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
-import { draftProblems, toDraft, usdCost, type Draft, type ImportResult } from "../../lib/importPlans";
+import { draftProblems, toDraft, type Draft, type ImportResult } from "../../lib/importPlans";
 import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
 
 const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
@@ -291,10 +291,10 @@ export function ImportDialog({
                     </label>
                     <label className="mb-2 block">
                       <span className="label-luxury mb-1 block text-white/80">
-                        {d.kind === "stay" ? "Check in" : "Day"}
+                        {d.kind === "stay" ? "Check in" : "Date"}
                         {flag("day")}
                       </span>
-                      <select className="field-dark" value={d.day} onChange={(e) => patch(i, { day: e.target.value })} aria-label={d.kind === "stay" ? "Check in" : "Day"}>
+                      <select className="field-dark" value={d.day} onChange={(e) => patch(i, { day: e.target.value })} aria-label={d.kind === "stay" ? "Check in" : "Date"}>
                         <option value="">Pick a day</option>
                         {days.map((day) => (
                           <option key={day} value={day}>
@@ -380,11 +380,7 @@ export function ImportDialog({
               );
             })}
           </ul>
-
-          <p className="mt-3 text-xs text-white/70" data-testid="import-cost">
-            This import cost {usdCost(result.usage.cost_usd)} at list price
-            {result.usage.searches ? `, with ${result.usage.searches} web ${result.usage.searches === 1 ? "search" : "searches"}` : ""}.
-          </p>
+          {/* The AI cost is logged (ai_calls) but never shown: people would read it as a charge (Mike's 11/19 review). */}
           {error && (
             <p role="alert" className="mt-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
               {error}

@@ -33,7 +33,7 @@ describe("how people pay you", () => {
   });
 
   it("notes a Venmo payment with TripTab, the trip and its dates", () => {
-    expect(venmoNote("Pod test", "Nov 20 to 22, 2026")).toBe("TripTab · Pod test · Nov 20 to 22, 2026");
-    expect(venmoNote("  ", "Nov 20 to 22, 2026")).toBe("TripTab · Nov 20 to 22, 2026");
+    expect(venmoNote("Pod test")).toBe("TripTab · Pod test");
+    expect(venmoNote("  ")).toBe("TripTab");
   });
 });

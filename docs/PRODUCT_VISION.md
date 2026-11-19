@@ -234,9 +234,28 @@ You see a real gap in the market and would keep TripTab running after the course
 
 - **TripTab emails invites itself,** from triptab.org through Resend, now that the domain is bought; it goes in with the sign-in work in Build 3. The Text button still opens your own Messages; TripTab texting people itself stays beyond the course.
 - **Build mode.** Nothing waits on a pod test any more; build the vision as far as it goes, each piece verified before the next.
-- **Your own costs can go in.** What you pay on your own, like a $900 flight, can be logged so you see your total cost; it is never split.
-- **One AI button.** Import and Plan with AI open from one button with two choices, I have bookings and Give me ideas; underneath they stay two separate functions.
-- **Calls happen in chat.** At most five at a time, each with a recommendation. Ones you haven't answered wait in Open calls on the Run book tab; answered ones are archived on the For Claude tab.
+
+* **Your own costs can go in.** What you pay on your own, like a $900 flight, can be logged so you see your total cost; it is never split.
+* **One AI button.** Import and Plan with AI open from one button with two choices, I have bookings and Give me ideas; underneath they stay two separate functions.
+* **Calls happen in chat.** At most five at a time, each with a recommendation. Ones you haven't answered wait in Open calls on the Run book tab; answered ones are archived on the For Claude tab.
+
+**Raised 11/19** (your phone review on triptab.org, with Julia joining; built from 11/19)
+
+- Google sign-in made a second account: you'd signed up with your alias address, and Google used your NetID address. Link or merge them (C19).
+- People: the lock next to a Venmo name does nothing when tapped; an Owner can add someone's Venmo but not their Zelle.
+- Pay with Venmo: the note shows + signs for spaces and the trip's dates; drop the date.
+- Money: every cost in one list, plans with a cost, other expenses and payments, sorted by date with who paid and what you owe, filterable by kind (several at once), like Splitwise. On desktop, Money stays a summary that opens the full list.
+- Your flights doesn't belong under Money: make it Travel and lodging (car rentals, stays, flights). On desktop, To do sits above Money.
+- Describe it: don't park a question about the trip's dates on the To do list (fix the dates instead); skip needless questions (a lift ticket for a ski day); parts of the day select all that apply in the review, as in the dialog; a where for each plan (what: Skiing, where: Loon Mountain); Drive to Newton, not Depart for Newton; never show the AI cost.
+- The plan dialog, progressively disclosed: lead with what, kind, date (not Day), parts of the day and status (Suggested, Planned, Confirmed). Cost details behind Add cost details; confirm a plan with no cost (a christening, a season-pass ski day) or before you know it; times and multi-day behind a toggle; transport uses the same parts as everything else; times in 15-minute steps.
+- 0 of 1 booked on plans without a cost is confusing.
+- Plan cards fully opaque white, across the board.
+- Who's going: initials on each plan's card (MP, JB), so a big group sees who's in.
+- To-dos from Describe it open the plan they're about when tapped; addresses autocomplete.
+- To do's example text (Book the Barcelona flight) reads like a real to-do; use a neutral example.
+- Drag on iPhone: a press held still brings up iOS's own menu.
+- Adding Julia with her email sent no email; Text it to the group worked. Link previews in iMessage should show an image.
+- Worked well: drag and drop (scrolling behind it, dropping onto a filled slot), the frosted part-of-day tags, Zelle copying the number, Pay with Venmo opening Venmo, Julia joining with Google.
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 

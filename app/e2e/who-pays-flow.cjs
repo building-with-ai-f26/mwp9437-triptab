@@ -86,19 +86,19 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   await panel(o).getByRole('button', { name: 'Log my cost' }).click();
   await panel(o).getByLabel('Your own cost').fill('80');
   await panel(o).getByRole('button', { name: 'Mark as booked' }).click();
-  await status(o).getByText('1 of 3 booked').waitFor();
+  await status(o).getByText('Each pays their own · 1 of 3 booked').waitFor();
   result.switchLockedOnceLogged = (await h.dlg(o).getByRole('radio', { name: 'One bill, split' }).count()) === 0;
   await panel(o).getByRole('button', { name: 'Log for Priya' }).click();
   await panel(o).getByLabel("Priya's own cost").fill('90');
   await panel(o).getByRole('button', { name: 'Mark as booked' }).click();
-  await status(o).getByText('Planned, 2 of 3 booked').waitFor();
+  await status(o).getByText('Planned, Each pays their own · 2 of 3 booked').waitFor();
   result.ownerStatus = await status(o).innerText();
   await h.shot(o, 'who-pays-own-lines-desktop');
   await h.dlg(o).getByRole('button', { name: 'Close' }).click();
   result.ownerCard = (await card(o, '2027-02-06', 'Lift passes').innerText()).replace(/\s+/g, ' ');
 
   // 3. Vic, a viewer on a phone: sees who has booked but no prices, and logs his own with points.
-  await card(v, '2027-02-06', 'Lift passes').getByText('2 of 3 booked').waitFor({ timeout: 15000 });
+  await card(v, '2027-02-06', 'Lift passes').getByText('Each pays their own · 2 of 3 booked').waitFor({ timeout: 15000 });
   await card(v, '2027-02-06', 'Lift passes').click();
   const seen = await panel(v).innerText();
   result.viewerSees = seen.replace(/\s+/g, ' ').slice(0, 160);

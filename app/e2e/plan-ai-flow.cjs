@@ -48,7 +48,8 @@ async function run(browser, label, opts, result) {
   r.ideas = await cards.count();
   r.titles = (await cards.allInnerTexts()).map((t) => t.split('\n')[0]);
   r.sources = await cards.locator('a').count();
-  r.cost = (await h.dlg(p).getByTestId('plan-ai-cost').innerText()).trim();
+  // The AI cost is logged but never shown to people (Mike's 11/19 review).
+  r.costShown = await h.dlg(p).getByTestId('plan-ai-cost').count();
   await h.shot(p, `${SHOTS}-review-${label}`);
   if (r.ideas === 0) return;
 
@@ -97,7 +98,7 @@ async function run(browser, label, opts, result) {
       if (label === 'errors') continue;
       const ok =
         r.choices.join('|') === 'I have bookings|Give me ideas' && r.choicesOverflow <= 0 && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
-        /^ai idea, kept by you$/i.test(r.suggestedBy) && r.movedPlaced && r.overflow <= 0;
+        /^ai idea, kept by you$/i.test(r.suggestedBy) && r.movedPlaced && r.overflow <= 0 && r.costShown === 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }
   }

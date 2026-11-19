@@ -28,7 +28,7 @@ async function run(browser, label, opts, result) {
   // 1. Add a plan on the day before the trip: the dialog says it will stretch the trip.
   await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
   await h.dlg(p).getByLabel('What').fill('Airport hotel shuttle');
-  await h.dlg(p).getByRole('combobox', { name: /^Day/ }).first().selectOption('2027-02-04');
+  await h.dlg(p).getByRole('combobox', { name: /^Date/ }).first().selectOption('2027-02-04');
   r.note = (await h.dlg(p).getByTestId('extends-trip').innerText()).trim();
   await h.dlg(p).getByTestId('extends-trip').scrollIntoViewIfNeeded();
   await h.shot(p, `extend-add-plan-${label}`);
@@ -53,7 +53,7 @@ async function run(browser, label, opts, result) {
   await card.getByRole('button', { name: 'Add Wed, Feb 3 to the trip' }).click();
   await card.getByRole('button', { name: /Add Wed, Feb 3/ }).waitFor({ state: 'detached' });
   r.keptAfter = await card.getByLabel('Keep this one').isChecked();
-  r.dayAfter = await card.getByLabel('Day', { exact: true }).inputValue();
+  r.dayAfter = await card.getByLabel('Date', { exact: true }).inputValue();
   await h.dlg(p).getByRole('button', { name: /Add 1 to the trip/ }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 }).catch(() => {});
   if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});

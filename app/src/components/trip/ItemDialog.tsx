@@ -410,7 +410,7 @@ function ItemForm({
         </>
       ) : (
         <>
-          <DarkField label="Day">
+          <DarkField label="Date">
             <select
               className="field-dark"
               value={day}
@@ -466,6 +466,7 @@ function ItemForm({
               <DarkField label={flight ? "Departs at (optional)" : "Leaves at (optional)"}>
                 <input
                   type="time"
+                  step={60}
                   className="field-dark"
                   value={startTime}
                   onChange={(e) => {
@@ -477,6 +478,7 @@ function ItemForm({
               <DarkField label={flight ? "Lands at (optional)" : "Arrives at (optional)"}>
                 <input
                   type="time"
+                  step={60}
                   className="field-dark"
                   value={endTime}
                   onChange={(e) => {
@@ -511,6 +513,7 @@ function ItemForm({
               <DarkField label="Starts at (optional)">
                 <input
                   type="time"
+                  step={900} /* quarter hours (Mike's 11/19 review); a flight keeps its minute */
                   className="field-dark"
                   value={startTime}
                   onChange={(e) => {
@@ -524,6 +527,7 @@ function ItemForm({
               <DarkField label="Ends at (optional)">
                 <input
                   type="time"
+                  step={900} /* quarter hours (Mike's 11/19 review); a flight keeps its minute */
                   className="field-dark"
                   value={endTime}
                   onChange={(e) => {

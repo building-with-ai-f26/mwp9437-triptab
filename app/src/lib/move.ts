@@ -101,3 +101,27 @@ export const justDropped = Object.assign(() => Date.now() < quietUntil, {
     quietUntil = Date.now() + 350;
   },
 });
+
+/**
+ * While a finger is down on a plan, nothing on the page selects text or opens iOS's own long-press
+ * menu (Mike's 11/19 review: holding a plan still brought that menu up). The card itself already
+ * can't be selected; this covers the rest of the page under and around the finger, and ends as
+ * soon as the finger lifts.
+ */
+const swallow = (e: Event) => e.preventDefault();
+export function quietPress(): void {
+  const html = document.documentElement;
+  if (html.classList.contains("press-quiet")) return;
+  html.classList.add("press-quiet");
+  document.addEventListener("selectstart", swallow);
+  document.addEventListener("contextmenu", swallow);
+  const done = () => {
+    html.classList.remove("press-quiet");
+    document.removeEventListener("selectstart", swallow);
+    document.removeEventListener("contextmenu", swallow);
+    window.removeEventListener("touchend", done);
+    window.removeEventListener("touchcancel", done);
+  };
+  window.addEventListener("touchend", done);
+  window.addEventListener("touchcancel", done);
+}

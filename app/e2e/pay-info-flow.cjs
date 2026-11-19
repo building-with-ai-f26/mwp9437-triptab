@@ -54,7 +54,13 @@ async function run(browser, label, opts, result) {
   await tab(o, 'People');
   const vicRow = people(o).locator('li').filter({ hasText: 'Vic' });
   r.vicLine = (await vicRow.getByTestId('pay-line').innerText()).trim();
-  r.vicLocked = (await vicRow.getByText('Set by Vic:').count()) === 1;
+  // The lock is a button that says what it means (Mike's 11/19 review: tapping it did nothing).
+  const lock = vicRow.getByRole('button', { name: /^Locked: only Vic can change this/ });
+  r.vicLocked = (await lock.count()) === 1;
+  if (r.vicLocked) {
+    await lock.click();
+    r.lockWhy = (await vicRow.getByTestId('pay-lock-why').innerText()).trim();
+  }
   r.noChangeForVic = (await vicRow.getByRole('button', { name: /Venmo/ }).count()) === 0;
   r.ownButton = (await people(o).getByRole('button', { name: 'Add how people pay you' }).count()) === 1;
   r.peopleOverflow = await h.overflowX(o);
@@ -97,7 +103,7 @@ async function run(browser, label, opts, result) {
       const ok =
         r.prefilled === '@vic-guess' && /10 digits/.test(r.shortZelle) && r.stepOverflow <= 0 &&
         /Venmo @vic-tt · Zelle \(555\) 123-4567/.test(r.vicLine) && r.vicLocked && r.noChangeForVic && r.ownButton &&
-        r.venmo.recipients === 'vic-tt' && r.venmo.amount === '45.00' && /^TripTab · .+ · .+\d{4}$/.test(r.venmo.note) &&
+        r.venmo.recipients === 'vic-tt' && r.venmo.amount === '45.00' && /^TripTab · [^·]+$/.test(r.venmo.note) && /only Vic can change it/.test(r.lockWhy ?? '') &&
         r.zelleButton === 'Zelle (555) 123-4567' && r.noChangeInSettle && r.peopleOverflow <= 0 && r.settleOverflow <= 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }

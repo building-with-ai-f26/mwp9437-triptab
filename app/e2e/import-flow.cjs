@@ -60,7 +60,8 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByRole('button', { name: 'Find the plans' }).click();
   await h.dlg(p).getByTestId('import-summary').waitFor({ timeout: 70000 });
   r.summary = (await h.dlg(p).getByTestId('import-summary').innerText()).trim();
-  r.cost = (await h.dlg(p).getByTestId('import-cost').innerText()).trim();
+  // The AI cost is logged but never shown to people (Mike's 11/19 review).
+  r.costShown = await h.dlg(p).getByTestId('import-cost').count();
   const cards = h.dlg(p).getByTestId('proposal');
   r.proposed = await cards.count();
   await h.shot(p, `${SHOTS}-review-${label}`);
@@ -80,7 +81,7 @@ async function run(browser, label, opts, result) {
     await keep(0).check();
     await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
     r.refusedWithoutDay = (await cards.nth(0).getByRole('alert').innerText()).trim();
-    await cards.nth(0).getByLabel('Day', { exact: true }).selectOption('2027-02-05');
+    await cards.nth(0).getByLabel('Date', { exact: true }).selectOption('2027-02-05');
     // The stay was priced in euros: the Owner types what the card was charged.
     await cards.nth(1).getByLabel('Cost').fill('3460');
     await cards.nth(1).getByLabel(/Already paid/).check();
@@ -120,6 +121,8 @@ async function run(browser, label, opts, result) {
   result.errors = h.errors;
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
+  // The AI cost is logged but never shown (Mike's 11/19 review).
+  if ([result.desktop, result.phone].some((r) => r && r.costShown)) process.exit(1);
 })().catch((e) => {
   console.error('FLOW FAILED:', e.message.split('\n').slice(0, 4).join(' | '));
   console.error('errors so far:', h.errors);
