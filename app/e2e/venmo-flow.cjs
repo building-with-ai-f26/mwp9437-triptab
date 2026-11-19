@@ -26,7 +26,8 @@ async function addExpense(page, what, amount, paidBy) {
   await d.getByLabel('Amount').fill(amount);
   await d.getByLabel('Paid by').selectOption({ label: paidBy });
   await d.getByRole('button', { name: 'Add to the tab' }).click();
-  await money(page).getByText(what).waitFor();
+  // The dialog closes once it's saved; the Money card is a summary now, with no lines (11/19).
+  await h.dlg(page).waitFor({ state: 'detached' });
 }
 
 async function run(browser, label, opts, result) {

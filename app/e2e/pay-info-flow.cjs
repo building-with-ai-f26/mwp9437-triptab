@@ -74,7 +74,8 @@ async function run(browser, label, opts, result) {
   await d.getByLabel('Amount').fill('90');
   await d.getByLabel('Paid by').selectOption({ label: 'Vic' });
   await d.getByRole('button', { name: 'Add to the tab' }).click();
-  await money(o).getByText('Chalet groceries').waitFor();
+  // The dialog closes once it's saved; the Money card is a summary now, with no lines (11/19).
+  await h.dlg(o).waitFor({ state: 'detached' });
   await money(o).getByRole('button', { name: 'Settle up' }).click();
   d = h.dlg(o);
   const toVic = d.getByTestId('transfer').filter({ hasText: 'Vic' });
