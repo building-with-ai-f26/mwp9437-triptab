@@ -28,7 +28,7 @@ async function run(browser, label, opts, result) {
   // 1. Add a plan on the day before the trip: the dialog says it will stretch the trip.
   await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
   await h.dlg(p).getByLabel('What').fill('Airport hotel shuttle');
-  await h.dlg(p).getByRole('combobox', { name: /^Day/ }).first().selectOption('2027-02-04');
+  await h.dlg(p).getByRole('combobox', { name: /^Date/ }).first().selectOption('2027-02-04');
   r.note = (await h.dlg(p).getByTestId('extends-trip').innerText()).trim();
   await h.dlg(p).getByTestId('extends-trip').scrollIntoViewIfNeeded();
   await h.shot(p, `extend-add-plan-${label}`);
