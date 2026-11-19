@@ -2,12 +2,52 @@ import { useState, type FormEvent } from "react";
 import { Button, DarkField } from "./ui";
 import { useAuth } from "../lib/auth";
 
+/** This device last signed in with email, so the email form opens straight away next time. */
+const EMAIL_PREF = "triptab.sign_in_with_email";
+const readEmailPref = () => {
+  try {
+    return localStorage.getItem(EMAIL_PREF) === "1";
+  } catch {
+    return false;
+  }
+};
+const writeEmailPref = (on: boolean) => {
+  try {
+    if (on) localStorage.setItem(EMAIL_PREF, "1");
+    else localStorage.removeItem(EMAIL_PREF);
+  } catch {
+    // storage can be unavailable; the form just starts with Google next time
+  }
+};
+
+/** Google's sign-in button, light theme (Google's branding rules: white, a thin gray edge, the four-color G). */
+function GoogleButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-5 text-[15px] font-semibold text-[#1f1f1f] shadow-sm transition-colors hover:bg-[#f2f2f2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60"
+    >
+      <svg viewBox="0 0 48 48" className="size-5 shrink-0" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+      </svg>
+      Continue with Google
+    </button>
+  );
+}
+
 /**
  * Create an account or sign in, on dark glass. Used on the sign-in page and the join page.
  * The two are separate, labeled tabs at the top (11/16 walkthrough: the old small link at the
  * bottom was easy to miss, so people with an account tried to create a second one).
- * Where the project has Google sign-in turned on, "Continue with Google" sits above both; it
- * signs in or creates the account in one step, and comes back to `googleReturn`.
+ * Where the project has Google sign-in turned on, Google comes first (Mike's 11/18 call: easier than
+ * typing and confirming an email): "Continue with Google" signs in or creates the account in one step
+ * and comes back to `googleReturn`, and the email form waits behind "Use email and a password instead"
+ * (open from the start on a device that last signed in that way).
  */
 export function AuthForm({
   onDone,
@@ -23,7 +63,8 @@ export function AuthForm({
   /** Where Google sends you back to on this site; defaults to this page. */
   googleReturn?: string;
 }) {
-  const { signUp, signIn, googleEnabled, signInWithGoogle, sendPasswordReset } = useAuth();
+  const { signUp, signIn, googleEnabled, signInOptionsKnown, signInWithGoogle, sendPasswordReset } = useAuth();
+  const [withEmail, setWithEmail] = useState(readEmailPref);
   const [mode, setMode] = useState<"create" | "sign-in">(initialMode);
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState("");
@@ -47,8 +88,9 @@ export function AuthForm({
     }
     const err = mode === "create" ? await signUp(name, email, password) : await signIn(email, password);
     setBusy(false);
-    if (err) setError(err);
-    else onDone();
+    if (err) return setError(err);
+    writeEmailPref(true);
+    onDone();
   };
 
   const valid = resetting
@@ -63,6 +105,7 @@ export function AuthForm({
   const google = async () => {
     setBusy(true);
     setError(null);
+    writeEmailPref(false);
     const err = await signInWithGoogle(googleReturn ?? `${window.location.pathname}${window.location.search}`);
     if (err) {
       setError(err);
@@ -70,13 +113,46 @@ export function AuthForm({
     }
   };
 
+  // Until we know whether Google is on, hold the space rather than flash the email fields.
+  if (!signInOptionsKnown) return <div className="h-48" aria-busy="true" />;
+
+  if (googleEnabled && !withEmail) {
+    return (
+      <div>
+        <h1 className="mb-1 font-display text-2xl font-bold italic text-white">{mode === "create" ? "Create your account" : "Welcome back"}</h1>
+        <p className="mb-5 text-sm text-white/80">
+          {intro ?? (mode === "create" ? "One tap with Google and you're in. No password to remember." : "Sign in to see your trips.")}
+        </p>
+        <GoogleButton onClick={google} disabled={busy} />
+        <p className="mt-2 text-center text-xs text-white/70">New or returning, it's the same button.</p>
+        {error && (
+          <p role="alert" className="mt-3 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
+            {error}
+          </p>
+        )}
+        <p className="mt-5 border-t border-white/10 pt-4 text-center">
+          <button
+            type="button"
+            className="text-sm font-semibold text-white underline underline-offset-4"
+            onClick={() => {
+              setWithEmail(true);
+              setError(null);
+            }}
+          >
+            Use email and a password instead
+          </button>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} noValidate>
       {googleEnabled && (
         <>
-          <Button type="button" variant="light" className="mb-3 w-full" onClick={google} disabled={busy}>
-            Continue with Google
-          </Button>
+          <div className="mb-3">
+            <GoogleButton onClick={google} disabled={busy} />
+          </div>
           <p className="mb-4 text-center text-xs text-white/70">or use your email</p>
         </>
       )}

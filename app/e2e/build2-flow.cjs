@@ -4,7 +4,7 @@
 // claims a name through the group link on a phone; a third person adds themselves.
 const { chromium, devices } = require('playwright');
 const path = require('path');
-const { joinTrip } = require('./helpers.cjs');
+const { joinTrip, withEmail } = require('./helpers.cjs');
 const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
 const BASE = 'http://localhost:5173';
 const run = Math.random().toString(36).slice(2, 7);
@@ -37,6 +37,7 @@ const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isM
 async function overflow(page) { return page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); }
 
 async function signUp(page, name, who) {
+  await withEmail(page);
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
   await page.getByLabel('Password').fill(PW);

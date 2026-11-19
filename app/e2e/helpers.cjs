@@ -38,7 +38,20 @@ const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.jpg`, type:
 const dlg = (page) => page.locator('dialog[open]');
 const overflowX = (page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
+/**
+ * Where Google sign-in is on, the sign-in form starts with Google and keeps email behind "Use email
+ * and a password instead" (Mike's 11/18 call). Opens the email form if it's folded; does nothing if
+ * it's already open (or Google is off).
+ */
+async function withEmail(page) {
+  const fold = page.getByRole('button', { name: 'Use email and a password instead' });
+  await Promise.race([fold.waitFor(), page.getByLabel('Email').waitFor()]);
+  if (await fold.isVisible()) await fold.click();
+  await page.getByLabel('Email').waitFor();
+}
+
 async function signUp(page, name, who) {
+  await withEmail(page);
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
   await page.getByLabel('Password').fill(PW);
@@ -87,10 +100,11 @@ async function joinTrip(page) {
 }
 
 async function signIn(page, who) {
+  await withEmail(page);
   await page.getByRole('tab', { name: 'Sign in' }).click();
   await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
   await page.getByLabel('Password').fill(PW);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { run, PW, signIn, joinTrip, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { run, PW, signIn, joinTrip, withEmail, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

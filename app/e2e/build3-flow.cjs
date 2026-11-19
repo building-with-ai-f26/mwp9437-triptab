@@ -2,7 +2,7 @@
 // flight, settle up, and a viewer's own view (their share, opting out). Run with the dev server
 // up (npm run dev): node e2e/build3-flow.cjs. Events are tagged test_run in PostHog.
 const path = require('path');
-const { joinTrip } = require('./helpers.cjs');
+const { joinTrip, withEmail } = require('./helpers.cjs');
 const { chromium, devices } = require('playwright');
 const OUT = path.join(__dirname, '..', '..', 'docs', 'screenshots');
 const BASE = 'http://localhost:5173';
@@ -28,6 +28,7 @@ const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.jpg`, type:
 const dlg = (page) => page.locator('dialog[open]');
 
 async function signUp(page, name, who) {
+  await withEmail(page);
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel('Email').fill(`demo-${run}-${who}@example.com`);
   await page.getByLabel('Password').fill(PW);

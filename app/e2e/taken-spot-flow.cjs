@@ -43,6 +43,7 @@ const h = require('./helpers.cjs');
     await h.shot(l, 'join-joined-spot-desktop');
     await vicButton.click();
     await l.getByText('already joined this trip').waitFor();
+    await h.withEmail(l);
     result.signInTabSelected = await l.getByRole('tab', { name: 'Sign in' }).getAttribute('aria-selected');
     await h.shot(l, 'join-sign-in-to-spot-desktop');
     await l.getByLabel('Email').fill(`demo-${h.run}-vic@example.com`);
