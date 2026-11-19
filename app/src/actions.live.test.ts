@@ -98,6 +98,22 @@ describe("action items", () => {
     expect(out.error).not.toBeNull();
   });
 
+  it("one nobody has yet: only an owner ticks it off, never a viewer or a stranger", async () => {
+    // Found 11/19 by the security test: with no one assigned, the check came out NULL, not false,
+    // and the refusal never ran, so anyone signed in could tick it off.
+    const { data, error } = await owner.from("action_items").insert({ trip_id: tripId, title: "Pick a restaurant" }).select("id").single();
+    expect(error).toBeNull();
+    for (const who of [vic, stranger]) {
+      const tick = await who.rpc("set_action_done", { p_id: data!.id, p_done: true });
+      expect(tick.error).not.toBeNull();
+    }
+    const { data: still } = await owner.from("action_items").select("done").eq("id", data!.id).single();
+    expect(still!.done).toBe(false);
+    const mine = await owner.rpc("set_action_done", { p_id: data!.id, p_done: true });
+    expect(mine.error).toBeNull();
+    await owner.from("action_items").delete().eq("id", data!.id);
+  });
+
   it("an owner can reassign, untick and delete", async () => {
     const re = await owner.from("action_items").update({ assignee: ids.Vic }).eq("id", dinner).select();
     expect(re.data).toHaveLength(1);

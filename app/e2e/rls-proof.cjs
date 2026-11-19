@@ -147,6 +147,50 @@ function probe(page, req) {
     const refused = r.status >= 400 || (Array.isArray(r.body) && r.body.length === 0);
     check(name, refused, said(r));
   }
+  // The functions that run with raised rights (Supabase's advisor lists 16): each must check who's
+  // asking itself. A sets up something for each to aim at: a planned plan, a to-do, A's own spot.
+  const asA = (req) => probe(a, { ...req, token: A.token });
+  const plan = (await asA({ method: 'POST', path: '/rest/v1/items', body: { trip_id: trip, title: 'Ski school', day: '2027-02-06', part: 'morning', status: 'planned', est_cents: 8000 } })).body?.[0];
+  const todo = (await asA({ method: 'POST', path: '/rest/v1/action_items', body: { trip_id: trip, title: 'Book the ski passes' } })).body?.[0];
+  const spot = (await asA({ path: `/rest/v1/travelers?select=id,user_id&trip_id=eq.${trip}&user_id=eq.${A.user}` })).body?.[0];
+  const state = async () => ({
+    trip: (await asA({ path: `/rest/v1/trips?id=eq.${trip}&select=name,start_date,end_date` })).body?.[0],
+    link: (await asA({ path: `/rest/v1/trip_links?trip_id=eq.${trip}&select=token,enabled` })).body?.[0],
+    people: (await asA({ path: `/rest/v1/travelers?select=id,user_id&trip_id=eq.${trip}` })).body,
+    expenses: (await asA({ path: `/rest/v1/expenses?trip_id=eq.${trip}&select=id` })).body?.length,
+    plan: (await asA({ path: `/rest/v1/items?id=eq.${plan?.id}&select=status` })).body?.[0]?.status,
+    todo: (await asA({ path: `/rest/v1/action_items?id=eq.${todo?.id}&select=done` })).body?.[0]?.done,
+  });
+  if (!plan?.id || !todo?.id || !spot?.id) throw new Error(`A's setup failed: ${JSON.stringify({ plan, todo, spot })}`);
+  const before = await state();
+  const attacks = [
+    ['update_trip', 'renames the trip and its stops', { p_trip: trip, p_name: 'Renamed by B', p_stops: [{ name: 'Nowhere', start_date: '2027-02-05', end_date: '2027-02-06' }] }],
+    ['extend_trip', 'stretches the trip', { p_trip: trip, p_day: '2027-02-28' }],
+    ['reset_group_link', 'resets the group link (to learn the new one)', { p_trip: trip }],
+    ['save_expense', 'adds an expense', { p_trip: trip, p_expense: null, p_description: 'B was here', p_day: '2027-02-06', p_total_cents: 1000, p_paid_by: spot.id, p_split_mode: 'even', p_shares: [] }],
+    ['confirm_item', 'confirms the plan as paid', { p_item: plan.id, p_total_cents: 8000, p_paid_by: spot.id, p_split_mode: 'even', p_shares: [] }],
+    ['unconfirm_item', 'undoes a confirmation', { p_item: plan.id }],
+    ['log_own_line', "logs a cost on A's line", { p_item: plan.id, p_traveler: spot.id, p_cents: 100, p_with_points: false }],
+    ['clear_own_line', "clears A's line", { p_item: plan.id, p_traveler: spot.id }],
+    ['set_action_done', "ticks off A's to-do", { p_id: todo.id, p_done: true }],
+    ['join_preview', 'previews a made-up group link', { p_token: 'not-the-link' }],
+    ['join_trip', 'joins with a made-up group link', { p_token: 'not-the-link', p_traveler_id: null, p_new_name: 'RLS test B' }],
+    ['join_trip', "takes A's spot, with the real link", { p_token: before.link?.token, p_traveler_id: spot.id, p_new_name: null }],
+  ];
+  for (const [fn, what, args] of attacks) {
+    const r = await probe(b, { method: 'POST', path: `/rest/v1/rpc/${fn}`, token: t, body: args });
+    const empty = r.body == null || r.body === '' || (Array.isArray(r.body) && r.body.length === 0) || (typeof r.body === 'object' && !Array.isArray(r.body) && Object.values(r.body).every((v) => v == null));
+    check(`B ${what} (${fn})`, r.status >= 400 || (r.status < 300 && empty), said(r));
+  }
+  const after = await state();
+  const moved = Object.keys(before).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+  check('...and none of it stuck', moved.length === 0, moved.length ? moved.map((k) => `${k}: ${JSON.stringify(before[k])} -> ${JSON.stringify(after[k])}`).join('; ') : 'name, dates, link, people, expenses, plan status, to-do: all as before');
+  // Controls: the same calls work for A, an Owner, so B's were turned away for who B is.
+  const reset = await asA({ method: 'POST', path: '/rest/v1/rpc/reset_group_link', body: { p_trip: trip } });
+  const done = await asA({ method: 'POST', path: '/rest/v1/rpc/set_action_done', body: { p_id: todo.id, p_done: true } });
+  const changed = await state();
+  check('Control: A, an Owner, resets the link and ticks the to-do', reset.status < 300 && done.status < 300 && changed.link?.token !== before.link?.token && changed.todo === true, `${reset.status}, ${done.status}: new link ${changed.link?.token !== before.link?.token}, to-do done ${changed.todo}`);
+
   // Signed out, with only the public key the site ships.
   for (const [name, path] of [['trips', `/rest/v1/trips?id=eq.${trip}`], ['trip_links', `/rest/v1/trip_links?trip_id=eq.${trip}`]]) {
     const r = await probe(b, { path });
@@ -170,7 +214,7 @@ function probe(page, req) {
     <table style="border-collapse:collapse;width:100%">${out.checks
       .map((c) => `<tr style="border-top:1px solid #e7e5e4"><td style="padding:4px 8px;width:30px">${c.ok ? '&#10003;' : '&#10007;'}</td><td style="padding:4px 8px;width:330px">${esc(c.name)}</td><td style="padding:4px 8px;font:12px ui-monospace,monospace;color:#44403c">${esc(c.got.slice(0, 120))}</td></tr>`)
       .join('')}</table>
-    <p style="margin:14px 0 0;color:#57534e">${out.checks.filter((c) => c.ok).length} of ${out.checks.length} refused or empty, as they should be.</p></body>`);
+    <p style="margin:14px 0 0;color:#57534e">${out.checks.filter((c) => c.ok).length} of ${out.checks.length} as they should be: refused or empty for B, and the control working for A.</p></body>`);
   await report.screenshot({ path: `${h.OUT}/rls-refused-api.png`, fullPage: true });
 
   // 4. Clean up: A deletes the trip in the app (Trip settings, Delete trip).
@@ -181,7 +225,7 @@ function probe(page, req) {
   const gone = await probe(a, { path: `/rest/v1/trips?id=eq.${trip}&select=id`, token: A.token });
   out.tripDeleted = Array.isArray(gone.body) && gone.body.length === 0;
 
-  out.errors = h.errors.filter((e) => !/status of (40[0-9])/.test(e));
+  out.errors = h.errors.filter((e) => !/status of (40[0-9]|500)/.test(e)); // the probes' own refusals
   out.pass = out.checks.every((c) => c.ok) && out.tripDeleted && out.phoneOverflow <= 0;
   console.log(JSON.stringify(out, null, 2));
   console.log(`\nNow delete the two test accounts: ${out.accounts.a.email} and ${out.accounts.b.email}`);
