@@ -9,6 +9,8 @@ import { WeekView } from "../components/trip/WeekView";
 import { ActionsCard } from "../components/trip/Actions";
 import { TripSettingsDialog } from "../components/trip/TripSettings";
 import { DayBlock, DayChips, useActiveDay, type TimelineActions } from "../components/trip/Timeline";
+import { MovePlans } from "../components/trip/MovePlans";
+import { movePlan, type MovePatch } from "../lib/move";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { splitEqually } from "../lib/money";
 import { AddPersonDialog, PeopleCard } from "../components/trip/People";
@@ -55,7 +57,24 @@ import {
   type TripBundle,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { addDays, canEdit, dateRange, dollars, longDay, partOfTime, plansOutside, ROLE_LABEL, suggestedBy, type Item, type ItemStatus, type Traveler } from "../lib/model";
+import {
+  addDays,
+  canEdit,
+  clock,
+  dateRange,
+  dollars,
+  longDay,
+  nightsBetween,
+  PART_LABEL,
+  partOfTime,
+  plansOutside,
+  ROLE_LABEL,
+  suggestedBy,
+  type DayPart,
+  type Item,
+  type ItemStatus,
+  type Traveler,
+} from "../lib/model";
 import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
@@ -91,6 +110,14 @@ export default function TripPage() {
   // Describe your trip: what Start a trip found, picked up once when this new trip first loads.
   const [described, setDescribed] = useState<DescribeResult | null>(null);
   const pickedUp = useRef(false);
+  // Drag and drop: a moved plan shows in its new slot while it saves, then a note offers Undo.
+  const [moving, setMoving] = useState<Record<string, MovePatch>>({});
+  const [moveNote, setMoveNote] = useState<{ text: string; undo?: () => void } | null>(null);
+  useEffect(() => {
+    if (!moveNote) return;
+    const t = window.setTimeout(() => setMoveNote(null), 10_000);
+    return () => window.clearTimeout(t);
+  }, [moveNote]);
 
   const reload = useCallback(
     () =>
@@ -142,8 +169,8 @@ export default function TripPage() {
   }, [bundle, id, user, reload]);
 
   const days = useMemo(
-    () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items) : []),
-    [bundle],
+    () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items.map((i) => (moving[i.id] ? { ...i, ...moving[i.id] } : i))) : []),
+    [bundle, moving],
   );
   const [active, jump] = useActiveDay(days.map((d) => d.date));
 
@@ -219,8 +246,60 @@ export default function TripPage() {
     await reload();
   };
 
+  /** Saves a move (or its Undo), showing the plan in its new slot until the trip reloads. */
+  const applyMove = async (item: Item, patch: MovePatch) => {
+    setMoving((m) => ({ ...m, [item.id]: patch }));
+    try {
+      await updateItem(item.id, patch);
+      await reload();
+    } finally {
+      setMoving((m) => {
+        const next = { ...m };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  /** Drag and drop: an Owner drops a plan on another part of the day, or on a day chip. */
+  const moveItem = async (item: Item, day: string, part: DayPart) => {
+    const move = movePlan(item, day, part, trip);
+    if (!move) return;
+    if ("error" in move) {
+      setMoveNote({ text: `${item.title} can't go there: ${move.error}` });
+      return;
+    }
+    // Until this save lands, no Undo is offered: an earlier note's Undo would undo the wrong move.
+    setMoveNote({ text: `Moving ${item.title}...` });
+    try {
+      await applyMove(item, move.patch);
+      track("plan moved", {
+        kind: item.kind,
+        days: nightsBetween(item.day, day),
+        part_changed: move.patch.part !== move.before.part,
+        time_cleared: Boolean(move.clearedTime),
+      });
+      setMoveNote({
+        text: `Moved ${item.title} to ${longDay(day)}, ${PART_LABEL[part].toLowerCase()}.${move.clearedTime ? ` Its ${clock(move.clearedTime)} time was cleared.` : ""}`,
+        undo: async () => {
+          setMoveNote({ text: `Putting ${item.title} back...` });
+          try {
+            await applyMove(item, move.before);
+            setMoveNote({ text: `Put ${item.title} back.` });
+            track("plan move undone", { kind: item.kind });
+          } catch (e) {
+            setMoveNote({ text: `Couldn't undo: ${(e as Error).message}` });
+          }
+        },
+      });
+    } catch (e) {
+      setMoveNote({ text: `Couldn't move ${item.title}: ${(e as Error).message}` });
+    }
+  };
+
   const actions: TimelineActions = {
     canEdit: editable,
+    onMove: moveItem,
     onAdd: (day, part, kind = "activity") => setDialog({ item: null, day, part, kind }),
     onOpen: (item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind }),
     exactCents: (item) =>
@@ -450,14 +529,14 @@ export default function TripPage() {
             {view === "week" ? (
               <WeekView days={days} actions={actions} />
             ) : (
-              <>
+              <MovePlans onMove={moveItem}>
                 <DayChips days={days} active={active} onPick={jump} />
                 <div className="divide-y divide-foreground/10 pb-16">
                   {days.map((d, i) => (
                     <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
                   ))}
                 </div>
-              </>
+              </MovePlans>
             )}
           </main>
 
@@ -610,6 +689,23 @@ export default function TripPage() {
           await reload();
         }}
       />
+      {moveNote && (
+        <div
+          role="status"
+          data-testid="move-note"
+          className="glass-card-solid fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl px-4 py-3 text-sm shadow-xl"
+        >
+          <p className="min-w-0 flex-1 text-foreground">{moveNote.text}</p>
+          {moveNote.undo && (
+            <button type="button" onClick={moveNote.undo} className="shrink-0 font-semibold text-foreground underline underline-offset-4">
+              Undo
+            </button>
+          )}
+          <button type="button" onClick={() => setMoveNote(null)} className="shrink-0 text-xs text-muted-foreground" aria-label="Close">
+            Close
+          </button>
+        </div>
+      )}
       {editable && described && (
         <ImportDialog
           key="described"

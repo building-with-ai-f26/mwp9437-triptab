@@ -232,3 +232,17 @@
     opacity: 0.5;
   }
 }
+
+/* Drag and drop (Build 3 polish): a plan an Owner can drag. On a phone a press and hold picks it
+   up, so the long-press menu and text selection stay out of the way; a mouse sees a grab cursor. */
+.draggable-card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+@media (hover: hover) {
+  .draggable-card {
+    cursor: grab;
+  }
+}

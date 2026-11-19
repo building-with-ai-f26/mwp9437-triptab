@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
   clock,
@@ -13,6 +14,7 @@ import {
   type ItemKind,
 } from "../../lib/model";
 import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
+import { canDrag, chipId, justDropped, slotId } from "../../lib/move";
 
 export const KIND_ICON: Record<ItemKind, LucideIcon> = {
   activity: Palmtree,
@@ -36,7 +38,14 @@ export interface TimelineActions {
   aboard?: (item: Item) => { names: string[]; everyone: boolean };
   /** On a Suggested plan: "Suggested by Jordan", or "AI idea, kept by you". */
   suggestedBy?: (item: Item) => string | null;
+  /** Drag and drop (Owners, Day by day view): move a plan to a day and part. */
+  onMove?: (item: Item, day: string, part: DayPart) => void;
 }
+
+/** Opens a plan, unless the tap was the end of a drag. */
+const open = (actions: TimelineActions, item: Item) => {
+  if (!justDropped()) actions.onOpen(item);
+};
 
 /** "Everyone's on it" covers tonight: no prompt for a stay. */
 const nightCovered = (overnight: Item[], actions: TimelineActions): boolean =>
@@ -56,26 +65,30 @@ export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active
       aria-label="Days"
       className="glass-bar sticky top-14 z-30 -mx-4 flex gap-1.5 overflow-x-auto border-x-0 border-t-0 border-b border-white/10 px-4 py-2 sm:top-16 sm:-mx-6 sm:gap-2 sm:px-6"
     >
-      {days.map((d) => {
-        const on = d.date === active;
-        return (
-          <button
-            key={d.date}
-            data-day={d.date}
-            onClick={() => onPick(d.date)}
-            aria-current={on ? "date" : undefined}
-            className={`flex min-w-[46px] shrink-0 flex-col items-center rounded-2xl px-2 py-1.5 transition-colors ${
-              on ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "glass hover:bg-primary/15"
-            }`}
-          >
-            <span className={`font-display text-[11px] font-bold ${on ? "text-white" : "text-foreground"}`}>
-              {d.chip.weekday}
-            </span>
-            <span className="text-sm font-semibold">{d.chip.date}</span>
-          </button>
-        );
-      })}
+      {days.map((d) => (
+        <DayChip key={d.date} day={d} on={d.date === active} onPick={onPick} />
+      ))}
     </nav>
+  );
+}
+
+function DayChip({ day, on, onPick }: { day: TimelineDay; on: boolean; onPick: (d: string) => void }) {
+  // A drop target while a plan is dragged: drop it here to move it to this day.
+  const { setNodeRef, isOver } = useDroppable({ id: chipId(day.date) });
+  return (
+    <button
+      ref={setNodeRef}
+      data-day={day.date}
+      data-over={isOver || undefined}
+      onClick={() => onPick(day.date)}
+      aria-current={on ? "date" : undefined}
+      className={`flex min-w-[46px] shrink-0 flex-col items-center rounded-2xl px-2 py-1.5 transition-colors ${
+        on ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "glass hover:bg-primary/15"
+      } ${isOver ? "ring-2 ring-primary ring-offset-2 ring-offset-white/60" : ""}`}
+    >
+      <span className={`font-display text-[11px] font-bold ${on ? "text-white" : "text-foreground"}`}>{day.chip.weekday}</span>
+      <span className="text-sm font-semibold">{day.chip.date}</span>
+    </button>
   );
 }
 
@@ -90,7 +103,7 @@ function ContinuedCard({ item, label, actions }: { item: Item; label: string | n
       data-status={item.status}
       data-out={out}
       data-continued="true"
-      onClick={() => actions.onOpen(item)}
+      onClick={() => open(actions, item)}
       aria-label={`${item.title}, ${label ?? "continues"}`}
     >
       <div className="flex items-center gap-2.5">
@@ -103,6 +116,26 @@ function ContinuedCard({ item, label, actions }: { item: Item; label: string | n
 }
 
 function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; actions: TimelineActions }) {
+  return actions.onMove && actions.canEdit && canDrag(item) ? (
+    <DraggableCard item={item} placed={placed} actions={actions} />
+  ) : (
+    <CardButton item={item} placed={placed} actions={actions} />
+  );
+}
+
+/** A plan an Owner can drag: press and hold on a phone, or drag a few pixels with a mouse. */
+function DraggableCard({ item, placed, actions }: { item: Item; placed?: Placement; actions: TimelineActions }) {
+  const { setNodeRef, listeners, isDragging } = useDraggable({ id: item.id, data: { item } });
+  return <CardButton item={item} placed={placed} actions={actions} drag={{ ref: setNodeRef, listeners, isDragging }} />;
+}
+
+interface Drag {
+  ref: (el: HTMLElement | null) => void;
+  listeners: ReturnType<typeof useDraggable>["listeners"];
+  isDragging: boolean;
+}
+
+function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Placement; actions: TimelineActions; drag?: Drag }) {
   const Icon = item.status === "suggested" ? Sparkles : KIND_ICON[item.kind];
   const price = priceLabel(item, actions.exactCents?.(item));
   const out = actions.isOut?.(item) ?? false;
@@ -111,11 +144,14 @@ function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; a
   return (
     <button
       type="button"
-      className="item-card"
+      ref={drag?.ref}
+      {...drag?.listeners}
+      className={`item-card ${drag ? "draggable-card" : ""} ${drag?.isDragging ? "opacity-40" : ""}`}
       data-kind={item.kind}
       data-status={item.status}
       data-out={out}
-      onClick={() => actions.onOpen(item)}
+      data-draggable={drag ? "true" : undefined}
+      onClick={() => open(actions, item)}
       aria-label={`${item.title}, ${STATUS_LABEL[item.status]}${out ? ", you're out" : ""}`}
     >
       {confirmed && (
@@ -167,7 +203,7 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
   const suggested = item.status === "suggested";
   const price = priceLabel(item, actions.exactCents?.(item));
   return (
-    <button type="button" className="item-card" data-kind="stay" data-status={item.status} onClick={() => actions.onOpen(item)}>
+    <button type="button" className="item-card" data-kind="stay" data-status={item.status} onClick={() => open(actions, item)}>
       <div className="flex items-center gap-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10">
           {suggested ? <Sparkles className="size-4 text-primary" /> : <BedDouble className="size-4 text-primary" />}
@@ -209,7 +245,7 @@ function OvernightRow({ item, actions }: { item: Item; actions: TimelineActions 
         ? `No stay needed for ${aboard.names.join(", ")}`
         : "No one's on it yet";
   return (
-    <button type="button" className="item-card" data-kind={item.kind} data-status={item.status} data-testid="overnight" onClick={() => actions.onOpen(item)}>
+    <button type="button" className="item-card" data-kind={item.kind} data-status={item.status} data-testid="overnight" onClick={() => open(actions, item)}>
       <div className="flex items-center gap-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-indigo/10">
           <Icon className="size-4 text-indigo" />
@@ -233,6 +269,21 @@ function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
     >
       <Plus className="size-4 shrink-0" /> {label}
     </button>
+  );
+}
+
+/** A part of a day, as a drop target while a plan is dragged. */
+function Slot({ day, part, children }: { day: string; part: DayPart; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: slotId(day, part) });
+  return (
+    <div
+      ref={setNodeRef}
+      data-slot={slotId(day, part)}
+      data-over={isOver || undefined}
+      className={`min-w-0 space-y-2 rounded-2xl transition-colors ${isOver ? "bg-primary/15 outline-2 outline-offset-4 outline-dashed outline-primary" : ""}`}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -268,7 +319,7 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
           return (
             <div key={part} className="grid grid-cols-[60px_1fr] gap-4 py-1">
               <div className="label-luxury pt-3.5 text-foreground">{PART_LABEL[part]}</div>
-              <div className="min-w-0 space-y-2">
+              <Slot day={day.date} part={part}>
                 {items.map((item) => {
                   const placed = day.placed[part][item.id];
                   return placed && !placed.first ? (
@@ -283,7 +334,7 @@ export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boole
                   ) : (
                     <p className="py-3 text-xs italic text-muted-foreground/70">Nothing planned</p>
                   ))}
-              </div>
+              </Slot>
             </div>
           );
         })}
