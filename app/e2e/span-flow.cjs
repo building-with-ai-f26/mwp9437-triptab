@@ -51,6 +51,9 @@ async function run(browser, label, opts, result) {
   await h.shot(p, `span-flight-dialog-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Add to trip' }).click();
   await inDay(p, '2027-02-06', 'UA 57').waitFor();
+  // Adding a flight puts you on it in a second step, and a live update can show the flight just
+  // before that lands: wait for it to settle (the checks below still fail if it never does).
+  await p.locator('#day-2027-02-05 [data-testid="overnight"]').getByText(/Everyone's on it/).waitFor({ timeout: 10000 }).catch(() => {});
   r.flightFri = await flat(inDay(p, '2027-02-05', 'UA 57'));
   // The red-eye's night: the flight sits in the stay row, and with the whole group on it (just the
   // owner here), there's no prompt for a bed (11/17 pod feedback).
