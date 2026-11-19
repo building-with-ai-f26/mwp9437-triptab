@@ -66,6 +66,7 @@ export type EventName =
   | "ai help opened"
   | "trip described"
   | "described plans reviewed"
+  | "described questions parked"
   | "confirm email resent"
   | "email confirmed"
   | "opted out"

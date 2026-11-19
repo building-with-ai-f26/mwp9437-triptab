@@ -159,13 +159,14 @@ export default function TripPage() {
       handoff = null;
     }
     if (!handoff) return;
+    // With plans to review, its questions are asked there, as optional (Mike's 11/18 call, C11).
+    if (handoff.plans.length) return setDescribed(handoff);
     const mine = bundle.travelers.find((t) => t.user_id === user?.id) ?? null;
     if (handoff.questions.length && mine) {
       Promise.all(handoff.questions.map((q) => addAction(id, q, mine.id, null)))
         .then(reload)
         .catch(() => {});
     }
-    if (handoff.plans.length) setDescribed(handoff);
   }, [bundle, id, user, reload]);
 
   const days = useMemo(
@@ -722,6 +723,15 @@ export default function TripPage() {
           }}
           onSave={(kept) => saveImported(kept, "description")}
           onDone={(result, keptCount) => track("described plans reviewed", { plans_proposed: result.plans.length, plans_kept: keptCount })}
+          questions={described.questions}
+          onQuestions={(parked) => {
+            // The questions left ticked wait on the To do list of the person who described the trip.
+            track("described questions parked", { asked: described.questions.length, parked: parked.length });
+            if (!parked.length || !meId) return;
+            Promise.all(parked.map((q) => addAction(trip.id, q, meId, null)))
+              .then(reload)
+              .catch((e: Error) => setError(e.message));
+          }}
         />
       )}
       {editable && (

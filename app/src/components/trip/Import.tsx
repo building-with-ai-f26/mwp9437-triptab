@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, CalendarPlus, Check, ExternalLink, FileUp, Sparkles } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
@@ -34,6 +34,8 @@ export function ImportDialog({
   onExtend,
   initial = null,
   heading,
+  questions = [],
+  onQuestions,
 }: {
   open: boolean;
   trip: Trip;
@@ -52,6 +54,14 @@ export function ImportDialog({
   initial?: ImportResult | null;
   /** The review's title, in place of "Review what was found". */
   heading?: string;
+  /**
+   * Follow-up questions about what a description left out (Mike's 11/18 call, C11): optional. The
+   * Owner can fill the details in on the plans below, or leave a question ticked and it waits on
+   * their To do list. Every question starts ticked.
+   */
+  questions?: string[];
+  /** Called once when the review ends, saved or not, with the questions left ticked. */
+  onQuestions?: (parked: string[]) => void;
 }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -60,6 +70,14 @@ export function ImportDialog({
   const [result, setResult] = useState<ImportResult | null>(initial);
   const [drafts, setDrafts] = useState<Draft[]>(() => (initial ? initial.plans.map((p) => toDraft(p, trip, items)) : []));
   const [tried, setTried] = useState(false);
+  const [park, setPark] = useState<boolean[]>(() => questions.map(() => true));
+  const answered = useRef(false);
+  /** Hands back the questions left ticked, once, however the review ends. */
+  const settleQuestions = () => {
+    if (answered.current || !onQuestions || questions.length === 0) return;
+    answered.current = true;
+    onQuestions(questions.filter((_, i) => park[i]));
+  };
 
   const reset = () => {
     setText("");
@@ -72,6 +90,7 @@ export function ImportDialog({
   };
   const close = () => {
     if (result) onDone(result, 0);
+    settleQuestions();
     reset();
     onClose();
   };
@@ -128,6 +147,7 @@ export function ImportDialog({
     try {
       await onSave(kept);
       onDone(result, kept.length);
+      settleQuestions();
       reset();
       onClose();
     } catch (e) {
@@ -194,6 +214,36 @@ export function ImportDialog({
               : `Found ${drafts.length} ${drafts.length === 1 ? "plan" : "plans"}. Edit, untick or keep each one; nothing is on the trip until you save.`}
             {drafts.length > 0 && result.note ? ` ${result.note}` : ""}
           </p>
+
+          {questions.length > 0 && (
+            <section className="mb-3 rounded-2xl border border-white/20 bg-white/5 p-3" aria-labelledby="followups-title" data-testid="followups">
+              <p id="followups-title" className="text-sm font-semibold text-white">
+                A few details to finish, if you like
+              </p>
+              <p className="mb-2.5 text-xs text-white/70">
+                Fill any of them in on the plans below now. Rather handle them later? Leave them ticked and they'll wait on your To do list.
+              </p>
+              <ul className="space-y-2">
+                {questions.map((q, i) => (
+                  <li key={i}>
+                    <label className="flex items-start gap-2.5 text-sm text-white/90">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 size-5 shrink-0 accent-[#8c7054]"
+                        checked={park[i]}
+                        onChange={(e) => setPark((all) => all.map((v, k) => (k === i ? e.target.checked : v)))}
+                        aria-label={`Park on my To do list: ${q}`}
+                      />
+                      <span>
+                        {q}
+                        <span className="block text-[11px] text-white/55">{park[i] ? "Goes on your To do list" : "Not added: handled here, or skipped"}</span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <ul className="space-y-3">
             {drafts.map((d, i) => {
