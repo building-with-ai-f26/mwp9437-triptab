@@ -8,7 +8,7 @@ const { devices } = require('playwright');
 const OUT = process.env.E2E_SHOTS || path.join(__dirname, '..', '..', 'docs', 'screenshots');
 // E2E_BASE points the flows at another copy of the app, such as a pull request's Preview (which
 // uses TripTab dev). Don't point a flow that signs people up at https://triptab.org: production is
-// for real users, and the flows make accounts.
+// for real users, and the flows make accounts. The one exception is e2e/rls-proof.cjs (C14).
 const BASE = process.env.E2E_BASE || 'http://localhost:5173';
 const run = Math.random().toString(36).slice(2, 7);
 const PW = `demo-${run}-Passw0rd`;
