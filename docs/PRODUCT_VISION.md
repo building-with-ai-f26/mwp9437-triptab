@@ -258,6 +258,7 @@ You see a real gap in the market and would keep TripTab running after the course
 - **Google sign-in.** A podmate who claimed her spot on her phone couldn't get in on her laptop: the link said her spot was taken instead of asking her to sign in. Signing in on the laptop fixed it. Google sign-in, and a "Sign in" prompt on a taken spot, would avoid this.
 - **A "Show me around" guide for new users.** A short walkthrough of the app the first time someone joins or starts a trip, so they get comfortable with it.
 - **Settle up mid-trip and record payments.** When you pay for the Airbnb up front and collect from people in advance, each payment gets recorded (who paid whom, how much), the way Splitwise's Record a payment works, and balances update right away instead of waiting for the end of the trip. TripTab still doesn't move money: each payment links out to Venmo to pay, and cash or another app (Zelle, say) can be recorded by hand. Today Settle up only lists the payments; there is no way to record one.
+- **How people pay you (Mike, 11/18).** Each person adds a Venmo username and a Zelle phone or email, asked once right after they join a trip and changed from People or Settle up (where it lives is C9). Once you save your own, it's locked to you: until then an Owner can add or fix someone's Venmo, and only you add your Zelle. A Venmo payment's note says TripTab, the trip's name and its dates.
 
 **Decided 11/16** (from your walkthrough and the market scan)
 
