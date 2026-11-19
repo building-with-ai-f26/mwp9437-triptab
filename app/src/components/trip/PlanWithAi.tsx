@@ -3,15 +3,16 @@ import { Check, ExternalLink, Wand2 } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { planWithAi, type PlanAiResult, type PlanIdea } from "../../lib/api";
 import { usdCost } from "../../lib/importPlans";
-import { dollars, longDay, PART_LABEL, type Trip } from "../../lib/model";
+import { dollars, longDay, PART_LABEL, PARTS, tripDays, type DayPart, type Trip } from "../../lib/model";
 
 const MAX_REQUEST = 1000;
 
 /**
  * Plan with AI (the vision's "ask for ideas for empty slots"): the Owner says what the group would
  * like, TripTab suggests real places for the trip's empty slots, each with the web page it was
- * found on, and the Owner keeps or drops each. Kept ideas are added as Suggested; nothing on the
- * trip is moved or replaced.
+ * found on, and the Owner keeps or drops each, and can move each to another day or part of the day
+ * first (the 11/17 pod test). Kept ideas are added as Suggested; nothing on the trip is moved or
+ * replaced.
  */
 export function PlanWithAiDialog({
   open,
@@ -33,11 +34,15 @@ export function PlanWithAiDialog({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanAiResult | null>(null);
   const [keep, setKeep] = useState<boolean[]>([]);
+  // Where each idea goes: the AI's pick to start with, changeable before adding.
+  const [picks, setPicks] = useState<{ day: string; part: DayPart }[]>([]);
+  const days = tripDays(trip.start_date, trip.end_date);
 
   const reset = () => {
     setRequest("");
     setResult(null);
     setKeep([]);
+    setPicks([]);
     setError(null);
     setBusy(false);
   };
@@ -55,6 +60,7 @@ export function PlanWithAiDialog({
       const r = await planWithAi(trip.id, request.trim());
       setResult(r);
       setKeep(r.suggestions.map(() => true));
+      setPicks(r.suggestions.map((s) => ({ day: s.day, part: s.part })));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -62,7 +68,9 @@ export function PlanWithAiDialog({
   };
 
   const ideas = result?.suggestions ?? [];
-  const kept = ideas.filter((_, i) => keep[i]);
+  const kept = ideas.map((idea, i) => ({ ...idea, ...(picks[i] ?? {}) })).filter((_, i) => keep[i]);
+  const pick = (i: number, change: Partial<{ day: string; part: DayPart }>) =>
+    setPicks((all) => all.map((p, j) => (j === i ? { ...p, ...change } : p)));
   const save = async () => {
     if (!result || kept.length === 0) return;
     setBusy(true);
@@ -117,13 +125,13 @@ export function PlanWithAiDialog({
           <p className="mb-3 text-sm text-white/85" data-testid="plan-ai-summary">
             {ideas.length === 0
               ? "No ideas this time."
-              : `${ideas.length} ${ideas.length === 1 ? "idea" : "ideas"} for empty slots. Untick any you don't want; kept ones are added as Suggested.`}
+              : `${ideas.length} ${ideas.length === 1 ? "idea" : "ideas"} for empty slots. Untick any you don't want, or move one to another day; kept ones are added as Suggested.`}
             {result.note ? ` ${result.note}` : ""}
           </p>
           <ul className="space-y-3">
             {ideas.map((idea, i) => (
               <li
-                key={`${idea.day}-${idea.part}`}
+                key={i}
                 className={`rounded-2xl border p-3 ${keep[i] ? "border-white/20 bg-white/5" : "border-white/10 opacity-70"}`}
                 data-testid="plan-idea"
               >
@@ -137,10 +145,7 @@ export function PlanWithAiDialog({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{idea.title}</span>
-                    <span className="block text-xs text-white/80">
-                      {longDay(idea.day)}, {PART_LABEL[idea.part].toLowerCase()}
-                      {idea.est_cents != null ? ` · about ${dollars(idea.est_cents)} a person` : ""}
-                    </span>
+                    {idea.est_cents != null && <span className="block text-xs text-white/80">About {dollars(idea.est_cents)} a person</span>}
                     {idea.why && <span className="mt-1 block text-xs text-white/85">{idea.why}</span>}
                     <a
                       href={idea.source_url}
@@ -153,6 +158,34 @@ export function PlanWithAiDialog({
                     </a>
                   </span>
                 </label>
+                {keep[i] && picks[i] && (
+                  <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2 pl-7">
+                    <select
+                      className="field-dark !h-10 !py-0 text-sm"
+                      aria-label={`Day for ${idea.title}`}
+                      value={picks[i].day}
+                      onChange={(e) => pick(i, { day: e.target.value })}
+                    >
+                      {days.map((d) => (
+                        <option key={d} value={d}>
+                          {longDay(d)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="field-dark !h-10 !py-0 text-sm"
+                      aria-label={`Part of the day for ${idea.title}`}
+                      value={picks[i].part}
+                      onChange={(e) => pick(i, { part: e.target.value as DayPart })}
+                    >
+                      {PARTS.map((p) => (
+                        <option key={p} value={p}>
+                          {PART_LABEL[p]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
