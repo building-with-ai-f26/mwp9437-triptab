@@ -161,8 +161,51 @@ async function phone(browser, result) {
   await card(p, '2027-02-08', 'morning', 'Fondue').waitFor();
   r.chipDrop = await moved(p, 'Moved Fondue to Mon, Feb 8');
 
-  // A tap still opens it.
-  await card(p, '2027-02-08', 'morning', 'Fondue').tap();
+  // Hold it at the bottom edge: the page scrolls behind the lifted plan; then drop it mid-screen.
+  await bringUp(p, slot(p, '2027-02-08', 'morning'), 300);
+  const cdp = await p.context().newCDPSession(p);
+  const a = center(await card(p, '2027-02-08', 'morning', 'Fondue').boundingBox());
+  const before = await p.evaluate(() => window.scrollY);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: a.x, y: a.y }] });
+  await p.waitForTimeout(450);
+  const bottom = (await p.evaluate(() => window.innerHeight)) - 30;
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: a.x, y: a.y + ((bottom - a.y) * i) / 10 }] });
+    await p.waitForTimeout(20);
+  }
+  await p.waitForTimeout(1200);
+  r.scrolledBehind = (await p.evaluate(() => window.scrollY)) - before;
+  // Back to mid-screen, out of the edge, so the page stops; then aim at the slot there.
+  const midY = Math.round((await p.evaluate(() => window.innerHeight)) * 0.55);
+  for (let i = 1; i <= 8; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 260, y: bottom + ((midY - bottom) * i) / 8 }] });
+    await p.waitForTimeout(20);
+  }
+  await p.waitForTimeout(400);
+  const mid = await p.evaluate(() => {
+    for (let y = Math.round(window.innerHeight * 0.4); y < window.innerHeight * 0.75; y += 15) {
+      const s = document.elementFromPoint(260, y)?.closest('[data-slot]');
+      if (s) {
+        const r = s.getBoundingClientRect();
+        return { id: s.getAttribute('data-slot'), x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 22) };
+      }
+    }
+    return null;
+  });
+  for (let i = 1; i <= 4; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 260 + ((mid.x - 260) * i) / 4, y: midY + ((mid.y - midY) * i) / 4 }] });
+    await p.waitForTimeout(20);
+  }
+  await p.waitForTimeout(250);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+  const [day, part] = mid.id.split('|');
+  await card(p, day, part, 'Fondue').waitFor();
+  r.droppedAfterScroll = mid.id;
+
+  // A tap still opens it (after the brief pause that keeps a drop from also opening the plan).
+  await p.waitForTimeout(500);
+  await card(p, day, part, 'Fondue').tap();
   r.tapOpens = await h.dlg(p).isVisible();
   r.overflow = await h.overflowX(p);
 }
@@ -180,7 +223,7 @@ const result = {};
   const ok =
     d.clickOpens && d.cancelLeftItAlone && d.timeKept && /Moved Fondue to Sun, Feb 7, evening/.test(d.noteSameDay) && /7:00 PM time was cleared/.test(d.noteOtherPart) &&
     d.undoneToEvening && d.afterReload && /Tue, Feb 9, evening/.test(d.chipDrop) && d.overflow <= 0 &&
-    m.swipeMovedNothing && m.cancelLeftItAlone && /Moved Fondue to Sat, Feb 6, morning/.test(m.note) && /Mon, Feb 8, morning/.test(m.chipDrop) && m.tapOpens && m.overflow <= 0 &&
+    m.swipeMovedNothing && m.cancelLeftItAlone && /Moved Fondue to Sat, Feb 6, morning/.test(m.note) && /Mon, Feb 8, morning/.test(m.chipDrop) && m.scrolledBehind > 150 && m.droppedAfterScroll > '2027-02-08|morning' && m.tapOpens && m.overflow <= 0 &&
     result.errors.length === 0;
   if (!ok) process.exit(1);
 })().catch((e) => {

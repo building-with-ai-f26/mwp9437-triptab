@@ -61,20 +61,33 @@ const landing: CollisionDetection = ({ droppableContainers }) => {
   return slot ? [{ id: slot.id }] : [];
 };
 
-/** The plan being dragged rides just right of the pointer, so the target under it stays in view. */
-const besidePointer: Modifier = ({ transform, activatorEvent, draggingNodeRect }) => {
+/**
+ * Where the lifted plan rides: on a phone it pops out above the finger, centered, so neither the
+ * thumb nor the plan hides the slot being aimed at (Mike's 11/18 note); with a mouse, just right of
+ * the pointer.
+ */
+const lifted: Modifier = ({ transform, activatorEvent, draggingNodeRect, overlayNodeRect }) => {
   const start = activatorEvent ? coordsOf(activatorEvent) : null;
   if (!start || !draggingNodeRect) return transform;
-  return { ...transform, x: transform.x + start.x - draggingNodeRect.left + 18, y: transform.y + start.y - draggingNodeRect.top - 22 };
+  const dx = start.x - draggingNodeRect.left;
+  const dy = start.y - draggingNodeRect.top;
+  if (activatorEvent?.type.startsWith("touch")) {
+    const w = overlayNodeRect?.width ?? 160;
+    const h = overlayNodeRect?.height ?? 44;
+    return { ...transform, x: transform.x + dx - w / 2, y: transform.y + dy - h - 28 };
+  }
+  return { ...transform, x: transform.x + dx + 18, y: transform.y + dy - 22 };
 };
 
 /** Edge scrolling, ours rather than the library's: near the bottom of the screen the page scrolls
- *  down, just below the day chips it scrolls up, and over the chips themselves it holds still. */
-const EDGE = 64;
+ *  down, just below the day chips it scrolls up, and over the chips themselves it holds still. A
+ *  finger gets wider edges than a mouse, so the page moves behind the lifted plan more readily. */
+let edge = 64;
 function edgeSpeed(y: number): number {
   const bar = barBottom();
-  if (y > window.innerHeight - EDGE) return Math.ceil(((y - (window.innerHeight - EDGE)) / EDGE) * 16);
-  if (y > bar && y < bar + EDGE) return -Math.ceil(((bar + EDGE - y) / EDGE) * 16);
+  const top = Math.min(window.innerHeight - edge, bar + edge);
+  if (y > window.innerHeight - edge) return Math.ceil(((y - (window.innerHeight - edge)) / edge) * 18);
+  if (y > bar && y < top) return -Math.ceil(((top - y) / edge) * 18);
   return 0;
 }
 
@@ -111,9 +124,11 @@ export function MovePlans({ children, onMove }: { children: ReactNode; onMove: (
     pointer = coordsOf(e.activatorEvent);
     window.addEventListener("pointermove", track, { passive: true });
     window.addEventListener("touchmove", track, { passive: true });
+    edge = 64;
     if (e.activatorEvent.type.startsWith("touch")) {
       window.addEventListener("touchmove", holdStill, { passive: false });
       touching.current = true;
+      edge = 96;
       navigator.vibrate?.(10);
     }
     frame.current = requestAnimationFrame(scrollLoop);
@@ -149,7 +164,7 @@ export function MovePlans({ children, onMove }: { children: ReactNode; onMove: (
       }}
     >
       {children}
-      <DragOverlay dropAnimation={null} modifiers={[besidePointer]}>
+      <DragOverlay dropAnimation={null} modifiers={[lifted]}>
         {active && <Ghost item={active} />}
       </DragOverlay>
     </DndContext>
@@ -167,7 +182,7 @@ function Ghost({ item }: { item: Item }) {
   const Icon = item.status === "suggested" ? Sparkles : KIND_ICON[item.kind];
   return (
     <div
-      className="item-card pointer-events-none !w-max max-w-[240px] rotate-[-2deg] !py-2 shadow-2xl shadow-black/25"
+      className="drag-ghost item-card pointer-events-none !w-max max-w-[240px] !py-2.5 shadow-2xl shadow-black/30"
       data-kind={item.kind}
       data-status={item.status}
       data-testid="drag-ghost"

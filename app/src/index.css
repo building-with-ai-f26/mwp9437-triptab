@@ -246,3 +246,34 @@
     cursor: grab;
   }
 }
+/* While a finger holds a plan, it presses in a little; when the hold lifts it, the plan pops out
+   (Mike's 11/18 note: tap and hold, the bubble pops out and follows the finger). */
+.draggable-card:active {
+  transform: scale(0.97);
+  transition: transform 280ms ease-out;
+}
+.drag-ghost {
+  transform: rotate(-2deg);
+  animation: ghost-pop 180ms ease-out;
+}
+@keyframes ghost-pop {
+  0% {
+    transform: rotate(0deg) scale(0.9);
+    opacity: 0.7;
+  }
+  60% {
+    transform: rotate(-2deg) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .draggable-card:active {
+    transform: none;
+  }
+  .drag-ghost {
+    animation: none;
+  }
+}
