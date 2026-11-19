@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
+import { aboutTripDates, checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
 
 const TEXT =
   "Euro ski trip! Chamonix Feb 5 to 12, then Barcelona for a night, then Andorra till the 16th. Skiing every day in Chamonix, dinner reservation Thursday, flights and the Airbnb are booked.";
@@ -100,5 +100,33 @@ describe("describe your trip: checking the answer", () => {
     expect(checkDescribe(structuredClone(past), `${text} (2026)`, "2026-11-18")!.trip.stops[0].start_date).toBe("2026-05-20");
     // A trip that's still ahead is left alone.
     expect(checkDescribe(answer(), TEXT, "2026-11-18")!.trip.stops[0].start_date).toBe("2027-02-05");
+  });
+});
+
+describe("a question about the trip's dates goes to the review screen, not the To do list (Mike's 11/19 review)", () => {
+  it("tells a question about the trip's dates from one about a plan's time", () => {
+    expect(aboutTripDates("Your dates don't line up with the calendar: did you mean Wednesday, November 25?")).toBe(true);
+    expect(aboutTripDates("November 31 doesn't exist; which date is right?")).toBe(true);
+    expect(aboutTripDates("November 25 isn't a Tuesday. Which day do you leave?")).toBe(true);
+    expect(aboutTripDates("Which is correct for the trip: leaving Tuesday November 24 or November 25, and returning Sunday November 29?")).toBe(true);
+    expect(aboutTripDates("Did you mean Wednesday, Nov 25?")).toBe(true);
+    expect(aboutTripDates("Since November has only 30 days, is the return on Sunday November 29th?")).toBe(true);
+    expect(aboutTripDates("Do you leave on November 24 or November 25?")).toBe(true);
+    expect(aboutTripDates("What time is Thanksgiving dinner on Thursday, November 26?")).toBe(false);
+    expect(aboutTripDates("What time does the christening start?")).toBe(false);
+    expect(aboutTripDates("What date is the dinner reservation?")).toBe(false);
+    expect(aboutTripDates("Where are you staying in Newton?")).toBe(false);
+  });
+
+  it("drops it from the questions and makes it the note when the model gave none", () => {
+    const r = checkDescribe(answer({ questions: ["Your dates don't line up with the calendar, did you mean Feb 6?", "What's the Airbnb's address or link?"] }), TEXT)!;
+    expect(r.questions).toEqual(["What's the Airbnb's address or link?"]);
+    expect(r.note).toBe("Check the dates: Your dates don't line up with the calendar, did you mean Feb 6?");
+  });
+
+  it("keeps the model's own note when it gave one", () => {
+    const r = checkDescribe(answer({ note: "Feb 5 2027 is a Friday, so I used Friday.", questions: ["Do your dates match the calendar?"] }), TEXT)!;
+    expect(r.note).toBe("Feb 5 2027 is a Friday, so I used Friday.");
+    expect(r.questions).toEqual([]);
   });
 });

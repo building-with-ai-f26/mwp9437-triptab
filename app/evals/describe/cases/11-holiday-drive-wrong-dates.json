@@ -1,0 +1,33 @@
+{
+  "id": "11-holiday-drive-wrong-dates",
+  "group": "messy",
+  "what": "Dictated with a weekday that isn't its date and a day that doesn't exist: the dates go in a note to fix, not a question. A ski day asks nothing about lift tickets, the drives say Drive to, and each plan's place is its location (Mike's 11/19 review).",
+  "text": "Thanksgiving with my sister's family in Hartford. We leave Tuesday November 25th in the afternoon and come back Sunday November 31st. Rental car both ways. Wednesday we're cooking in the afternoon, then drinks with friends in New Haven. Thursday is Thanksgiving dinner at Aunt Rosa's house. Friday we go skiing at Mount Snow. Saturday morning is my nephew's baptism, and Sunday we drive home to Brooklyn.",
+  "expect": {
+    "trip": {
+      "stops": [
+        {
+          "names": ["Hartford"],
+          "start": ["2026-11-24", "2026-11-25"],
+          "end": ["2026-11-29", "2026-11-30"]
+        }
+      ]
+    },
+    "plans": [
+      { "kind": ["transport"], "day": ["2026-11-24", "2026-11-25"] },
+      { "kind": ["meal"], "day": ["2026-11-26"], "location": ["Rosa"] },
+      { "kind": ["activity"], "day": ["2026-11-27"], "location": ["Mount Snow"] },
+      { "kind": ["activity"], "day": ["2026-11-28"], "part": ["morning"] },
+      { "kind": ["transport"], "day": ["2026-11-29", "2026-11-30"] }
+    ],
+    "questions": [["car", "rental"]],
+    "forbidden_words": [],
+    "forbidden_cents": [],
+    "not_a_stop": ["New Haven", "Mount Snow"],
+    "no_times": true,
+    "not_asked": ["lift", "ticket", "calendar", "dates", "correct", "November 25", "November 31"],
+    "note_about": ["date", "November", "Tuesday", "Sunday", "31"],
+    "titles_not": ["depart", "leave for"]
+  },
+  "today": "2026-11-18"
+}

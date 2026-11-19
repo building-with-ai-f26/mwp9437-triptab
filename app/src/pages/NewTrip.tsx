@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { MapPin, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, MapPin, Plus, Sparkles, Trash2 } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, Field, PhotoFrame, Segmented } from "../components/ui";
 import { PlaceInput } from "../components/PlaceInput";
@@ -186,6 +186,12 @@ export default function NewTrip() {
             {mode === "form" && described && (
               <div role="status" className="mb-5 rounded-2xl border border-primary/30 bg-white/40 px-4 py-3 text-sm" data-testid="described-note">
                 <p className="font-semibold">From your description</p>
+                {/* Dates that don't fit the calendar are fixed here, before the trip starts, never parked as a to-do (Mike's 11/19 review). */}
+                {described.note && (
+                  <p className="my-1.5 flex gap-2 rounded-xl bg-amber-100 px-3 py-2 text-amber-950" data-testid="described-warning">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" /> <span>{described.note}</span>
+                  </p>
+                )}
                 <p className="text-foreground/80">
                   Check the name, dates and stops below, then start the trip.
                   {nextSteps(described)}

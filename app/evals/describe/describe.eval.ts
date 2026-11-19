@@ -93,6 +93,7 @@ it(`Describe your trip eval: ${cases.length} cases`, async () => {
       trip: r.result?.trip ?? null,
       plans: r.result?.plans ?? [],
       questions: r.result?.questions ?? [],
+      note: r.result?.note ?? null,
     })),
   };
   const dir = here("../../../journal/evals/");

@@ -238,7 +238,10 @@ export default function TripPage() {
           day: d.day,
           part: stay ? "night" : d.part,
           end_day: stay ? d.end_day : spanEnd(d),
-          end_part: !stay && travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null,
+          // The parts picked on the review card (11/19), else a same-day trip's arrival part.
+          end_part: stay
+            ? null
+            : d.end_part ?? (travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null),
           start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
           end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
           location: d.location.trim() || null,
@@ -327,7 +330,10 @@ export default function TripPage() {
         const p = ownProgress(item, travelers, itemPeople, ownMarks);
         const mine = ownLineOf(expenses, item.id, meId);
         if (item.status === "confirmed") return mine ? "Your own price · everyone's booked" : "Everyone's booked";
-        if (item.status === "planned" || p.booked.size > 0) {
+        // A booked count only means something once there's a price to book (Mike's 11/19 review:
+        // "0 of 1 booked" on a drive with no cost was confusing): someone has booked, the plan has
+        // an estimate, or it's a flight.
+        if (p.booked.size > 0 || (item.status === "planned" && (item.est_cents != null || item.kind === "flight"))) {
           return `${bookedLabel(p)}${mine ? ` · yours ${dollars(mine.total_cents)}` : ""}`;
         }
       }
