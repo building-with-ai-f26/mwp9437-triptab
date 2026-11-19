@@ -40,7 +40,7 @@ if [ "$MODE" = "dry-run" ]; then
   echo "== Supabase (dry run): migrations production doesn't have yet =="
   "${SB[@]}" db push --workdir . --remote="$PROD_REF" --dry-run || echo "!! dry run: db push failed (see above); nothing was changed"
   echo "== Supabase (dry run): the functions production has now =="
-  "${SB[@]}" functions list --workdir . --project-ref "$PROD_REF" || echo "!! dry run: functions list failed (see above); nothing was changed"
+  "${SB[@]}" functions list --workdir . --remote="$PROD_REF" || echo "!! dry run: functions list failed (see above); nothing was changed"
   echo "== Supabase (dry run): would deploy ${functions[*]} =="
   exit 0
 fi
@@ -48,4 +48,4 @@ fi
 echo "== Supabase: apply new migrations to production =="
 "${SB[@]}" db push --workdir . --remote="$PROD_REF" --yes
 echo "== Supabase: deploy Edge Functions to production: ${functions[*]} =="
-"${SB[@]}" functions deploy "${functions[@]}" --workdir . --project-ref "$PROD_REF" --use-api --yes
+"${SB[@]}" functions deploy "${functions[@]}" --workdir . --remote="$PROD_REF" --use-api --yes
