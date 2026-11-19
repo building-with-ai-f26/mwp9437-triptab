@@ -1,7 +1,41 @@
-import type { PostHog } from "posthog-js";
+import type { CaptureResult, PostHog } from "posthog-js";
 
 const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || "https://us.i.posthog.com";
+
+/**
+ * A group link works like a key to its trip: whoever joins through one gets the link's role (Owner
+ * by default, Mike's 11/16 call). So its token never goes to PostHog (security audit, 11/19). Page
+ * addresses carry /join/[link] instead, and anything else an event holds is scrubbed the same way,
+ * plain or URL-encoded (a text-message link, a clicked element's address, a replay's page). In
+ * replays, the link's own elements are also left out whole (`ph-no-capture` in People), since
+ * PostHog compresses page snapshots before they reach this hook.
+ */
+const LINK = /(\/|%2F)join(\/|%2F)[A-Za-z0-9_-]{8,}/gi;
+const HAS_LINK = new RegExp(LINK.source, "i");
+export const scrubLinks = (s: string): string => s.replace(LINK, (_m, a: string, b: string) => `${a}join${b}[link]`);
+
+function scrubDeep(v: unknown): unknown {
+  if (typeof v === "string") return HAS_LINK.test(v) ? scrubLinks(v) : v;
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) v[i] = scrubDeep(v[i]);
+    return v;
+  }
+  if (v && typeof v === "object" && !(v instanceof Date)) {
+    const o = v as Record<string, unknown>;
+    for (const k of Object.keys(o)) o[k] = scrubDeep(o[k]);
+  }
+  return v;
+}
+
+/** PostHog's before_send: the same event with every group link token taken out. */
+export function scrubEvent(event: CaptureResult | null): CaptureResult | null {
+  if (!event) return event;
+  scrubDeep(event.properties);
+  if (event.$set) scrubDeep(event.$set);
+  if (event.$set_once) scrubDeep(event.$set_once);
+  return event;
+}
 
 let client: PostHog | null = null;
 const queue: ((ph: PostHog) => void)[] = [];
@@ -19,6 +53,8 @@ export function startAnalytics(): void {
       capture_pageleave: true,
       person_profiles: "identified_only",
       session_recording: { maskAllInputs: true },
+      get_current_url: scrubLinks,
+      before_send: scrubEvent,
     });
     client = posthog;
     tagTestRun(posthog);
@@ -48,6 +84,7 @@ export type EventName =
   | "pdf opened"
   | "calendar downloaded"
   | "group link copied"
+  | "group link texted"
   | "invite emailed"
   | "group link opened"
   | "name claimed"
