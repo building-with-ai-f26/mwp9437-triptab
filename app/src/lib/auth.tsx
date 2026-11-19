@@ -10,6 +10,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<string | null>;
   /** Whether this project has Google sign-in turned on (Supabase, Sign In / Providers). */
   googleEnabled: boolean;
+  /** True once we know whether Google sign-in is on, so the form doesn't flash the email fields first. */
+  signInOptionsKnown: boolean;
   /** Leaves for Google; the browser comes back to `returnPath` on this site, signed in. */
   signInWithGoogle: (returnPath: string) => Promise<string | null>;
   /** Emails a link to /reset-password. Says nothing about whether the account exists. */
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!isConfigured);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [signInOptionsKnown, setSignInOptionsKnown] = useState(!isConfigured);
 
   // Google sign-in shows only where it is turned on, so a project without it never shows a dead button.
   useEffect(() => {
@@ -47,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabaseKey } })
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => setGoogleEnabled(Boolean(s?.external?.google)))
-      .catch(() => setGoogleEnabled(false));
+      .catch(() => setGoogleEnabled(false))
+      .finally(() => setSignInOptionsKnown(true));
   }, []);
 
   useEffect(() => {
@@ -160,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         googleEnabled,
+        signInOptionsKnown,
         signInWithGoogle,
         sendPasswordReset,
         setNewPassword,

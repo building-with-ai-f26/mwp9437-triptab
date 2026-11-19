@@ -64,6 +64,8 @@ function decode(req) {
 
   await page.goto(`${BASE}/`);
   await page.getByRole('button', { name: 'Start a trip' }).click();
+  const fold = page.getByRole('button', { name: 'Use email and a password instead' });
+  if (await fold.isVisible().catch(() => false)) await fold.click();
   await page.getByLabel('Your name').fill('Mike');
   await page.getByLabel('Email').fill(`demo-${run}-ph@example.com`);
   await page.getByLabel('Password').fill(`demo-${run}-Passw0rd`);

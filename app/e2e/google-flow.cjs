@@ -1,19 +1,22 @@
 // "Continue with Google" (Build 3). The button shows only where the Supabase project has Google
-// turned on: with the real settings of TripTab dev (Google off) it is absent; with the settings
-// answer faked to say Google is on, it shows, and clicking it leaves for Supabase's Google sign-in
+// turned on: with the settings answer faked to say Google is off it is absent and the email form
+// shows; faked to say Google is on, Google comes first and the email form waits behind "Use email
+// and a password instead" (Mike's 11/18 call), and clicking Google leaves for Supabase's Google sign-in
 // with a PKCE code challenge and the right way back: the sign-in page's next step, or the group
 // link with the picked name. The trip to Google itself isn't made (no Google account in tests).
 // Screens at 390 and 1280. Run with `npm run dev` going.
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 
-const googleOn = async (ctx) =>
+const googleSetTo = (on) => async (ctx) =>
   ctx.route('**/auth/v1/settings', async (route) => {
     const res = await route.fetch();
     const body = await res.json();
-    body.external = { ...body.external, google: true };
+    body.external = { ...body.external, google: on };
     await route.fulfill({ response: res, json: body });
   });
+const googleOn = googleSetTo(true);
+const googleOff = googleSetTo(false);
 
 // Stops the browser at Supabase's authorize step and reports where it was going.
 const catchAuthorize = (page) =>
@@ -28,13 +31,15 @@ const catchAuthorize = (page) =>
   const browser = await chromium.launch({ args: ['--disable-blink-features=AutomationControlled'] });
   const result = {};
   try {
-    // ---------- Real dev settings: Google is off, so no button ----------
+    // ---------- Google off: no button, and the email form shows straight away ----------
     const offCtx = await h.context(browser, h.DESKTOP);
+    await googleOff(offCtx);
     const off = h.watch(await offCtx.newPage(), 'google-off');
     await off.goto(`${h.BASE}/sign-in`);
     await off.getByRole('tab', { name: 'Sign in' }).waitFor();
     await off.waitForTimeout(800);
     result.buttonWhenOff = await off.getByRole('button', { name: 'Continue with Google' }).count();
+    result.emailWhenOff = await off.getByLabel('Email').isVisible();
 
     // ---------- Google on: the sign-in page ----------
     const dCtx = await h.context(browser, h.DESKTOP);
@@ -42,7 +47,13 @@ const catchAuthorize = (page) =>
     const d = h.watch(await dCtx.newPage(), 'google-desktop');
     await d.goto(`${h.BASE}/sign-in?next=/trips/new`);
     await d.getByRole('button', { name: 'Continue with Google' }).waitFor();
+    result.emailFoldedFirst = (await d.getByLabel('Email').count()) === 0;
     await h.shot(d, 'sign-in-google-desktop');
+    // One tap opens the email form, with Google still above it.
+    await d.getByRole('button', { name: 'Use email and a password instead' }).click();
+    result.emailOpens = await d.getByLabel('Email').isVisible();
+    result.googleStillThere = await d.getByRole('button', { name: 'Continue with Google' }).isVisible();
+    await h.shot(d, 'sign-in-email-open-desktop');
     const leaving = catchAuthorize(d);
     await d.getByRole('button', { name: 'Continue with Google' }).click();
     const url = await leaving;
@@ -64,6 +75,7 @@ const catchAuthorize = (page) =>
     await p.getByLabel('Your name').first().fill('Jo Ann');
     await p.getByRole('button', { name: 'Next' }).click();
     await p.getByRole('button', { name: 'Continue with Google' }).waitFor();
+    result.joinEmailFolded = (await p.getByLabel('Email').count()) === 0;
     result.phoneOverflow = await h.overflowX(p);
     await h.shot(p, 'join-google-phone');
     const leavingJoin = catchAuthorize(p);
@@ -76,6 +88,10 @@ const catchAuthorize = (page) =>
     await p.goto(back.toString());
     await p.getByText('Joining as').waitFor();
     result.joinStepKept = (await p.getByText('Joining as').textContent()).includes('Jo Ann');
+    const ok =
+      result.buttonWhenOff === 0 && result.emailWhenOff && result.emailFoldedFirst && result.emailOpens && result.googleStillThere &&
+      result.provider === 'google' && result.pkce && result.joinEmailFolded && result.phoneOverflow <= 0 && result.joinStepKept;
+    if (!ok) result.failure = 'a check failed';
   } catch (e) {
     result.failure = String(e);
   } finally {
