@@ -4,7 +4,9 @@
 #
 # 1. The tests, always against TripTab dev: lint, unit tests, type check, and the live database
 #    security tests. If any fails, the script stops, so nothing is built and nothing deploys.
-# 2. The build: production's values on main (Cloudflare then deploys it to triptab.org), and
+# 2. On main only: production's Edge Functions and migrations, from the repo (supabase-deploy.sh;
+#    C12, Mike's 11/18 call: production changes only through merges).
+# 3. The build: production's values on main (Cloudflare then deploys it to triptab.org), and
 #    TripTab dev's on every other branch (a Preview, never real users).
 #
 # Every value below is public by design: it ships in the browser, and row-level security in the
@@ -32,6 +34,7 @@ npx tsc -b
 npm run test:rls
 
 if [ "$BRANCH" = "main" ]; then
+  bash scripts/supabase-deploy.sh
   echo "== Build for production (triptab.org) =="
   export VITE_SUPABASE_URL="$PROD_SUPABASE_URL" VITE_SUPABASE_PUBLISHABLE_KEY="$PROD_SUPABASE_KEY" VITE_POSTHOG_KEY="$PROD_POSTHOG_KEY"
   npm run build
