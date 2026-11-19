@@ -69,7 +69,9 @@ async function run(browser, label, opts, result) {
     const keep = (i) => cards.nth(i).getByLabel('Keep this one');
     r.keptByDefault = [];
     for (let i = 0; i < r.proposed; i++) r.keptByDefault.push(await keep(i).isChecked());
-    r.flightWarning = (await cards.nth(0).innerText()).includes("outside the trip's dates");
+    // Feb 4 is a day before the trip: the card offers to extend it (since the extend change), rather
+    // than the "outside the trip's dates" warning a day further out gets.
+    r.flightOffersExtend = (await cards.nth(0).innerText()).includes('is before the trip');
     r.flightMarkedCheckThis = (await cards.nth(0).innerText()).includes('check this');
     r.euroNote = (await cards.nth(1).innerText()).includes('Priced in EUR 3200.00');
     r.euroCostLeftBlank = (await cards.nth(1).getByLabel('Cost').inputValue()) === '';
