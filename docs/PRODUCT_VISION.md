@@ -20,7 +20,7 @@ As of Nov 17. Everything in the Built column is live and checked by automated te
 | Trips and people | Start a trip with dates and stops; change its dates, or extend it in one tap when a plan falls a day outside; add people by name, email or phone, or share one group link where they pick their name; Owner and Viewer roles; the group link inside People | Confirming your email and resetting a password and Google sign-in (Build 3; emails from triptab.org through Resend, your 11/17 call; you use TripTab right away and get a reminder until you confirm, while Google sign-ins count as confirmed, your 11/18 call); TripTab emailing invites itself from triptab.org (Build 3, your 11/18 call); texting them itself stays beyond the course |
 | Itinerary | Day by day, morning to night, with where everyone's staying; a week view; Suggested (dotted), Planned (solid) and Confirmed (paid, the green $ ✓); opting in or out; one plan across several parts or days (skiing all week); flights with an arrival day and time | Place autocomplete when typing a town (from your 11/16 walkthrough) |
 | Money | Confirm a plan with its cost, payer and split (even, shares, percent or exact); Who pays: one bill, or everyone pays their own, with private prices and paid with points; general expenses like a grocery run; your own view and balance; Settle up in the fewest payments | Costs in other currencies at the day's rate (stretch goal); one person buying for part of the group (a general expense for now) |
-| AI | Import of bookings: paste an email or summary, or attach a PDF or photo, with flight times looked up and a review before saving; Plan with AI: real places for empty slots, each with its source, added as Suggested. Both capped at $7 a day, logged with their cost, and scored by 10-case evals | Packing list; local tips; see alternatives; suggestions from a group survey; import by forwarding an email or from Gmail (both your calls) |
+| AI | Import of bookings: paste an email or summary, or attach a PDF or photo, with flight times looked up and a review before saving; Plan with AI: real places for empty slots, each with its source, added as Suggested; forwarding a confirmation to the trip's own address, read the same way and kept for an Owner's review (your call, 11/20). All capped at $7 a day, logged with their cost, and scored by 10-case evals | Packing list; local tips; see alternatives; suggestions from a group survey; import from Gmail (your call) |
 | Getting it done | Action items with who's on it and due dates before the trip; a PDF itinerary; add to calendar | Nothing in the course plan |
 | Running it | Online on GitHub Pages; PostHog, with test runs left out; the spring look, phone first | The move to triptab.org on Cloudflare, with deploy on merge, previews, a dev database, a tested rollback and a security audit (Build 3, your 11/17 call); the two-minute video (Build 5, due 12/7); the ski group using it; the Sponsor Memo (12/14) |
 
@@ -88,7 +88,7 @@ What we're building for Demo Day (12/8) versus the wider product.
 | Owner and Viewer roles, picked from an Add as menu | Privacy controls, like keeping your flights to yourself |
 | Itinerary timeline with stays and morning, day, evening, night, plus a week view | Receipt scanning |
 | Statuses: Suggested, Planned, Confirmed (paid); opt in and out | Entering costs in other currencies at the day's exchange rate (a stretch goal for the course) |
-| Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings by forwarding emails to TripTab or from Gmail (paste and upload are in the course) |
+| Plans and bookings with cost, payer and split (even, shares, percent or exact) | Importing bookings from Gmail (paste, upload and forwarding to the trip's own address are in the course) |
 | General expenses not tied to a plan, like a grocery run | Full AI-built itineraries and an in-trip AI concierge |
 | Settle-up in the fewest payments | Post-trip recap |
 | Your own view: your flights, costs and balance, with a tap for everyone's flights | A native phone app |
@@ -255,6 +255,7 @@ You see a real gap in the market and would keep TripTab running after the course
 - To do's example text (Book the Barcelona flight) reads like a real to-do; use a neutral example.
 - Drag on iPhone: a press held still brings up iOS's own menu.
 - Adding Julia with her email sent no email; Text it to the group worked. Link previews in iMessage should show an image.
+- Upload a flight or car rental confirmation (a screenshot or PDF), or add an Airbnb link to a plan. AI import already reads PDFs, screenshots and photos into plans, but it's hidden under AI help, I have bookings, and keeps nothing; plans have no link field (C22).
 - Worked well: drag and drop (scrolling behind it, dropping onto a filled slot), the frosted part-of-day tags, Zelle copying the number, Pay with Venmo opening Venmo, Julia joining with Google.
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)

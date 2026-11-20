@@ -93,6 +93,20 @@ export function importInput(mail: ParsedMail): ImportInput | null {
   return { text, file, subject };
 }
 
+/**
+ * Whether Cloudflare found the email really came from its From address: DMARC passed, in the first
+ * Authentication-Results header, the one Cloudflare's mail servers (mx.cloudflare.net) prepend before
+ * the Worker runs. The Worker passes it on as it reads it; repeats of the header (a sender can add
+ * their own) come after the first, joined by ", ", and are never read.
+ */
+export function dmarcPassed(results: string | null | undefined): boolean {
+  const first = String(results ?? "").split(",")[0];
+  const [authserv, ...rest] = first.split(";").map((s) => s.trim());
+  if (!/^mx\.cloudflare\.net(\s|$)/i.test(authserv ?? "")) return false;
+  const dmarc = rest.find((s) => /^dmarc=/i.test(s));
+  return Boolean(dmarc && /^dmarc=pass\b/i.test(dmarc));
+}
+
 /** Constant-time comparison for the Worker's shared secret. */
 export function sameSecret(a: string, b: string): boolean {
   if (!a || !b || a.length !== b.length) return false;

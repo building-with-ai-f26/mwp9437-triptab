@@ -16,6 +16,7 @@ interface Env {
 interface IncomingEmail {
   readonly to: string;
   readonly from: string;
+  readonly headers: Headers;
   readonly raw: ReadableStream<Uint8Array>;
   readonly rawSize: number;
   setReject(reason: string): void;
@@ -25,7 +26,7 @@ const MAX_EMAIL_BYTES = 8_000_000;
 
 /** What the sender's mail program tells them when the email can't be taken. */
 const BOUNCE: Record<number, string> = {
-  403: "Only people on the trip can send it bookings. Forward it from the email address you use for TripTab.",
+  403: "Only people on the trip can send it bookings. Forward it from the email address you use for TripTab, from your usual mail app.",
   404: "There's no TripTab trip at that address. Copy the address again from the trip's People panel.",
   413: "That email is too big for TripTab (8 MB at most).",
   429: "That trip has taken in all the emails it can today. Try again tomorrow, or add the booking in the app.",
@@ -42,7 +43,15 @@ export default {
     const raw = await new Response(message.raw).arrayBuffer();
     const res = await fetch(env.INBOX_URL, {
       method: "POST",
-      headers: { "x-inbox-secret": env.INBOX_SECRET, "x-envelope-to": message.to, "content-type": "message/rfc822" },
+      headers: {
+        "x-inbox-secret": env.INBOX_SECRET,
+        "x-envelope-to": message.to,
+        // Cloudflare's own check of the sender (SPF, DKIM, DMARC), the first Authentication-Results
+        // header it prepends. The function takes mail only when DMARC passed, so a forged From is
+        // turned away (Cloudflare's email handler docs, "Authentication results").
+        "x-auth-results": message.headers.get("authentication-results") ?? "",
+        "content-type": "message/rfc822",
+      },
       body: raw,
     });
     if (BOUNCE[res.status]) return message.setReject(BOUNCE[res.status]);

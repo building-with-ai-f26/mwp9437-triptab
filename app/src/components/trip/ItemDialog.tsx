@@ -470,36 +470,6 @@ function ItemForm({
         />
       </DarkField>
 
-      <DarkField label="Link (optional)">
-        <span className="flex items-center gap-2">
-          <input
-            className="field-dark min-w-0 flex-1"
-            type="text"
-            inputMode="url"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            aria-label="Link (optional)"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            onBlur={() => setLinkLeft(true)}
-            placeholder={isStay ? "The Airbnb or hotel page" : "A booking or a page about it"}
-          />
-          {linked.value && (
-            <a
-              href={linked.value}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-white underline underline-offset-4"
-              aria-label={`Open ${linkHost(linked.value)}`}
-            >
-              Open <ExternalLink className="size-3.5" />
-            </a>
-          )}
-        </span>
-        {linked.problem && (linkLeft || tried) && <span className="mt-1 block text-xs text-red-200">{linked.problem}</span>}
-      </DarkField>
-
       {isStay ? (
         <>
         <div className="grid grid-cols-2 gap-2">
@@ -878,6 +848,36 @@ function ItemForm({
           </div>
         )}
       </div>
+
+      <DarkField label="Link (optional)">
+        <span className="flex items-center gap-2">
+          <input
+            className="field-dark min-w-0 flex-1"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Link (optional)"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onBlur={() => setLinkLeft(true)}
+            placeholder={isStay ? "The Airbnb or hotel page" : "A booking or a page about it"}
+          />
+          {linked.value && (
+            <a
+              href={linked.value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-white underline underline-offset-4"
+              aria-label={`Open ${linkHost(linked.value)}`}
+            >
+              Open <ExternalLink className="size-3.5" />
+            </a>
+          )}
+        </span>
+        {linked.problem && (linkLeft || tried) && <span className="mt-1 block text-xs text-red-200">{linked.problem}</span>}
+      </DarkField>
 
       <DarkField label="Notes (optional)">
         <textarea className="field-dark min-h-[72px] resize-y" value={notes} onChange={(e) => setNotes(e.target.value)} />

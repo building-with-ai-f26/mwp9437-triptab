@@ -3,7 +3,7 @@
  * it, and what part of a forwarded email goes to AI import. Made-up emails only.
  */
 import { describe, expect, it } from "vitest";
-import { htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
+import { dmarcPassed, htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
 import { inboxAddressFor } from "./inbox";
 
 const TOKEN = "3f9a0b1c2d3e4f5a";
@@ -76,5 +76,24 @@ describe("the Worker's secret", () => {
     expect(sameSecret("abc123", "abc123")).toBe(true);
     expect(sameSecret("abc123", "abc124")).toBe(false);
     expect(sameSecret("", "")).toBe(false);
+  });
+});
+
+describe("whether the sender is who the email says (Cloudflare's own check)", () => {
+  it("passes when Cloudflare's header, the first one, says DMARC passed", () => {
+    expect(dmarcPassed("mx.cloudflare.net; spf=pass smtp.mailfrom=gmail.com; dkim=pass header.d=gmail.com; dmarc=pass header.from=gmail.com")).toBe(true);
+    expect(dmarcPassed("MX.Cloudflare.net;dmarc=pass header.from=nyu.edu")).toBe(true);
+  });
+  it("fails when DMARC failed, was missing, or the header isn't Cloudflare's", () => {
+    expect(dmarcPassed("mx.cloudflare.net; spf=pass smtp.mailfrom=x.com; dkim=none; dmarc=fail header.from=gmail.com")).toBe(false);
+    expect(dmarcPassed("mx.cloudflare.net; spf=pass smtp.mailfrom=x.com; dkim=pass header.d=x.com; dmarc=none header.from=x.com")).toBe(false);
+    expect(dmarcPassed("evil.example; dmarc=pass header.from=gmail.com")).toBe(false);
+    expect(dmarcPassed("")).toBe(false);
+    expect(dmarcPassed(null)).toBe(false);
+  });
+  it("reads only Cloudflare's header, never one the sender added after it", () => {
+    // Headers.get joins repeats with ", ": Cloudflare's comes first.
+    expect(dmarcPassed("mx.cloudflare.net; dmarc=fail header.from=gmail.com, mx.cloudflare.net; dmarc=pass header.from=gmail.com")).toBe(false);
+    expect(dmarcPassed("mx.cloudflare.net; dmarc=fail header.from=gmail.com (dmarc=pass)")).toBe(false);
   });
 });

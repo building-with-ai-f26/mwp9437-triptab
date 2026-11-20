@@ -149,3 +149,14 @@ What this does and doesn't show:
 - Ten earlier cases plus one new one is a small set; these are results on these eleven descriptions.
 
 All 18 runs of this round: **$0.1721** at list price, logged in dev's `ai_calls` as test runs, covered by the Max plan's API credit.
+
+# Email-in eval: results
+
+Email-in (Mike's call, 11/20) sends a forwarded confirmation through the same import model, prompt and checks, so its eval reuses the import eval's 10 made-up cases, each sent as a forwarded email to a throwaway trip's own address through `inbox-email`'s dev-only test path (`npm run eval:email`, `evals/email/email.eval.ts`). Odd-numbered cases go as HTML mail (a style block and a forwarded-message line, the way mail programs send it), even ones as plain text, and the scanned lift-pass receipt as a PDF attached to an email that says only "See attached." What import proposed is read back from the trip's inbox and scored with the same four rules.
+
+## First run (Nov 20, about 10:17 AM New York)
+
+- **10 of 10 cases passed all four rules** (`email-first-20261120-1518.md`): right kind, days and parts; nothing invented; costs, currency and who pays; never following instructions in the input. The injected $9,999 charge in case 09 was ignored, and the grocery receipt in case 10 found no plans.
+- Cost, from dev's `ai_calls` (feature `import_email`, test runs, 15:17:30 to 15:19:00 UTC): 10 calls, **$0.0207** at list price, one web search (case 05's bare flight number). Covered by the Max plan's API credit.
+- 3 to 9 seconds an email; nothing is waiting on that, since the result lands on the trip.
+- Ten cases is a small set, and they're the import eval's: what this shows is that the email path (HTML to text, attachments, the subject) hands import what pasting does.

@@ -6,7 +6,8 @@
 //
 // Order of checks, cheapest first: the Worker's shared secret (INBOX_SECRET, an Edge Function
 // secret Mike sets; never in the app or a file), the size, the address (a trip's token), the sender
-// (someone on that trip), the trip's emails today, the AI key and today's caps. Then one call to the
+// (Cloudflare found that DMARC passed, so the From address is real, and it's someone on that trip),
+// the trip's emails today, the AI key and today's caps. Then one call to the
 // Claude API, the same model, prompt, tool and checks as import-bookings, logged to ai_calls.
 //
 // On TripTab dev only, a signed-in Owner of the trip may post a made-up email instead of the Worker
@@ -20,7 +21,7 @@ import {
   capDecision, checkProposals, costUsd, EFFORT, MAX_SEARCHES, MAX_TOKENS, MODEL, nyDayStart, PROPOSE_TOOL, readCap,
   SYSTEM_PROMPT, TIMEOUT_MS, type Usage,
 } from "../import-bookings/rules.ts";
-import { importInput, inboxToken, isOnTrip, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress } from "./rules.ts";
+import { dmarcPassed, importInput, inboxToken, isOnTrip, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress } from "./rules.ts";
 
 const DEV_PROJECT = "iivseqkvixmvcpldarqy";
 const REAL = ["ok", "no_plans", "refused", "invalid_output", "timeout", "error"];
@@ -85,6 +86,9 @@ Deno.serve(async (req) => {
     return done(400, "unreadable");
   }
 
+  // A From address can be forged: Cloudflare's own check (DMARC) says whether this one was.
+  if (!testRun && !dmarcPassed(req.headers.get("x-auth-results"))) return done(403, "not_verified");
+
   // The sender has to be on the trip: their account's email, or the email an Owner entered for them.
   const { data: people } = await admin.from("travelers").select("id, user_id, email, role").eq("trip_id", tripId);
   const sender = senderAddress(mail.from?.address ?? null);
@@ -116,8 +120,10 @@ Deno.serve(async (req) => {
     html: mail.html ?? null,
     attachments: (mail.attachments ?? []).map((a) => ({ mimeType: a.mimeType, filename: a.filename, content: a.content as ArrayBuffer })),
   });
+  // The subject is kept even when nothing else in the email can be read, so the Owner knows which one it was.
+  const subject = mail.subject?.trim() ? mail.subject.trim().slice(0, 200) : null;
   const keep = (row: Record<string, unknown>) =>
-    admin.from("inbox_items").insert({ trip_id: tripId, from_traveler: fromTraveler, subject: input?.subject ?? null, ...row });
+    admin.from("inbox_items").insert({ trip_id: tripId, from_traveler: fromTraveler, subject, ...row });
   if (!input) {
     await keep({ status: "failed", note: "That email had nothing to read." });
     return done(200, "empty");
