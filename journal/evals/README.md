@@ -143,7 +143,7 @@ What the misses were, and what fixed them:
 - **A train as a flight (case 03), once.** It didn't recur in the nine runs after.
 
 What this does and doesn't show:
-- **No drop on the earlier cases with what ships:** 30 of 30 across v11's three runs, against 10 of 10 for the old prompt's baseline today and 49 of 50 across its five runs on 11/19.
+- **No drop on the earlier cases with what ships:** 30 of 30 across v11's three runs, against 10 of 10 for the old prompt's baseline today and 48 of 50 across its five full runs on 11/19 (both misses since fixed in code).
 - **Case 11 passed in all three v11 runs:** the dates came back as a note to fix on the form, no question about the dates or lift tickets, the places in location, "Drive to" titles, and a question about the rental car.
 - Three of the four fixes are checks in code (unit-tested in `src/lib/describeRules.test.ts`), so they hold whatever the model does. The prompt alone did not reliably stop the lift-ticket question.
 - Ten earlier cases plus one new one is a small set; these are results on these eleven descriptions.
