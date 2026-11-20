@@ -49,15 +49,17 @@ afterAll(async () => {
   await stranger.from("trips").delete().eq("id", otherTrip);
 });
 
-describe("an Owner and someone else's Venmo", () => {
+describe("an Owner and someone else's Venmo and Zelle", () => {
   it("adds a Venmo for someone who hasn't set their own, and can fix it", async () => {
     expect((await owner.from("travelers").update({ venmo: "priya-typo" }).eq("id", priya).select("id")).error).toBeNull();
     expect((await owner.from("travelers").update({ venmo: "priya-tt" }).eq("id", priya).select("id")).error).toBeNull();
     expect(await row(owner, priya)).toEqual({ venmo: "priya-tt", zelle: null, pay_locked: false });
   });
 
-  it("can't add anyone's Zelle, or lock or unlock a spot", async () => {
-    expect((await owner.from("travelers").update({ zelle: "5551234567" }).eq("id", priya)).error?.code).toBe("42501");
+  it("adds a Zelle for someone who hasn't set their own too (C20, 11/20), but can't lock or unlock a spot", async () => {
+    expect((await owner.from("travelers").update({ zelle: "5551234567" }).eq("id", priya).select("id")).error).toBeNull();
+    expect(await row(owner, priya)).toEqual({ venmo: "priya-tt", zelle: "5551234567", pay_locked: false });
+    expect((await owner.from("travelers").update({ zelle: "555-1234" }).eq("id", priya)).error?.code).toBe("23514");
     expect((await owner.from("travelers").update({ pay_locked: true }).eq("id", priya)).error?.code).toBe("42501");
   });
 });
@@ -71,8 +73,11 @@ describe("saving your own", () => {
   it("then an Owner can't change your Venmo, and is told why", async () => {
     const { error } = await owner.from("travelers").update({ venmo: "not-vic" }).eq("id", vic);
     expect(error?.code).toBe("42501");
-    expect(error?.message).toMatch(/Vic set their own Venmo, so only they can change it/);
+    expect(error?.message).toMatch(/Vic set their own Venmo and Zelle, so only they can change them/);
     expect((await row(owner, vic))!.venmo).toBe("vic-tt");
+    const z = await owner.from("travelers").update({ zelle: "5559999999" }).eq("id", vic);
+    expect(z.error?.code).toBe("42501");
+    expect((await row(owner, vic))!.zelle).toBe("5551234567");
   });
 
   it("an email works for Zelle, in lower case; something else doesn't", async () => {

@@ -14,6 +14,13 @@ interface AuthState {
   signInOptionsKnown: boolean;
   /** Leaves for Google; the browser comes back to `returnPath` on this site, signed in. */
   signInWithGoogle: (returnPath: string) => Promise<string | null>;
+  /** This account can sign in with Google (Google sign-in, or Google linked to it). */
+  hasGoogle: boolean;
+  /**
+   * Links Google to this account (C19, Mike's call 11/20), so Google signs in here instead of making a
+   * second account. Leaves for Google and comes back to `returnPath`.
+   */
+  linkGoogle: (returnPath: string) => Promise<string | null>;
   /** Emails a link to /reset-password. Says nothing about whether the account exists. */
   sendPasswordReset: (email: string) => Promise<string | null>;
   /** Sets a new password for whoever is signed in (after a reset link, the person it was sent to). */
@@ -62,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       // Back from Google: count it like any sign-in, or as a sign-up when the account is brand new.
       const u = data.session?.user;
-      if (arrivedFromOAuth && u) {
+      if (arrivedFromOAuth && u && new URLSearchParams(window.location.search).get("linked") === "google") {
+        track("google linked", { ok: Boolean(u.identities?.some((i) => i.provider === "google")) });
+      } else if (arrivedFromOAuth && u) {
         const isNew = Date.now() - new Date(u.created_at).getTime() < 2 * 60_000;
         track(isNew ? "signed up" : "signed in", { method: "google" });
       }
@@ -111,6 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { redirectTo: `${window.location.origin}${returnPath}` },
     });
     return error ? "Couldn't reach Google. Try again, or use your email." : null;
+  };
+
+  const linkGoogle = async (returnPath: string) => {
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}${returnPath}` },
+    });
+    if (!error) return null;
+    if (/manual linking/i.test(error.message) || (error as { code?: string }).code === "manual_linking_disabled") {
+      return "Linking Google isn't turned on yet. Try again later.";
+    }
+    return "Couldn't reach Google. Try again.";
   };
 
   const sendPasswordReset = async (email: string) => {
@@ -166,6 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         googleEnabled,
         signInOptionsKnown,
         signInWithGoogle,
+        hasGoogle: Boolean(session?.user?.identities?.some((i) => i.provider === "google")),
+        linkGoogle,
         sendPasswordReset,
         setNewPassword,
         emailPending: session?.user?.app_metadata?.email_check === "pending",

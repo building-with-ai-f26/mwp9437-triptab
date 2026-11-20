@@ -68,6 +68,8 @@ export interface Item {
   start_time: string | null;
   end_time: string | null;
   location: string | null;
+  /** A web page for it, such as an Airbnb listing or a booking (C22); missing on a database without it yet. */
+  link?: string | null;
   notes: string | null;
   status: ItemStatus;
   /** Rough cost while suggested or planned. */
@@ -317,6 +319,37 @@ export interface ItemDraft {
   end_time?: string | null;
   status: ItemStatus;
   est_cents: number | null;
+}
+
+/** The longest link a plan keeps (the database checks the same). */
+export const MAX_LINK = 500;
+
+/**
+ * A typed link, ready to save (C22): empty is none; "airbnb.com/rooms/1" gains https://. Only a web
+ * address (http or https, no spaces) fits, as the database requires.
+ */
+export function cleanLink(text: string): { value: string | null; problem: string | null } {
+  const t = text.trim();
+  if (!t) return { value: null, problem: null };
+  const url = /^[a-z][a-z0-9+.-]*:/i.test(t) ? t : `https://${t.replace(/^\/+/, "")}`;
+  let ok = /^https?:\/\/[^\s]+$/i.test(url) && url.length <= MAX_LINK;
+  if (ok) {
+    try {
+      ok = new URL(url).hostname.includes(".");
+    } catch {
+      ok = false;
+    }
+  }
+  return ok ? { value: url, problem: null } : { value: null, problem: "Type the link as a web address, like airbnb.com/rooms/123." };
+}
+
+/** A link's site, for showing it: "airbnb.com". */
+export function linkHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 /** Checks an itinerary item against its trip's dates. */

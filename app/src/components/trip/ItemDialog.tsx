@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { ChevronDown, ExternalLink, FileUp, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
   addDays,
+  cleanLink,
   defaultPayMode,
   dollars,
   KIND_LABEL,
+  linkHost,
   longDay,
   PART_LABEL,
   PARTS,
@@ -66,6 +68,7 @@ export function ItemDialog({
   stopOn,
   hasCost = false,
   confirmsItself = false,
+  onImport,
   onClose,
   onSave,
   onDelete,
@@ -85,6 +88,8 @@ export function ItemDialog({
   hasCost?: boolean;
   /** An own-cost plan with some lines in: it confirms itself once everyone going has booked. */
   confirmsItself?: boolean;
+  /** A new plan: read it from a confirmation instead (a screenshot, a PDF or pasted text; C22). */
+  onImport?: () => void;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -105,7 +110,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onClose, onSave, onDelete }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onClose, onSave, onDelete }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -134,6 +139,7 @@ function ItemForm({
   stopOn,
   hasCost = false,
   confirmsItself = false,
+  onImport,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -152,6 +158,7 @@ function ItemForm({
   stopOn?: (day: string) => string | null;
   hasCost?: boolean;
   confirmsItself?: boolean;
+  onImport?: () => void;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -169,6 +176,9 @@ function ItemForm({
   const [costType, setCostType] = useState<CostType>(it?.cost_type ?? "total");
   const [location, setLocation] = useState(it?.location ?? "");
   const [notes, setNotes] = useState(it?.notes ?? "");
+  // A web page for it: an Airbnb listing, a booking (C22, Mike's call 11/20).
+  const [link, setLink] = useState(it?.link ?? "");
+  const [linkLeft, setLinkLeft] = useState(false);
   // New plans only: who pays (a default by kind until you pick), and whether it's already paid.
   const [payMode, setPayMode] = useState<PayMode>(it?.pay_mode ?? defaultPayMode(state.kind));
   const [payPicked, setPayPicked] = useState(false);
@@ -212,6 +222,7 @@ function ItemForm({
       ? { mode: "own", cents: toCents(paidTyped), withPoints: points }
       : { mode: "split", totalCents: toCents(paidTyped), paidBy };
 
+  const linked = cleanLink(link);
   const input: ItemInput = {
     kind,
     title: title.trim(),
@@ -222,6 +233,7 @@ function ItemForm({
     start_time: !isStay && startTime ? startTime : null,
     end_time: !isStay && endTime ? endTime : null,
     location: location.trim() || null,
+    link: linked.value,
     notes: notes.trim() || null,
     status: paidNow ? "planned" : status,
     est_cents: paidNow ? null : estCents,
@@ -233,7 +245,7 @@ function ItemForm({
     ...(paidNow && paidBad ? ["Enter what it cost, like 120 or $120."] : []),
     ...(paidNow && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
   ];
-  const problems = [...validateItem(input, tripNow), ...costProblems];
+  const problems = [...validateItem(input, tripNow), ...(linked.problem ? [linked.problem] : []), ...costProblems];
   // Non-travel plans: the run of parts covered, as indexes into PARTS.
   const fromIdx = PARTS.indexOf(part);
   const toIdx = endPart && PARTS.indexOf(endPart) > fromIdx ? PARTS.indexOf(endPart) : fromIdx;
@@ -352,6 +364,19 @@ function ItemForm({
             {it.location}
           </p>
         )}
+        {it.link && (
+          <p>
+            <span className="label-luxury block text-white/55">Link</span>
+            <a
+              href={it.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-white underline underline-offset-4"
+            >
+              {linkHost(it.link)} <ExternalLink className="size-3.5" />
+            </a>
+          </p>
+        )}
         {it.notes && (
           <p className="whitespace-pre-line">
             <span className="label-luxury block text-white/55">Notes</span>
@@ -391,6 +416,24 @@ function ItemForm({
         else setTried(true);
       }}
     >
+      {!it && onImport && (
+        // Uploading a confirmation was only under AI help, where Mike didn't find it (his 11/19 review).
+        <button
+          type="button"
+          onClick={() => {
+            closed.current = true;
+            onImport();
+          }}
+          className="mb-3 flex w-full items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
+        >
+          <FileUp className="size-4 shrink-0" />
+          <span>
+            Have a confirmation? <span className="font-semibold text-white underline underline-offset-4">Upload a screenshot or PDF</span>, or paste
+            it, and TripTab fills the plan in.
+          </span>
+        </button>
+      )}
+
       <DarkField label="What">
         <input
           className="field-dark"
@@ -805,6 +848,36 @@ function ItemForm({
           </div>
         )}
       </div>
+
+      <DarkField label="Link (optional)">
+        <span className="flex items-center gap-2">
+          <input
+            className="field-dark min-w-0 flex-1"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Link (optional)"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onBlur={() => setLinkLeft(true)}
+            placeholder={isStay ? "The Airbnb or hotel page" : "A booking or a page about it"}
+          />
+          {linked.value && (
+            <a
+              href={linked.value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-white underline underline-offset-4"
+              aria-label={`Open ${linkHost(linked.value)}`}
+            >
+              Open <ExternalLink className="size-3.5" />
+            </a>
+          )}
+        </span>
+        {linked.problem && (linkLeft || tried) && <span className="mt-1 block text-xs text-red-200">{linked.problem}</span>}
+      </DarkField>
 
       <DarkField label="Notes (optional)">
         <textarea className="field-dark min-h-[72px] resize-y" value={notes} onChange={(e) => setNotes(e.target.value)} />

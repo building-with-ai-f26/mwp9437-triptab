@@ -71,6 +71,7 @@ function run(fn: (ph: PostHog) => void) {
 export type EventName =
   | "signed up"
   | "signed in"
+  | "google linked"
   | "trip created"
   | "person added"
   | "plan added"
@@ -105,6 +106,10 @@ export type EventName =
   | "pay info saved"
   | "pay info skipped"
   | "ai help opened"
+  | "import opened"
+  | "inbox review opened"
+  | "inbox reviewed"
+  | "inbox dismissed"
   | "trip described"
   | "described plans reviewed"
   | "described questions parked"

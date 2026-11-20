@@ -63,3 +63,24 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
   502. Fixed in the batch 5 pull request: that answer is now a 422 telling the Owner to check the
   address, and build2 no longer emails a made-up inbox. The flows now log the address of every
   server error, so the production one above can be traced if it comes back.
+- **Email-in (11/20) opens a new way in: mail from anyone.** What guards it, for SECURITY.md:
+  - The Worker passes mail on only with the shared secret (`INBOX_SECRET`, compared in constant
+    time); without it the function answers 401. The secret is a Worker secret and a Supabase secret
+    Mike sets; it's never in a file or the app.
+  - Each trip's address carries 64 random bits (`trip+<16 hex>@triptab.org`), given only to its
+    Owners (`inbox_address`, raised rights, checks the caller); an Owner can replace it, and the old
+    one stops at once (tested in `inbox.live.test.ts`).
+  - Mail is read only from an address on the trip (an account's email, or the email an Owner
+    entered). **Known limit:** a From address can be forged. Someone who has a trip's address and
+    knows a traveler's email could send plans in their name. They'd still wait for an Owner to
+    review them; nothing reaches the itinerary on its own, and the trip takes 20 emails a day.
+    Cloudflare checks SPF, DKIM and DMARC on incoming mail; reading its verdict in the Worker is
+    a possible next step.
+  - Size: 8 MB at most (Worker and function), import's own 3 MB file and 20,000-character limits,
+    20 emails a trip a day, and the AI caps (`AI_DAILY_CAP_USD`, 20 calls a person a day) with each
+    call in `ai_calls` (feature `import_email`).
+  - What's kept: who sent it on the trip, its subject and the proposed plans. The email itself
+    isn't stored. Only the trip's Owners can read `inbox_items`; only the function writes them, and
+    Owners can change nothing but the status, to saved or dismissed (tested).
+  - The dev-only test path (a signed-in Owner posts a made-up email) checks the project it runs on
+    and is closed on production.

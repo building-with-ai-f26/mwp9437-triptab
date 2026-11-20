@@ -8,6 +8,7 @@ import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, PayMode,
 import type { SplitMode } from "./split";
 import type { ImportResult } from "./importPlans";
 import { cleanVenmo, cleanZelle, VENMO_FORMAT, venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "./pay";
+import { inboxAddressFor, type InboxItem } from "./inbox";
 
 export { cleanVenmo, venmoLooksRight, zelleLabel, zelleLooksRight } from "./pay";
 
@@ -175,10 +176,15 @@ export interface TripBundle {
    * until its migration is OK'd): the app then hides payments rather than failing to load.
    */
   payments: Payment[] | null;
+  /**
+   * Emails forwarded to the trip's address that wait for a look (new, or unreadable), newest first.
+   * Owners only (everyone else gets none). Null when this database doesn't have email-in yet.
+   */
+  inbox: InboxItem[] | null;
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay, inbox] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -193,6 +199,8 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("payments").select("*").eq("trip_id", id).order("paid_on").order("created_at"),
     supabase.from("travelers").select("id, venmo").eq("trip_id", id),
     supabase.from("travelers").select("id, zelle, pay_locked").eq("trip_id", id),
+    // Asked apart too, so a database without email-in still loads the trip.
+    supabase.from("inbox_items").select("*").eq("trip_id", id).in("status", ["new", "failed"]).order("received_at", { ascending: false }),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -221,7 +229,35 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     ownMarks: (marks.data as OwnMark[] | null) ?? [],
     actions: must(actions.data, actions.error) as ActionItem[],
     payments: payments.error ? null : (payments.data as Payment[]),
+    inbox: inbox.error ? null : (inbox.data as InboxItem[]),
   };
+}
+
+// ---------- Email-in (Mike's call, 11/20) ----------
+
+/** Whether email-in takes mail: on production once INBOX_SECRET is set (by name only), on dev always. */
+export async function inboxReady(): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke("inbox-email", { body: { probe: true } });
+  return !error && (data as { ready?: unknown } | null)?.ready === true;
+}
+
+/** The trip's own address for forwarding bookings, made the first time an Owner asks. */
+export async function tripInboxAddress(tripId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("inbox_address", { p_trip: tripId });
+  return inboxAddressFor(must(data as string | null, error));
+}
+
+/** A new address in place of the old one, which stops taking email at once. */
+export async function resetTripInbox(tripId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("reset_inbox", { p_trip: tripId });
+  return inboxAddressFor(must(data as string | null, error));
+}
+
+/** An Owner marks an email's plans saved (kept on the trip) or dismisses it. */
+export async function markInbox(id: string, status: "saved" | "dismissed"): Promise<void> {
+  const { data, error } = await supabase.from("inbox_items").update({ status }).eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }
 
 // ---------- Payments ----------
@@ -267,6 +303,24 @@ export async function setVenmoFor(travelerId: string, handle: string): Promise<v
   if (!data?.length) throw new Error("Only the trip's owners can do that.");
 }
 
+/**
+ * An Owner adds or fixes someone's Venmo and Zelle (C20, Mike's call 11/20), until that person sets
+ * their own. Blank clears either one.
+ */
+export async function setPayFor(travelerId: string, venmo: string, zelle: string): Promise<void> {
+  if (!venmoLooksRight(venmo)) throw new Error(VENMO_FORMAT);
+  if (!zelleLooksRight(zelle)) throw new Error(ZELLE_FORMAT);
+  const { data, error } = await supabase
+    .from("travelers")
+    .update({ venmo: cleanVenmo(venmo), zelle: cleanZelle(zelle) })
+    .eq("id", travelerId)
+    .select("id");
+  if (error?.code === "42501" && /set their own/.test(error.message)) throw new Error(error.message);
+  if (error?.code === "23514") throw new Error(error.message.includes("zelle") ? ZELLE_FORMAT : VENMO_FORMAT);
+  if (error) throw new Error(friendly(error));
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
 /** Your Venmo username, on all your trips at once. Blank clears it. (Databases without Zelle yet.) */
 export async function setMyVenmo(handle: string): Promise<void> {
   const { error } = await supabase.rpc("set_my_venmo", { p_venmo: handle });
@@ -301,6 +355,8 @@ export interface PersonDraft {
   role: Role;
   /** Their Venmo username, so people can pay them from Settle up (optional). */
   venmo?: string;
+  /** Their Zelle phone or email (optional; C20). */
+  zelle?: string;
 }
 
 /** Owners get each person's email and phone; everyone else gets null for both. */
@@ -323,10 +379,11 @@ export async function addTraveler(tripId: string, p: PersonDraft): Promise<Trave
       role: p.role,
       // Only when given, so a database without Venmo names still adds people.
       ...(cleanVenmo(p.venmo ?? "") ? { venmo: cleanVenmo(p.venmo ?? "") } : {}),
+      ...(cleanZelle(p.zelle ?? "") ? { zelle: cleanZelle(p.zelle ?? "") } : {}),
     })
     .select(TRAVELER_COLUMNS)
     .single();
-  if (error?.code === "23514") throw new Error(VENMO_FORMAT);
+  if (error?.code === "23514") throw new Error(error.message.includes("zelle") ? ZELLE_FORMAT : VENMO_FORMAT);
   const row = must(data as Omit<Traveler, "email" | "phone"> | null, error);
   return { ...row, email: p.email.trim() || null, phone: p.phone.trim() || null };
 }
@@ -426,6 +483,8 @@ export interface ItemInput {
   part: DayPart;
   end_day: string | null;
   location: string | null;
+  /** A web page for it, such as an Airbnb listing (C22). */
+  link?: string | null;
   notes: string | null;
   status: ItemStatus;
   est_cents: number | null;

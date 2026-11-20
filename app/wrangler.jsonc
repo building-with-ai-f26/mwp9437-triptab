@@ -1,12 +1,15 @@
 {
-  // TripTab on Cloudflare Workers (Build 3, Advanced lane). Static files only: no Worker code runs.
+  // TripTab on Cloudflare Workers (Build 3, Advanced lane). The pages and files are static; the one
+  // bit of Worker code (worker/index.ts) takes email for trips' addresses (email-in, 11/20).
   // Cloudflare's Workers Builds runs app/scripts/cloudflare-build.sh (the tests, then the build into
   // dist/) and deploys main to triptab.org only once the tests pass; other branches get a Preview.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "triptab",
   "compatibility_date": "2026-11-18",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // The app picks the screen in the browser (react-router), so a path that isn't a file, like
     // /join/abc or /trips/123, gets index.html instead of a 404.
     "not_found_handling": "single-page-application"
@@ -15,6 +18,9 @@
   // built against TripTab dev, so a Preview never touches real users.
   "routes": [{ "pattern": "triptab.org", "custom_domain": true }],
   "workers_dev": false,
+  // Where the email handler sends a trip's mail: production's inbox-email function (a public
+  // address). Its shared secret, INBOX_SECRET, is a Worker secret Mike sets in Cloudflare.
+  "vars": { "INBOX_URL": "https://pptzbogslzicfyjooqra.supabase.co/functions/v1/inbox-email" },
   "preview_urls": true,
   // Workers Builds deploys a branch with `wrangler preview`, which won't run without this block. It
   // stays empty: assets and compatibility settings above apply to Previews too.

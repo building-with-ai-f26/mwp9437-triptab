@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cleanLink,
+  linkHost,
   dueDayOk,
   dueWindow,
   todayIso,
@@ -105,6 +107,27 @@ describe("validateTrip", () => {
     expect(validateTrip("Gap year", [{ name: "Asia", start_date: "2026-01-01", end_date: "2026-06-01" }])).toContain(
       "Trips can be up to 60 days long.",
     );
+  });
+});
+
+describe("a plan's link (C22)", () => {
+  it("adds https:// to a bare address and keeps a full one", () => {
+    expect(cleanLink("airbnb.com/rooms/123")).toEqual({ value: "https://airbnb.com/rooms/123", problem: null });
+    expect(cleanLink("  https://www.hertz.com/res?id=9 ")).toEqual({ value: "https://www.hertz.com/res?id=9", problem: null });
+    expect(cleanLink("http://example.org").value).toBe("http://example.org");
+  });
+  it("is none when empty", () => {
+    expect(cleanLink("   ")).toEqual({ value: null, problem: null });
+  });
+  it("refuses what isn't a web address", () => {
+    for (const bad of ["javascript:alert(1)", "mailto:a@b.co", "my airbnb", "localhost", "ftp://x.org/f", `https://a.co/${"x".repeat(500)}`]) {
+      expect(cleanLink(bad).value).toBeNull();
+      expect(cleanLink(bad).problem).toMatch(/web address/);
+    }
+  });
+  it("shows a link by its site", () => {
+    expect(linkHost("https://www.airbnb.com/rooms/123")).toBe("airbnb.com");
+    expect(linkHost("not a url")).toBe("not a url");
   });
 });
 

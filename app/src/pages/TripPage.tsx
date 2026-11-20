@@ -26,6 +26,8 @@ import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
 import { AiChoiceDialog } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
+import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
+import type { InboxItem } from "../lib/inbox";
 import { draftCents, type Draft } from "../lib/importPlans";
 import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
@@ -48,6 +50,11 @@ import {
   setMyPay,
   setMyVenmo,
   setVenmoFor,
+  setPayFor,
+  inboxReady,
+  markInbox,
+  resetTripInbox,
+  tripInboxAddress,
   type PaymentDraft,
   loadTrip,
   removeTraveler,
@@ -116,6 +123,8 @@ export default function TripPage() {
   const [view, setView] = useState<"days" | "week">("days");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  // Email-in (11/20): the email whose plans are open on import's review.
+  const [reviewingInbox, setReviewingInbox] = useState<InboxItem | null>(null);
   const [planning, setPlanning] = useState(false);
   // One AI button, two choices (Mike's 11/18 call): I have bookings (Import) or Give me ideas (Plan with AI).
   const [choosingAi, setChoosingAi] = useState(false);
@@ -155,7 +164,14 @@ export default function TripPage() {
   const paymentsReady = bundle?.payments != null;
   // A database with Zelle and the lock answers pay_locked for every person.
   const zelleReady = (bundle?.travelers ?? []).some((t) => t.pay_locked !== undefined);
-  useEffect(() => (loaded ? subscribeToTrip(id, reload, { payments: paymentsReady }) : undefined), [id, loaded, reload, paymentsReady]);
+  // Emails forwarded to the trip, where the database has email-in.
+  const inboxOn = bundle?.inbox != null;
+  const inboxAddressHere = useCallback(() => tripInboxAddress(id), [id]);
+  const resetInboxHere = useCallback(() => resetTripInbox(id), [id]);
+  useEffect(
+    () => (loaded ? subscribeToTrip(id, reload, { payments: paymentsReady, inbox: inboxOn }) : undefined),
+    [id, loaded, reload, paymentsReady, inboxOn],
+  );
 
   // A trip just set up from a description: its follow-up questions become your to-dos, and its
   // plans open on import's review (once; the hand-off is removed as it's read).
@@ -242,7 +258,7 @@ export default function TripPage() {
   const openItem = dialog?.item ? (items.find((i) => i.id === dialog.item!.id) ?? dialog.item) : null;
 
   /** Saves the plans kept on import's review (an import, or a trip's description), with what was paid. */
-  const saveImported = async (kept: Draft[], via: "import" | "description" = "import") => {
+  const saveImported = async (kept: Draft[], via: "import" | "description" | "email" = "import") => {
     for (const d of kept) {
       const cents = draftCents(d);
       const stay = d.kind === "stay";
@@ -389,7 +405,7 @@ export default function TripPage() {
    * Adds a plan, and when it's already paid logs the one bill (split evenly among who's in) or
    * your own line in the same step. Used by Add a plan and by AI import.
    */
-  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import" | "ai plan" | "description") => {
+  const createPlan = async (input: ItemInput, paid: PaidNow | undefined, via: "form" | "import" | "ai plan" | "description" | "email") => {
     const added = await addItem(trip.id, input);
     // Flights are per person: whoever adds one is on it.
     if (added.kind === "flight" && meId) await setGoing(added.id, meId, true);
@@ -528,6 +544,7 @@ export default function TripPage() {
         await reload();
       }}
       payReady={paymentsReady}
+      zelleReady={zelleReady}
       onEditMyPay={() => setEditingPay(true)}
       onVenmoFor={(t) => setVenmoForPerson(t)}
       linkControls={{
@@ -623,6 +640,23 @@ export default function TripPage() {
             ) : (
             <>
             {!wide && travelCard}
+            {editable && bundle.inbox && bundle.inbox.length > 0 && (
+              <div className="pt-4 sm:pt-6">
+                <InboxBanner
+                  items={bundle.inbox}
+                  travelers={travelers}
+                  onReview={(item) => {
+                    track("inbox review opened", { plans: item.plans.length });
+                    setReviewingInbox(item);
+                  }}
+                  onDismiss={async (item) => {
+                    await markInbox(item.id, "dismissed");
+                    track("inbox dismissed", { status: item.status });
+                    await reload();
+                  }}
+                />
+              </div>
+            )}
             <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
               <div data-tour="itinerary">
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
@@ -779,6 +813,15 @@ export default function TripPage() {
         travelers={travelers}
         meId={meId}
         canEdit={editable}
+        onImport={
+          editable
+            ? () => {
+                setDialog(null);
+                track("import opened", { from: "add a plan" });
+                setImporting(true);
+              }
+            : undefined
+        }
         extras={
           openItem && (
             <PlanPanel
@@ -963,6 +1006,7 @@ export default function TripPage() {
             await reload();
           }}
           onSave={saveImported}
+          forward={<ForwardAddress ready={inboxReady} getAddress={inboxAddressHere} resetAddress={resetInboxHere} />}
           onDone={(result, keptCount) =>
             track("ai import", {
               plans_proposed: result.plans.length,
@@ -974,6 +1018,33 @@ export default function TripPage() {
               latency_ms: result.usage.latency_ms,
             })
           }
+        />
+      )}
+      {editable && reviewingInbox && (
+        <ImportDialog
+          key={reviewingInbox.id}
+          open
+          initial={{
+            plans: reviewingInbox.plans,
+            note: reviewingInbox.note,
+            call_id: reviewingInbox.call_id,
+            usage: { cost_usd: 0, searches: 0, input_tokens: 0, output_tokens: 0, latency_ms: 0, model: "", effort: "" },
+          }}
+          heading={inboxHeading(reviewingInbox, travelers)}
+          trip={trip}
+          items={items}
+          onClose={() => setReviewingInbox(null)}
+          onExtend={async (day) => {
+            await extendTrip(trip.id, day);
+            track("trip extended", { via: "email", side: day < trip.start_date ? "before" : "after" });
+            await reload();
+          }}
+          onSave={async (kept) => {
+            await saveImported(kept, "email");
+            await markInbox(reviewingInbox.id, "saved");
+            await reload();
+          }}
+          onDone={(result, keptCount) => track("inbox reviewed", { plans_proposed: result.plans.length, plans_kept: keptCount })}
         />
       )}
       {editable && (
@@ -1120,9 +1191,11 @@ export default function TripPage() {
       />
       <VenmoForDialog
         person={venmoFor}
-        onSave={async (travelerId, handle) => {
-          await setVenmoFor(travelerId, handle);
-          track("venmo added", { whose: "someone else", where: "people" });
+        zelleReady={zelleReady}
+        onSave={async (travelerId, venmo, zelle) => {
+          if (zelleReady) await setPayFor(travelerId, venmo, zelle);
+          else await setVenmoFor(travelerId, venmo);
+          track("venmo added", { whose: "someone else", where: "people", has_zelle: Boolean(zelle.trim()) });
           await reload();
         }}
         onClose={() => setVenmoForPerson(null)}
@@ -1131,10 +1204,11 @@ export default function TripPage() {
         open={addingPerson}
         defaultRole={link?.default_role ?? "owner"}
         canInvite={Boolean(link?.enabled)}
+        zelleReady={zelleReady}
         onClose={() => setAddingPerson(false)}
         onAdd={async (p, invite) => {
           const added = await addTraveler(trip.id, p);
-          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()), has_venmo: Boolean(p.venmo?.trim()), invited: invite });
+          track("person added", { method: "direct", role: p.role, has_email: Boolean(p.email.trim()), has_phone: Boolean(p.phone.trim()), has_venmo: Boolean(p.venmo?.trim()), has_zelle: Boolean(p.zelle?.trim()), invited: invite });
           let note: string | null = null;
           if (invite) {
             const r = await sendInviteEmail(trip.id, added.id);
@@ -1147,4 +1221,10 @@ export default function TripPage() {
       />
     </div>
   );
+}
+
+/** "From Vic's email", for import's review of what an email brought in. */
+function inboxHeading(item: InboxItem, travelers: Traveler[]): string {
+  const who = travelers.find((t) => t.id === item.from_traveler)?.name;
+  return who ? `From ${who}'s email` : "From an email";
 }

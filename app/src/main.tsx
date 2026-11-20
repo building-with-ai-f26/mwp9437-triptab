@@ -5,6 +5,7 @@ import { HASH_ROUTES } from "./lib/api";
 import "./index.css";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { startAnalytics } from "./lib/analytics";
+import { reloadOnStaleBuild } from "./lib/staleBuild";
 import { isConfigured } from "./lib/supabase";
 import { Spinner } from "./components/ui";
 import Landing from "./pages/Landing";
@@ -20,6 +21,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 
 startAnalytics();
+reloadOnStaleBuild();
 
 const Router = HASH_ROUTES ? HashRouter : BrowserRouter;
 
