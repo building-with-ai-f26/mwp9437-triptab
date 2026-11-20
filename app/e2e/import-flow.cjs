@@ -81,6 +81,15 @@ async function run(browser, label, opts, result) {
     await keep(0).check();
     await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
     r.refusedWithoutDay = (await cards.nth(0).getByRole('alert').innerText()).trim();
+    // By the button too, and the card that needs the fix is brought into view (Mike's 11/19 review:
+    // three taps on Add did nothing he could see, since the reason was up on a card).
+    r.needsFixByButton = (await h.dlg(p).getByTestId('needs-fix').innerText()).trim();
+    await p.waitForTimeout(700);
+    r.problemCardInView = await cards.nth(0).evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return b.bottom > 0 && b.top < window.innerHeight;
+    });
+    if (!/One plan needs a fix first/.test(r.needsFixByButton) || !r.problemCardInView) throw new Error(`blocked save: ${JSON.stringify([r.needsFixByButton, r.problemCardInView])}`);
     await cards.nth(0).getByLabel('Date', { exact: true }).selectOption('2027-02-05');
     // The stay was priced in euros: the Owner types what the card was charged.
     await cards.nth(1).getByLabel('Cost').fill('3460');

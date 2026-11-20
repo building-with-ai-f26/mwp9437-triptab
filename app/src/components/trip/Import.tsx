@@ -142,11 +142,21 @@ export function ImportDialog({
 
   const patch = (i: number, change: Partial<Draft>) => setDrafts((all) => all.map((d, k) => (k === i ? { ...d, ...change } : d)));
   const kept = drafts.filter((d) => d.keep);
-  const blocked = kept.some((d) => draftProblems(d, trip).length > 0);
+  const needFix = kept.filter((d) => draftProblems(d, trip).length > 0).length;
+  const blocked = needFix > 0;
+  const list = useRef<HTMLUListElement>(null);
 
   const save = async () => {
     setTried(true);
-    if (!result || blocked || kept.length === 0) return;
+    if (blocked) {
+      // What needs fixing is on its card, which can be far up the list on a phone: go to it
+      // (Mike's 11/19 review: three taps on Add did nothing he could see).
+      window.requestAnimationFrame(() =>
+        list.current?.querySelector('[data-problem="true"]')?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      );
+      return;
+    }
+    if (!result || kept.length === 0) return;
     setBusy(true);
     setError(null);
     try {
@@ -251,14 +261,19 @@ export function ImportDialog({
             </section>
           )}
 
-          <ul className="space-y-3">
+          <ul className="space-y-3" ref={list}>
             {drafts.map((d, i) => {
               const problems = d.keep ? draftProblems(d, trip) : [];
               const flag = (field: string) =>
                 d.unsure.includes(field) ? <span className="ml-1.5 rounded-full bg-amber-400/20 px-1.5 text-[10px] font-bold normal-case tracking-normal text-amber-200">check this</span> : null;
               const checkouts = d.day ? tripDays(addDays(d.day, 1), addDays(trip.end_date, 1)) : [];
               return (
-                <li key={i} className={`rounded-2xl border p-3 ${d.keep ? "border-white/20 bg-white/5" : "border-white/10 opacity-70"}`} data-testid="proposal">
+                <li
+                  key={i}
+                  className={`rounded-2xl border p-3 ${d.keep ? "border-white/20 bg-white/5" : "border-white/10 opacity-70"}`}
+                  data-testid="proposal"
+                  data-problem={problems.length > 0}
+                >
                   <label className="mb-2 flex items-center gap-2.5 text-sm font-semibold text-white">
                     <input type="checkbox" className="size-5 accent-[#8c7054]" checked={d.keep} onChange={(e) => patch(i, { keep: e.target.checked })} />
                     Keep this one
@@ -437,6 +452,12 @@ export function ImportDialog({
           {error && (
             <p role="alert" className="mt-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
               {error}
+            </p>
+          )}
+          {tried && blocked && (
+            <p role="alert" className="mt-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200" data-testid="needs-fix">
+              {needFix === 1 ? "One plan needs" : `${needFix} plans need`} a fix first, marked in red above. Fix {needFix === 1 ? "it" : "them"}, or
+              untick {needFix === 1 ? "it" : "them"}, then add.
             </p>
           )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
