@@ -207,6 +207,14 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
   const checked = checkProposals({ plans: plansIn, note: r.note ?? null }, [], inputText);
   // A plan dated outside the trip came from a misread date: it is left out rather than stretch the trip.
   const plans = (checked?.plans ?? []).filter((p) => !p.day || (p.day >= tripStart && p.day <= tripEnd));
+  // Something they say is booked but give no day for ("Lift tickets are bought") goes on the trip's
+  // first day, marked unsure, as the earlier prompt always placed it; left blank (5 of 15 eval runs
+  // of the 11/19 prompt) it reached the review screen unticked, asking for a day.
+  for (const p of plans) {
+    if (p.day) continue;
+    p.day = tripStart;
+    if (!p.unsure.includes("day")) p.unsure.push("day");
+  }
   // "Sunday brunch" came back with no part of the day in 1 eval run of 4: when the model leaves it
   // blank, a meal word in the plan's own title sets it, marked unsure for the review screen.
   for (const p of plans) {

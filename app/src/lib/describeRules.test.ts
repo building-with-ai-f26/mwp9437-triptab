@@ -154,3 +154,11 @@ describe("no questions about extras they never mentioned (Mike's 11/19 review: l
     expect(r.questions).toEqual(["What's the Airbnb's address or link?"]);
   });
 });
+
+describe("a plan with no day (11/19 eval: 'Lift tickets are bought')", () => {
+  it("goes on the trip's first day, marked to check", () => {
+    const r = checkDescribe(answer({ plans: [plan({ title: "Lift tickets", day: null, end_day: null, part: null })] }), TEXT)!;
+    expect(r.plans[0].day).toBe("2027-02-05");
+    expect(r.plans[0].unsure).toContain("day");
+  });
+});
