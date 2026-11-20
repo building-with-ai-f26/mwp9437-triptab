@@ -340,6 +340,7 @@ export default function TripPage() {
         ? (ownLineOf(expenses, item.id, meId)?.total_cents ?? null)
         : (expenseByItem.get(item.id)?.total_cents ?? null),
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
+    paid: (item) => costIsIn(item),
     suggestedBy: (item) => suggestedBy(item, travelers, user?.id ?? null),
     aboard: (item) => {
       const on = goingList(item, travelers, itemPeople);
@@ -350,7 +351,7 @@ export default function TripPage() {
         // Everyone pays their own: "Planned, 2 of 5 booked" until everyone going has logged theirs.
         const p = ownProgress(item, travelers, itemPeople, ownMarks);
         const mine = ownLineOf(expenses, item.id, meId);
-        if (item.status === "confirmed") return mine ? "Your own price · everyone's booked" : "Everyone's booked";
+        if (p.complete) return mine ? "Your own price · everyone's booked" : "Everyone's booked";
         // A booked count only means something once there's a price to book (Mike's 11/19 review:
         // "0 of 1 booked" on a drive with no cost was confusing): someone has booked, the plan has
         // an estimate, or it's a flight.
@@ -426,6 +427,10 @@ export default function TripPage() {
   };
 
   const openPlan = (item: Item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind });
+  /** Its cost is in: one bill logged, or everyone going has logged their own (the $ check, C21). */
+  function costIsIn(item: Item): boolean {
+    return item.pay_mode === "own" ? ownProgress(item, travelers, itemPeople, ownMarks).complete : expenseByItem.has(item.id);
+  }
   const lineCount = moneyLines(expenses, payments, meId).length;
   // Each renders once, where the layout puts it: a phone shows the list under the Money summary and
   // Travel and lodging atop the itinerary; desktop shows them in the main column and the sidebar.
@@ -625,7 +630,10 @@ export default function TripPage() {
                   <span className="inline-flex items-center gap-1.5 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-5 rounded-[4px] border-2 border-dotted border-foreground/55" />Suggested is dotted</span>
                   <span className="font-medium text-foreground/80">Planned is solid</span>
                   <span className="inline-flex items-center gap-1 font-semibold text-green-900">
-                    Confirmed (paid) <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
+                    Confirmed <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800"><Check className="size-2.5" strokeWidth={3} /></span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-green-900">
+                    Paid <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
                   </span>
                 </p>
                 <button
@@ -763,6 +771,10 @@ export default function TripPage() {
       <ItemDialog
         state={dialog}
         trip={trip}
+        hasCost={openItem ? costIsIn(openItem) : false}
+        confirmsItself={
+          openItem?.pay_mode === "own" && ownMarks.some((m) => m.item_id === openItem.id) && !costIsIn(openItem)
+        }
         stopOn={(day) => (stops.find((s) => day >= s.start_date && day < s.end_date) ?? stops[stops.length - 1])?.name ?? null}
         travelers={travelers}
         meId={meId}

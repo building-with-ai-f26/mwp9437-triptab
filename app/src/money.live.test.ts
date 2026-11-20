@@ -82,11 +82,14 @@ describe("confirming a plan", () => {
     expect(exp?.expense_shares).toHaveLength(3);
   });
 
-  it("can't mark a plan Confirmed without its cost", async () => {
-    const { error } = await owner.from("items").update({ status: "confirmed" }).eq("id", tickets);
-    expect(error?.message).toMatch(/cost, who paid/);
-    const add = await owner.from("items").insert({ trip_id: tripId, title: "Sneaky", day: "2027-02-06", status: "confirmed" });
-    expect(add.error?.message).toMatch(/cost, who paid/);
+  it("can mark a plan Confirmed without a cost, and back (C21, 11/20)", async () => {
+    const up = await owner.from("items").update({ status: "confirmed" }).eq("id", tickets);
+    expect(up.error).toBeNull();
+    const back = await owner.from("items").update({ status: "planned" }).eq("id", tickets);
+    expect(back.error).toBeNull();
+    const add = await owner.from("items").insert({ trip_id: tripId, title: "Christening", day: "2027-02-06", status: "confirmed" }).select("id").single();
+    expect(add.error).toBeNull();
+    await owner.from("items").delete().eq("id", add.data!.id);
   });
 
   it("can't quietly un-confirm a paid plan", async () => {

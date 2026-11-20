@@ -257,12 +257,15 @@ export function dollars(cents: number): string {
   })}`;
 }
 
-/** Suggested and planned show "~$25 est."; confirmed shows the exact amount (spring EditablePrice.tsx). */
+/**
+ * Suggested and planned show "~$25 est."; a confirmed plan with its cost in shows the exact amount
+ * (spring EditablePrice.tsx), and one confirmed before its price is known keeps its estimate (C21).
+ */
 export function priceLabel(
   item: Pick<Item, "status" | "est_cents" | "cost_type" | "kind">,
   exactCents?: number | null,
 ): string | null {
-  if (item.status === "confirmed") return exactCents == null ? null : dollars(exactCents);
+  if (item.status === "confirmed" && exactCents != null) return dollars(exactCents);
   if (item.est_cents == null || item.est_cents <= 0) return null;
   const per = item.kind === "stay" ? "" : item.cost_type === "per_person" ? " pp" : "";
   return `~${dollars(item.est_cents)}${per} est.`;

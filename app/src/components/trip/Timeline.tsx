@@ -31,6 +31,8 @@ export interface TimelineActions {
   onOpen: (item: Item) => void;
   /** Exact price for a confirmed item, when it has one (Build 3). */
   exactCents?: (item: Item) => number | null;
+  /** Its cost is in (a bill, or everyone's own line): the green $ check (C21: Confirmed alone is a plain check). */
+  paid?: (item: Item) => boolean;
   /** Whether the viewer has opted out of this item (Build 3). */
   isOut?: (item: Item) => boolean;
   /** A short line on the card: "Your share $40", or "3 of 4 in" (Build 3). */
@@ -138,6 +140,20 @@ interface Drag {
   isDragging: boolean;
 }
 
+/** Confirmed: the green "$ ✓" once its cost is in, a plain green check before (C21, 11/20). */
+function ConfirmedBadge({ paid, className = "" }: { paid: boolean; className?: string }) {
+  return (
+    <span
+      className={`flex h-5 items-center gap-0.5 rounded-full bg-green-500/20 px-1.5 text-[10px] font-bold text-green-700 ${className}`}
+      title={paid ? "Confirmed and paid" : "Confirmed"}
+      data-testid={paid ? "badge-paid" : "badge-confirmed"}
+    >
+      {paid && "$ "}
+      <Check className="size-3" strokeWidth={3} />
+    </span>
+  );
+}
+
 /** Who's in, at the end of a card's details: a few initials and +N, or Everyone. */
 function GoingFaces({ badge }: { badge: GoingBadge }) {
   return (
@@ -193,14 +209,7 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
       onClick={() => open(actions, item)}
       aria-label={`${item.title}, ${STATUS_LABEL[item.status]}${out ? ", you're out" : ""}${going ? `. ${going.label}` : ""}`}
     >
-      {confirmed && (
-        <span
-          className="absolute right-2 top-2 flex h-5 items-center gap-0.5 rounded-full bg-green-500/20 px-1.5 text-[10px] font-bold text-green-700"
-          title="Confirmed and paid"
-        >
-          $ <Check className="size-3" strokeWidth={3} />
-        </span>
-      )}
+      {confirmed && <ConfirmedBadge paid={actions.paid?.(item) ?? true} className="absolute right-2 top-2" />}
       <div className="flex items-start gap-2.5">
         <Icon
           className={`mt-0.5 size-4 shrink-0 ${item.status === "suggested" ? "text-primary" : "opacity-70"}`}
@@ -262,11 +271,7 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
             {price}
           </span>
         )}
-        {item.status === "confirmed" && !stay.checkout && (
-          <span className="flex h-5 shrink-0 items-center gap-0.5 rounded-full bg-green-500/20 px-1.5 text-[10px] font-bold text-green-700">
-            $ <Check className="size-3" strokeWidth={3} />
-          </span>
-        )}
+        {item.status === "confirmed" && !stay.checkout && <ConfirmedBadge paid={actions.paid?.(item) ?? true} className="shrink-0" />}
       </div>
     </button>
   );

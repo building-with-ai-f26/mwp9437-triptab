@@ -143,7 +143,7 @@ export function PlanPanel({
         ) : (
           canEdit && (
             <Button className="w-full" onClick={onConfirm}>
-              <CircleDollarSign /> Confirm with the real cost
+              <CircleDollarSign /> {item.status === "confirmed" ? "Add the real cost" : "Confirm with the real cost"}
             </Button>
           )
         ))}
@@ -159,7 +159,7 @@ export function PlanPanel({
                 Confirmed: everyone going has booked
               </>
             ) : (
-              `${STATUS_LABEL[item.status === "confirmed" ? "planned" : item.status]}, ${bookedLabel(progress)}`
+              `${STATUS_LABEL[item.status]}, ${bookedLabel(progress)}`
             )}
           </p>
 

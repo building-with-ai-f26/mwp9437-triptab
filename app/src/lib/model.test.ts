@@ -142,6 +142,9 @@ describe("statuses and prices", () => {
     );
     expect(priceLabel({ status: "confirmed", est_cents: 2500, cost_type: "total", kind: "meal" }, 2730)).toBe("$27.30");
     expect(priceLabel({ status: "suggested", est_cents: null, cost_type: "total", kind: "meal" })).toBeNull();
+    // Confirmed before its price is known (C21): the estimate, until the real cost is in.
+    expect(priceLabel({ status: "confirmed", est_cents: 4500, cost_type: "total", kind: "transport" })).toBe("~$45 est.");
+    expect(priceLabel({ status: "confirmed", est_cents: null, cost_type: "total", kind: "activity" })).toBeNull();
   });
 
   it("only owners can change the trip", () => {
