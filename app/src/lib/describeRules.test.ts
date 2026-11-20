@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aboutTripDates, checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
+import { aboutTripDates, asksAboutExtras, checkDescribe, MAX_QUESTIONS } from "../../../supabase/functions/describe-trip/rules.ts";
 
 const TEXT =
   "Euro ski trip! Chamonix Feb 5 to 12, then Barcelona for a night, then Andorra till the 16th. Skiing every day in Chamonix, dinner reservation Thursday, flights and the Airbnb are booked.";
@@ -128,5 +128,23 @@ describe("a question about the trip's dates goes to the review screen, not the T
     const r = checkDescribe(answer({ note: "Feb 5 2027 is a Friday, so I used Friday.", questions: ["Do your dates match the calendar?"] }), TEXT)!;
     expect(r.note).toBe("Feb 5 2027 is a Friday, so I used Friday.");
     expect(r.questions).toEqual([]);
+  });
+});
+
+describe("no questions about extras they never mentioned (Mike's 11/19 review: lift tickets for a ski day)", () => {
+  it("drops a lift ticket or rental question when the description says nothing about it", () => {
+    expect(asksAboutExtras("What time is the Mount Snow ski day, and do you have lift tickets booked?", TEXT)).toBe(true);
+    expect(asksAboutExtras("Do you need ski rentals?", TEXT)).toBe(true);
+    expect(asksAboutExtras("Do you have travel insurance?", TEXT)).toBe(true);
+    expect(asksAboutExtras("What's the Airbnb's address or link?", TEXT)).toBe(false);
+  });
+
+  it("keeps it when they brought it up", () => {
+    expect(asksAboutExtras("Which day are the lift passes for?", `${TEXT} We still need lift passes.`)).toBe(false);
+  });
+
+  it("leaves it out of the answer", () => {
+    const r = checkDescribe(answer({ questions: ["Do you have lift tickets for Chamonix?", "What's the Airbnb's address or link?"] }), TEXT)!;
+    expect(r.questions).toEqual(["What's the Airbnb's address or link?"]);
   });
 });

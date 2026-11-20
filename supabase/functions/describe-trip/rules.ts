@@ -91,7 +91,7 @@ Return, by calling set_up_trip once:
   - who_pays is own for flights and personal tickets, split for shared things (a house, a car, a group dinner). paid is true only when they say it is paid.
   - title says what it is, and location says where, when they give a place: "Skiing" at "Loon Mountain", "Thanksgiving dinner" at "Grandma's house". A leg of the trip is titled by how they travel and where to: "Drive to Boston", "Train to Barcelona", "Flight to Geneva", never "Depart for" or "Leave for".
   - Mark in unsure any field you inferred rather than read.
-- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention: no lift tickets for a ski day, no rental gear, no insurance. Never ask about the trip's dates. No questions when nothing is missing.
+- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention: never whether they have lift tickets or passes, rental gear or insurance, unless they say they still need them. Never ask about the trip's dates. No questions when nothing is missing.
 - note: null, unless something needs saying. When a date they give doesn't fit the calendar (a weekday that isn't that date, a day that doesn't exist such as November 31), use your best reading, mark the dates unsure, and say in note which dates you used so they can fix them on the review screen.
 
 Rules:
@@ -141,11 +141,27 @@ export const aboutTripDates = (q: string): boolean =>
   // Two dates to choose between.
   (q.match(new RegExp(MONTH_DAY.source, "gi"))?.length ?? 0) >= 2;
 
+/** Extras a group sorts out itself, which the traveler never asked TripTab about (Mike's 11/19 review). */
+const EXTRAS: RegExp[] = [
+  /\blift (tickets?|pass(es)?)\b/i,
+  /\bski pass(es)?\b/i,
+  /\b(rental|rented) (gear|equipment|skis|boards?)\b/i,
+  /\b(gear|equipment|ski|board) rentals?\b/i,
+  /\binsurance\b/i,
+];
+/**
+ * A question about an extra the description never mentions ("do you have lift tickets booked?" for
+ * a ski day). The prompt asks for none; the model still asked in two of two eval runs, so the
+ * check makes sure. An extra the traveler did mention can still be asked about.
+ */
+export const asksAboutExtras = (q: string, inputText: string): boolean => EXTRAS.some((re) => re.test(q) && !re.test(inputText));
+
 /**
  * Checks and cleans what the model handed back. Null means nothing usable: no stop survived. A stop
  * whose name shares no word with the traveler's is dropped (nothing invented); stops are put in date
  * order, each at most MAX_SPAN_DAYS long in all; plans go through import's checks; questions are
- * trimmed to five short ones, and one about the trip's own dates becomes the note instead.
+ * trimmed to five short ones, one about the trip's own dates becomes the note instead, and one
+ * about an extra they never mentioned (lift tickets) is dropped.
  */
 export function checkDescribe(raw: unknown, inputText: string, today?: string): Described | null {
   if (!raw || typeof raw !== "object") return null;
@@ -211,6 +227,7 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
       dateNote ??= t;
       continue;
     }
+    if (asksAboutExtras(t, inputText)) continue;
     if (!t.endsWith("?")) t = `${t.replace(/[.!]+$/, "")}?`;
     const k = t.toLowerCase();
     if (seen.has(k)) continue;
