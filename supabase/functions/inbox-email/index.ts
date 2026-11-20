@@ -21,7 +21,7 @@ import {
   capDecision, checkProposals, costUsd, EFFORT, MAX_SEARCHES, MAX_TOKENS, MODEL, nyDayStart, PROPOSE_TOOL, readCap,
   SYSTEM_PROMPT, TIMEOUT_MS, type Usage,
 } from "../import-bookings/rules.ts";
-import { dmarcPassed, importInput, inboxToken, isOnTrip, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress } from "./rules.ts";
+import { accountEmails, dmarcPassed, importInput, inboxToken, isOnTrip, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress } from "./rules.ts";
 
 const DEV_PROJECT = "iivseqkvixmvcpldarqy";
 const REAL = ["ok", "no_plans", "refused", "invalid_output", "timeout", "error"];
@@ -93,10 +93,10 @@ Deno.serve(async (req) => {
   const { data: people } = await admin.from("travelers").select("id, user_id, email, role").eq("trip_id", tripId);
   const sender = senderAddress(mail.from?.address ?? null);
   const accounts = await Promise.all(
-    (people ?? []).filter((p) => p.user_id).map(async (p) => ({ id: p.id as string, user_id: p.user_id as string, email: (await admin.auth.admin.getUserById(p.user_id)).data.user?.email ?? null })),
+    (people ?? []).filter((p) => p.user_id).map(async (p) => ({ id: p.id as string, user_id: p.user_id as string, emails: accountEmails((await admin.auth.admin.getUserById(p.user_id)).data.user) })),
   );
   const match =
-    accounts.find((a) => isOnTrip(sender, [a.email])) ??
+    accounts.find((a) => isOnTrip(sender, a.emails)) ??
     (people ?? []).map((p) => ({ id: p.id as string, user_id: (p.user_id as string | null) ?? null, email: p.email as string | null })).find((p) => isOnTrip(sender, [p.email]));
   if (testRun) {
     // A dev test stands in for a sender: it has to be an Owner of this trip.

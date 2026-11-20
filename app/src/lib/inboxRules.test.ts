@@ -3,7 +3,7 @@
  * it, and what part of a forwarded email goes to AI import. Made-up emails only.
  */
 import { describe, expect, it } from "vitest";
-import { dmarcPassed, htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
+import { accountEmails, dmarcPassed, htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
 import { inboxAddressFor } from "./inbox";
 
 const TOKEN = "3f9a0b1c2d3e4f5a";
@@ -103,5 +103,25 @@ describe("whether the sender is who the email says (Cloudflare's own check)", ()
       ),
     ).toBe(true);
     expect(dmarcPassed("mx.cloudflare.net; spf=fail (a, b); dmarc=fail header.from=x.com, mx.cloudflare.net; dmarc=pass")).toBe(false);
+  });
+});
+
+describe("the addresses an account signs in with (C19)", () => {
+  it("are its email and each linked sign-in's, once each, in lower case", () => {
+    const user = {
+      email: "Mike.Alias@example.edu",
+      identities: [
+        { identity_data: { email: "mike.alias@example.edu" } },
+        { identity_data: { email: "netid@example.edu" } },
+        { identity_data: null },
+        { identity_data: { email: 42 } },
+      ],
+    };
+    expect(accountEmails(user)).toEqual(["mike.alias@example.edu", "netid@example.edu"]);
+    expect(isOnTrip("netid@example.edu", accountEmails(user))).toBe(true);
+  });
+  it("are none for no account", () => {
+    expect(accountEmails(null)).toEqual([]);
+    expect(accountEmails({ email: null })).toEqual([]);
   });
 });

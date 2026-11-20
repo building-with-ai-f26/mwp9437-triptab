@@ -29,6 +29,16 @@ export function senderAddress(from: string | null | undefined): string | null {
   return bare ? bare.toLowerCase() : null;
 }
 
+/**
+ * Every address an account signs in with: its email, and each linked sign-in's (Google linked to an
+ * email account, C19), so a booking forwarded from either is theirs.
+ */
+export function accountEmails(user: { email?: string | null; identities?: { identity_data?: { email?: unknown } | null }[] | null } | null | undefined): string[] {
+  if (!user) return [];
+  const all = [user.email, ...(user.identities ?? []).map((i) => i.identity_data?.email)];
+  return [...new Set(all.filter((e): e is string => typeof e === "string" && e.includes("@")).map((e) => e.trim().toLowerCase()))];
+}
+
 /** A sender counts when the address matches one on the trip (an account's email or the email an Owner entered). */
 export function isOnTrip(sender: string | null, emails: (string | null | undefined)[]): boolean {
   if (!sender) return false;
