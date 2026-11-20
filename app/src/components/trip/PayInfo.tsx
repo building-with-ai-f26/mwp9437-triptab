@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Check, Copy, Lock } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
-import { cleanVenmo, venmoLooksRight, zelleLabel, zelleLooksRight } from "../../lib/pay";
+import { cleanVenmo, cleanZelle, VENMO_FORMAT, venmoLooksRight, ZELLE_FORMAT, zelleLabel, zelleLooksRight } from "../../lib/pay";
 import type { Traveler } from "../../lib/model";
 
 /**
@@ -139,42 +139,54 @@ export function PayInfoDialog({
   );
 }
 
-/** An Owner adds or fixes someone's Venmo, until that person sets their own. */
+/**
+ * An Owner adds or fixes someone's Venmo, and their Zelle where the trip has Zelle (C20, Mike's call
+ * 11/20), until that person sets their own.
+ */
 export function VenmoForDialog({
   person,
+  zelleReady = false,
   onSave,
   onClose,
 }: {
   person: Traveler | null;
-  onSave: (travelerId: string, handle: string) => Promise<void>;
+  zelleReady?: boolean;
+  /** Saves both; `zelle` is "" without Zelle. */
+  onSave: (travelerId: string, venmo: string, zelle: string) => Promise<void>;
   onClose: () => void;
 }) {
+  const what = zelleReady ? "Venmo and Zelle" : "Venmo";
   return (
-    <Dialog open={person !== null} onClose={onClose} title={person ? `${person.name}'s Venmo` : "Venmo"}>
-      {person && <VenmoForForm key={person.id} person={person} onSave={onSave} onClose={onClose} />}
+    <Dialog open={person !== null} onClose={onClose} title={person ? `${person.name}'s ${what}` : what}>
+      {person && <VenmoForForm key={person.id} person={person} zelleReady={zelleReady} onSave={onSave} onClose={onClose} />}
     </Dialog>
   );
 }
 
 function VenmoForForm({
   person,
+  zelleReady,
   onSave,
   onClose,
 }: {
   person: Traveler;
-  onSave: (travelerId: string, handle: string) => Promise<void>;
+  zelleReady: boolean;
+  onSave: (travelerId: string, venmo: string, zelle: string) => Promise<void>;
   onClose: () => void;
 }) {
   const [value, setValue] = useState(person.venmo ? `@${person.venmo}` : "");
+  const [zelle, setZelle] = useState(person.zelle ? zelleLabel(person.zelle) : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unchanged = cleanVenmo(value) === (person.venmo ?? null) && (!zelleReady || cleanZelle(zelle) === (person.zelle ?? null));
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!venmoLooksRight(value)) return setError("A Venmo username is 5 to 30 letters, numbers, - or _.");
+    if (!venmoLooksRight(value)) return setError(VENMO_FORMAT);
+    if (zelleReady && !zelleLooksRight(zelle)) return setError(ZELLE_FORMAT);
     setBusy(true);
     setError(null);
     try {
-      await onSave(person.id, value);
+      await onSave(person.id, value, zelleReady ? zelle : "");
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -183,7 +195,10 @@ function VenmoForForm({
   };
   return (
     <form onSubmit={submit} noValidate>
-      <DarkField label={`${person.name}'s Venmo username`} hint={`Once ${person.name} saves their own, only they can change it.`}>
+      <DarkField
+        label={`${person.name}'s Venmo username`}
+        hint={zelleReady ? undefined : `Once ${person.name} saves their own, only they can change it.`}
+      >
         <input
           className="field-dark"
           value={value}
@@ -195,6 +210,22 @@ function VenmoForForm({
           autoFocus
         />
       </DarkField>
+      {zelleReady && (
+        <DarkField
+          label={`${person.name}'s Zelle phone or email`}
+          hint={`Once ${person.name} saves their own Venmo or Zelle, only they can change them.`}
+        >
+          <input
+            className="field-dark"
+            value={zelle}
+            onChange={(e) => setZelle(e.target.value)}
+            placeholder="(555) 123-4567 or an email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+          />
+        </DarkField>
+      )}
       {error && (
         <p role="alert" className="mb-3 rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-200">
           {error}
@@ -204,7 +235,7 @@ function VenmoForForm({
         <Button type="button" variant="light" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={busy || cleanVenmo(value) === (person.venmo ?? null)}>
+        <Button type="submit" disabled={busy || unchanged}>
           {busy ? "Saving..." : "Save"}
         </Button>
       </div>

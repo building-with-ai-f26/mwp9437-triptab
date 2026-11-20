@@ -3,7 +3,7 @@ import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, 
 import { PayLine } from "./PayInfo";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import { inviteUrl, sendInviteEmail, type PersonDraft } from "../../lib/api";
-import { venmoLooksRight } from "../../lib/pay";
+import { venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "../../lib/pay";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
 
@@ -53,6 +53,7 @@ export function PeopleCard({
   onRole,
   onRemove,
   payReady = false,
+  zelleReady = false,
   onEditMyPay,
   onVenmoFor,
   linkControls,
@@ -67,6 +68,8 @@ export function PeopleCard({
   onRemove: (t: Traveler) => Promise<void>;
   /** The database has Venmo names (and maybe Zelle): show how each person is paid. */
   payReady?: boolean;
+  /** The database has Zelle too: an Owner's button offers both (C20). */
+  zelleReady?: boolean;
   /** Your own row: how people pay you. */
   onEditMyPay?: () => void;
   /** Owners: add or fix someone's Venmo, until they set their own. */
@@ -196,7 +199,7 @@ export function PeopleCard({
                     className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
                     onClick={() => onVenmoFor(t)}
                   >
-                    <Wallet className="size-3" /> {t.venmo ? "Change Venmo" : "Add Venmo"}
+                    <Wallet className="size-3" /> {payForLabel(t, zelleReady)}
                   </button>
                 </div>
               )}
@@ -241,7 +244,7 @@ export function PeopleCard({
                       className="inline-flex h-8 items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 text-xs hover:bg-white/50"
                       onClick={() => onVenmoFor(t)}
                     >
-                      <Wallet className="size-3" /> {t.venmo ? "Change Venmo" : "Add Venmo"}
+                      <Wallet className="size-3" /> {payForLabel(t, zelleReady)}
                     </button>
                   )}
                   <button
@@ -389,11 +392,14 @@ export function AddPersonDialog({
   open,
   defaultRole,
   canInvite,
+  zelleReady = false,
   onClose,
   onAdd,
 }: {
   open: boolean;
   defaultRole: Role;
+  /** The database has Zelle: ask for it next to Venmo (C20). */
+  zelleReady?: boolean;
   /** The group link is on, so an invite email has a link to carry. */
   canInvite: boolean;
   onClose: () => void;
@@ -402,7 +408,7 @@ export function AddPersonDialog({
 }) {
   return (
     <Dialog open={open} onClose={onClose} title="Add a person">
-      {open && <AddPersonForm defaultRole={defaultRole} canInvite={canInvite} onClose={onClose} onAdd={onAdd} />}
+      {open && <AddPersonForm defaultRole={defaultRole} canInvite={canInvite} zelleReady={zelleReady} onClose={onClose} onAdd={onAdd} />}
     </Dialog>
   );
 }
@@ -410,15 +416,17 @@ export function AddPersonDialog({
 function AddPersonForm({
   defaultRole,
   canInvite,
+  zelleReady,
   onClose,
   onAdd,
 }: {
   defaultRole: Role;
   canInvite: boolean;
+  zelleReady: boolean;
   onClose: () => void;
   onAdd: (p: PersonDraft, invite: boolean) => Promise<string | null>;
 }) {
-  const [p, setP] = useState<PersonDraft>({ name: "", email: "", phone: "", venmo: "", role: defaultRole });
+  const [p, setP] = useState<PersonDraft>({ name: "", email: "", phone: "", venmo: "", zelle: "", role: defaultRole });
   // Adding someone's email sends their invite unless you untick this (Mike's 11/19 review: Julia
   // was added with her email and got nothing, since invites only went from the People list).
   const [invite, setInvite] = useState(true);
@@ -440,13 +448,17 @@ function AddPersonForm({
       setError("A Venmo username is 5 to 30 letters, numbers, - or _.");
       return;
     }
+    if (zelleReady && !zelleLooksRight(p.zelle ?? "")) {
+      setError(ZELLE_FORMAT);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const sending = invite && canInvite && Boolean(p.email.trim());
       setEmailNote(await onAdd(p, sending));
       setAdded((a) => [...a, p.name.trim()]);
-      setP({ name: "", email: "", phone: "", venmo: "", role: p.role });
+      setP({ name: "", email: "", phone: "", venmo: "", zelle: "", role: p.role });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -505,16 +517,31 @@ function AddPersonForm({
           />
         </DarkField>
       </div>
-      <DarkField label="Venmo (optional)" hint="So the group can pay them from Settle up.">
-        <input
-          className="field-dark"
-          value={p.venmo ?? ""}
-          onChange={(e) => setP({ ...p, venmo: e.target.value })}
-          placeholder="@username"
-          autoCapitalize="none"
-          autoCorrect="off"
-        />
-      </DarkField>
+      <div className={zelleReady ? "grid gap-x-3 sm:grid-cols-2" : undefined}>
+        <DarkField label="Venmo (optional)" hint={zelleReady ? undefined : "So the group can pay them from Settle up."}>
+          <input
+            className="field-dark"
+            value={p.venmo ?? ""}
+            onChange={(e) => setP({ ...p, venmo: e.target.value })}
+            placeholder="@username"
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+        </DarkField>
+        {zelleReady && (
+          <DarkField label="Zelle (optional)">
+            <input
+              className="field-dark"
+              value={p.zelle ?? ""}
+              onChange={(e) => setP({ ...p, zelle: e.target.value })}
+              placeholder="Phone or email"
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+          </DarkField>
+        )}
+      </div>
+      {zelleReady && <p className="-mt-1 mb-3 text-xs text-white/70">So the group can pay them from Settle up.</p>}
       <DarkField group label="Add as" hint={ROLE_HELP[p.role]}>
         <Segmented label="Add as" value={p.role} onChange={(role) => setP({ ...p, role })} options={ROLE_OPTIONS} />
       </DarkField>
@@ -533,4 +560,10 @@ function AddPersonForm({
       </div>
     </form>
   );
+}
+
+/** The Owner's button on someone's row: Add Venmo, or with Zelle, Add Venmo or Zelle (C20). */
+function payForLabel(t: Traveler, zelleReady: boolean): string {
+  if (!zelleReady) return t.venmo ? "Change Venmo" : "Add Venmo";
+  return t.venmo || t.zelle ? "Change Venmo or Zelle" : "Add Venmo or Zelle";
 }

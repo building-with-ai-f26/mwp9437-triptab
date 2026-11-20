@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, CalendarPlus, Check, ChevronDown, ExternalLink, FileUp, Sparkles } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
@@ -36,6 +36,7 @@ export function ImportDialog({
   heading,
   questions = [],
   onQuestions,
+  forward,
 }: {
   open: boolean;
   trip: Trip;
@@ -62,6 +63,8 @@ export function ImportDialog({
   questions?: string[];
   /** Called once when the review ends, saved or not, with the questions left ticked. */
   onQuestions?: (parked: string[]) => void;
+  /** On the first screen, under attaching a file: the trip's address to forward bookings to (email-in). */
+  forward?: ReactNode;
 }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -188,6 +191,7 @@ export function ImportDialog({
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
+          {forward}
           <p className="mb-3 text-xs text-white/55">
             It never invents a time, price or address that isn't in what you give it. For a bare flight number it may look up the
             schedule and tells you where it found it. What you paste is sent to Claude (Anthropic) to be read and isn't stored by TripTab.

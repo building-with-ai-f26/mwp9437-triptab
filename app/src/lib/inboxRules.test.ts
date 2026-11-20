@@ -1,0 +1,80 @@
+/**
+ * Email-in's rules (supabase/functions/inbox-email/rules.ts): which trip an address is for, who sent
+ * it, and what part of a forwarded email goes to AI import. Made-up emails only.
+ */
+import { describe, expect, it } from "vitest";
+import { htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
+import { inboxAddressFor } from "./inbox";
+
+const TOKEN = "3f9a0b1c2d3e4f5a";
+
+describe("which trip an address is for", () => {
+  it("is trip+<code>@triptab.org, read back in any case, with or without angle brackets", () => {
+    expect(inboxAddress(TOKEN)).toBe(`trip+${TOKEN}@triptab.org`);
+    expect(inboxToken(`trip+${TOKEN}@triptab.org`)).toBe(TOKEN);
+    expect(inboxToken(`<TRIP+${TOKEN.toUpperCase()}@TripTab.org>`)).toBe(TOKEN);
+  });
+  it("is the same address the app shows the Owner", () => {
+    expect(inboxAddressFor(TOKEN)).toBe(inboxAddress(TOKEN));
+    expect(inboxToken(inboxAddressFor(TOKEN))).toBe(TOKEN);
+  });
+  it("refuses anything that isn't a trip's code", () => {
+    expect(inboxToken("trip@triptab.org")).toBeNull();
+    expect(inboxToken(`hello+${TOKEN}@triptab.org`)).toBeNull();
+    expect(inboxToken(`trip+${TOKEN}0@triptab.org`)).toBeNull();
+    expect(inboxToken(null)).toBeNull();
+  });
+});
+
+describe("who sent it", () => {
+  it("takes the bare address from a From header", () => {
+    expect(senderAddress('"Mike P" <Mike@Example.com>')).toBe("mike@example.com");
+    expect(senderAddress("vic@example.com")).toBe("vic@example.com");
+    expect(senderAddress("no address here")).toBeNull();
+  });
+  it("counts only someone whose address is on the trip", () => {
+    expect(isOnTrip("mike@example.com", ["Mike@example.com ", null])).toBe(true);
+    expect(isOnTrip("stranger@example.com", ["mike@example.com"])).toBe(false);
+    expect(isOnTrip(null, ["mike@example.com"])).toBe(false);
+  });
+});
+
+describe("what goes to import", () => {
+  it("turns an HTML confirmation into readable lines", () => {
+    const text = htmlToText(
+      '<html><head><style>p{color:red}</style></head><body><p>Hertz&nbsp;reservation</p><table><tr><td>Pick up</td><td>Nov 24, 2:00&nbsp;PM</td></tr></table><script>alert(1)</script></body></html>',
+    );
+    expect(text).toBe("Hertz reservation\nPick up Nov 24, 2:00 PM");
+  });
+
+  it("uses the text part, with the subject on top, and the PDF over a photo", () => {
+    const pdf = new Uint8Array([37, 80, 68, 70]);
+    const png = new Uint8Array([137, 80, 78, 71]);
+    const r = importInput({
+      subject: "Fwd: Your car rental",
+      text: "Confirmation HZ123, pick up Nov 24.",
+      attachments: [
+        { mimeType: "image/png", content: png },
+        { mimeType: "application/pdf", content: pdf },
+      ],
+    })!;
+    expect(r.text).toBe("Subject: Fwd: Your car rental\n\nConfirmation HZ123, pick up Nov 24.");
+    expect(r.file).toEqual({ media_type: "application/pdf", data: "JVBERg==" });
+  });
+
+  it("falls back to the HTML, skips files import can't read or that are too big, and returns null for an empty email", () => {
+    const big = new Uint8Array(3_000_001);
+    const r = importInput({ html: "<p>Booked: Loon Mountain lift tickets</p>", attachments: [{ mimeType: "application/zip", content: new Uint8Array([1]) }, { mimeType: "application/pdf", content: big }] })!;
+    expect(r.text).toBe("Booked: Loon Mountain lift tickets");
+    expect(r.file).toBeNull();
+    expect(importInput({ subject: "", text: "  " })).toBeNull();
+  });
+});
+
+describe("the Worker's secret", () => {
+  it("matches only the same value", () => {
+    expect(sameSecret("abc123", "abc123")).toBe(true);
+    expect(sameSecret("abc123", "abc124")).toBe(false);
+    expect(sameSecret("", "")).toBe(false);
+  });
+});
