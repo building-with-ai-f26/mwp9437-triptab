@@ -120,3 +120,32 @@ What this does and doesn't show:
 - Ten cases is a small set. These are results on these ten descriptions, not a quality rate.
 
 From dev's cost log (`ai_calls`, feature `describe`) after the five runs: 50 calls, all test runs, **$0.0441** at list price. About **$0.0009 a description** (from $0.0006 to $0.0015), about 2,800 tokens in and 1,300 out, 6.0 seconds on average. The five "not a trip" answers took 1.5 seconds and are logged as `invalid_output`; from this pull request on, an answer with no stops is logged as `no_plans`, as import logs "nothing found". Cash cost was $0, covered by the Max plan's API credit.
+
+## Mike's 11/19 review: the prompt change (Nov 19 to 20, New York evening)
+
+Mike's phone review of Describe it asked for four things the prompt controls: don't park a question about the trip's dates on the To do list (fix the dates instead), skip needless questions (a lift ticket for a ski day), title a leg "Drive to Newton", not "Depart for Newton", and put a plan's place in its location (Skiing at Loon Mountain). The eval gained an 11th made-up case shaped like his Thanksgiving description (a weekday that isn't its date, a day that doesn't exist, a ski day, two drives) and four checks: a note about the dates, a plan's place, no "Depart for" titles, and questions it shouldn't ask. Every run below was against describe-trip on TripTab dev, deployed through the dev connector and checked file by file against the repo before each run.
+
+| Run | What was on dev | The ten earlier cases | Case 11 | Real cost |
+| --- | --- | --- | --- | --- |
+| baseline-1119 | the old prompt | 10 of 10 | not in the set yet | $0.0083 |
+| case11-old-prompt (twice) | the old prompt | not run | passed once with a looser check, then failed once the check caught its two questions about the dates | $0.0033 |
+| after-1119-1, -2 | new prompt, first wording | 10 of 10, 10 of 10 | failed both: asked about lift tickets | $0.0218 |
+| after-guard-1119-1, -2 | a plainer line naming lift tickets, plus a check that drops such questions | 9 of 10, 9 of 10 | passed, failed | $0.0215 |
+| final-1119-1, -2 | the first wording again, with the check | 10 of 10, 9 of 10 | passed, failed | $0.0214 |
+| v9-1119-1 to -3 | no extras named in the prompt | 10, 9, 9 of 10 | failed, failed, passed | $0.0317 |
+| v10-1119-1 to -3 | a narrower title rule; a note of "x" counts as none | 9, 10, 10 of 10 | passed all three | $0.0320 |
+| **v11-1119-1 to -3** | **v10, plus: a plan with no day goes on the trip's first day, marked to check** | **10, 10, 10 of 10** | **passed all three** | $0.0321 |
+
+What the misses were, and what fixed them:
+- **Lift tickets asked anyway.** The prompt said not to; the model asked in both runs of the first wording. A check in code now drops a question about lift tickets or passes, rental gear or insurance when the description never mentions them. Naming those extras in the prompt didn't help, so the prompt names none.
+- **"Lift tickets are bought" lost its day (case 09).** Every run of the old prompt put that plan on the trip's first day; the new prompt left the day blank in 5 of 15 runs, which the review screen shows as an unticked card asking for a day. The title rule was the first suspect and was narrowed, which didn't stop it; the old prompt titled it "Lift tickets" too. The check now puts a plan with no day on the first day, marked "check this", as the old prompt did on its own.
+- **A note of "x".** Two runs answered with a one-letter note, which hid the dates warning. A note too short to say anything now counts as none, so a question about the dates becomes the warning instead.
+- **A train as a flight (case 03), once.** It didn't recur in the nine runs after.
+
+What this does and doesn't show:
+- **No drop on the earlier cases with what ships:** 30 of 30 across v11's three runs, against 10 of 10 for the old prompt's baseline today and 49 of 50 across its five runs on 11/19.
+- **Case 11 passed in all three v11 runs:** the dates came back as a note to fix on the form, no question about the dates or lift tickets, the places in location, "Drive to" titles, and a question about the rental car.
+- Three of the four fixes are checks in code (unit-tested in `src/lib/describeRules.test.ts`), so they hold whatever the model does. The prompt alone did not reliably stop the lift-ticket question.
+- Ten earlier cases plus one new one is a small set; these are results on these eleven descriptions.
+
+All 18 runs of this round: **$0.1721** at list price, logged in dev's `ai_calls` as test runs, covered by the Max plan's API credit.
