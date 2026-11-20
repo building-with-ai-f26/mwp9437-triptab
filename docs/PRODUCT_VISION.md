@@ -257,6 +257,8 @@ You see a real gap in the market and would keep TripTab running after the course
 - Adding Julia with her email sent no email; Text it to the group worked. Link previews in iMessage should show an image.
 - Upload a flight or car rental confirmation (a screenshot or PDF), or add an Airbnb link to a plan. AI import already reads PDFs, screenshots and photos into plans, but it's hidden under AI help, I have bookings, and keeps nothing; plans have no link field (C22).
 - Worked well: drag and drop (scrolling behind it, dropping onto a filled slot), the frosted part-of-day tags, Zelle copying the number, Pay with Venmo opening Venmo, Julia joining with Google.
+- From the PostHog recordings of that review (read 11/20): in one session a trip wouldn't open. That tab still ran the build from before a deploy, and the new one no longer had its page file. The app now reloads once when that happens (in review 11/20).
+- Also from the recordings: "Add 10 to the trip" on the Describe it review was tapped three times with nothing visible happening. A card needed a fix and said so, out of view up the list. Now a note by the button says what needs fixing, and the card scrolls into view (in review 11/20).
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
