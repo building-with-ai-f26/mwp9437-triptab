@@ -64,6 +64,8 @@ export function ItemDialog({
   extras,
   costExtras,
   stopOn,
+  hasCost = false,
+  confirmsItself = false,
   onClose,
   onSave,
   onDelete,
@@ -79,6 +81,10 @@ export function ItemDialog({
   costExtras?: ReactNode;
   /** The stop a day is at, so Where's suggestions lean toward it (11/19). */
   stopOn?: (day: string) => string | null;
+  /** The plan's cost is in (its bill, or everyone's own line): Confirmed stays until that's undone. */
+  hasCost?: boolean;
+  /** An own-cost plan with some lines in: it confirms itself once everyone going has booked. */
+  confirmsItself?: boolean;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -99,7 +105,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, stopOn, onClose, onSave, onDelete }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onClose, onSave, onDelete }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -126,6 +132,8 @@ function ItemForm({
   goingExtras,
   costExtras,
   stopOn,
+  hasCost = false,
+  confirmsItself = false,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -142,6 +150,8 @@ function ItemForm({
   /** An existing plan's who pays, confirm and own costs (PlanPanel, cost): inside the cost section. */
   costExtras?: ReactNode;
   stopOn?: (day: string) => string | null;
+  hasCost?: boolean;
+  confirmsItself?: boolean;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -637,8 +647,20 @@ function ItemForm({
 
 
 
-      {paidNow ? null : status !== "confirmed" ? (
-        <DarkField group label="Status" hint="Suggested has a dotted outline until the group decides. Confirm it with the real cost under Cost and who pays, below.">
+      {/* Confirmed means it's happening; its cost can come later (C21, Mike's call 11/20). A plan whose
+          cost is in stays Confirmed until that's undone. */}
+      {paidNow ? null : it?.status === "confirmed" && hasCost ? (
+        <p className="mb-3 text-sm text-white/70">Confirmed and paid. Undo the confirmation to change its status.</p>
+      ) : (
+        <DarkField
+          group
+          label="Status"
+          hint={
+            confirmsItself
+              ? "Some people have logged their own cost: it's Confirmed once everyone going has booked."
+              : "Suggested has a dotted outline until the group decides. Confirmed means it's happening; add its cost under Cost and who pays whenever you have it."
+          }
+        >
           <Segmented
             label="Status"
             value={status}
@@ -646,11 +668,10 @@ function ItemForm({
             options={[
               { value: "suggested", label: "Suggested" },
               { value: "planned", label: "Planned" },
+              ...(confirmsItself ? [] : [{ value: "confirmed" as ItemStatus, label: "Confirmed" }]),
             ]}
           />
         </DarkField>
-      ) : (
-        <p className="mb-3 text-sm text-white/70">Confirmed and paid. Undo the confirmation to change its status.</p>
       )}
 
       {goingExtras}
@@ -667,7 +688,7 @@ function ItemForm({
             <span className="label-luxury block text-white/80">{it ? "Cost and who pays" : "Cost"}</span>
             <span className="block truncate text-sm text-white">
               {it
-                ? it.status === "confirmed"
+                ? it.status === "confirmed" && hasCost
                   ? "Confirmed and paid"
                   : `${PAY_MODE_LABEL[it.pay_mode]} · ${costSummary}`
                 : `${costSummary}${!paidNow ? ` · ${PAY_MODE_LABEL[payMode]}` : ""}`}

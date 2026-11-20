@@ -190,8 +190,11 @@ describe("status follows the lines", () => {
   it("can't be set by hand in either direction", async () => {
     const down = await owner.from("items").update({ status: "planned" }).eq("id", lift).select("id");
     expect(down.error?.message).toContain("stays confirmed until a line is cleared");
+    // C21 (11/20): with nobody's line in yet, an own plan can be Confirmed by hand like any plan, and back.
     const up = await owner.from("items").update({ status: "confirmed" }).eq("id", flight).select("id");
-    expect(up.error?.message).toContain("confirmed once everyone going has logged");
+    expect(up.error).toBeNull();
+    const back = await owner.from("items").update({ status: "planned" }).eq("id", flight).select("id");
+    expect(back.error).toBeNull();
   });
 
   it("clearing a line takes it back to Planned", async () => {
