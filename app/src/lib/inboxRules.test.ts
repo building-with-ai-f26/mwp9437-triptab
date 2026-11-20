@@ -96,4 +96,12 @@ describe("whether the sender is who the email says (Cloudflare's own check)", ()
     expect(dmarcPassed("mx.cloudflare.net; dmarc=fail header.from=gmail.com, mx.cloudflare.net; dmarc=pass header.from=gmail.com")).toBe(false);
     expect(dmarcPassed("mx.cloudflare.net; dmarc=fail header.from=gmail.com (dmarc=pass)")).toBe(false);
   });
+  it("isn't thrown by a comment with a comma in it", () => {
+    expect(
+      dmarcPassed(
+        "mx.cloudflare.net; spf=pass (mx.cloudflare.net: domain of a@gmail.com designates 209.85.1.2 as permitted sender, (checked)) smtp.mailfrom=a@gmail.com; dkim=pass header.d=gmail.com; dmarc=pass header.from=gmail.com",
+      ),
+    ).toBe(true);
+    expect(dmarcPassed("mx.cloudflare.net; spf=fail (a, b); dmarc=fail header.from=x.com, mx.cloudflare.net; dmarc=pass")).toBe(false);
+  });
 });

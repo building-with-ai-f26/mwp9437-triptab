@@ -97,10 +97,14 @@ export function importInput(mail: ParsedMail): ImportInput | null {
  * Whether Cloudflare found the email really came from its From address: DMARC passed, in the first
  * Authentication-Results header, the one Cloudflare's mail servers (mx.cloudflare.net) prepend before
  * the Worker runs. The Worker passes it on as it reads it; repeats of the header (a sender can add
- * their own) come after the first, joined by ", ", and are never read.
+ * their own) come after the first, joined by ", ", and are never read. Comments don't count.
  */
 export function dmarcPassed(results: string | null | undefined): boolean {
-  const first = String(results ?? "").split(",")[0];
+  // Comments in parentheses can hold commas and words like "dmarc=pass": drop them first (nested
+  // ones too), so the only commas left are the ones joining repeated headers.
+  let text = String(results ?? "");
+  for (let prev = ""; prev !== text; ) [prev, text] = [text, text.replace(/\([^()]*\)/g, " ")];
+  const first = text.split(",")[0];
   const [authserv, ...rest] = first.split(";").map((s) => s.trim());
   if (!/^mx\.cloudflare\.net(\s|$)/i.test(authserv ?? "")) return false;
   const dmarc = rest.find((s) => /^dmarc=/i.test(s));
