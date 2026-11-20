@@ -23,6 +23,8 @@ async function context(browser, opts) {
   const ctx = await browser.newContext(opts);
   await ctx.addInitScript(() => {
     try { localStorage.setItem('triptab.test_run', '1'); } catch {}
+    // The flows check other things; tour-flow checks Show me around itself.
+    try { localStorage.setItem('triptab.tour_seen', '1'); } catch {}
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', { get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }) });
   });

@@ -15,6 +15,7 @@ const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isM
 async function prep(ctx) {
   await ctx.addInitScript(() => {
     try { localStorage.setItem('triptab.test_run', '1'); } catch {}
+    try { localStorage.setItem('triptab.tour_seen', '1'); } catch {}
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', { get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }) });
   });
@@ -23,6 +24,8 @@ async function prep(ctx) {
 const watch = (page, who) => {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${who}: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`${who}: ${e}`));
+  // A server error names its address (without the query, which can hold a token).
+  page.on('response', (r) => { if (r.status() >= 500) errors.push(`${who}: ${r.status()} from ${r.url().split('?')[0]}`); });
 };
 const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 80 });
 const dlg = (page) => page.locator('dialog[open]');

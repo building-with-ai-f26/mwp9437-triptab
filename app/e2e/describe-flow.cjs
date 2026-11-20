@@ -31,7 +31,8 @@ const CANNED = {
     plan({ kind: 'meal', title: 'Dinner reservation', day: '2027-02-11', part: 'evening', unsure: ['part'] }),
   ],
   questions: QUESTIONS,
-  note: null,
+  // Dates that don't fit the calendar come back as a note to fix on the form, never a to-do (11/19).
+  note: 'Feb 5, 2027 is a Friday, so I used Friday the 5th. Check the dates.',
   call_id: null,
   usage: { input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, searches: 0, cost_usd: 0, latency_ms: 0, model: 'canned', effort: 'none' },
 };
@@ -69,6 +70,7 @@ async function run(browser, label, opts, result) {
   const note = p.getByTestId('described-note');
   await note.waitFor();
   r.note = (await note.innerText()).replace(/\s+/g, ' ').trim();
+  r.dateWarning = (await p.getByTestId('described-warning').innerText()).replace(/\s+/g, ' ').trim();
   r.tripName = await p.getByLabel('Trip name').inputValue();
   r.stops = [await p.getByRole('combobox', { name: 'Stop 1 place' }).inputValue(), await p.getByRole('combobox', { name: 'Stop 2 place' }).inputValue()];
   r.dates = await p.locator('input[type="date"]').evaluateAll((els) => els.map((e) => e.value));
@@ -95,6 +97,14 @@ async function run(browser, label, opts, result) {
   r.followups = (await followups.innerText()).replace(/\s+/g, ' ');
   r.allTickedAtFirst = (await followups.getByRole('checkbox').evaluateAll((els) => els.map((e) => e.checked))).every(Boolean);
   await followups.getByLabel(`Park on my To do list: ${QUESTIONS[1]}`).uncheck();
+  // The review card (11/19): cost starts folded on a plan with none, parts pick all that apply,
+  // and a plan gets a Where.
+  const ski = cards.nth(1);
+  r.costFolded = (await ski.getByRole('button', { name: /Cost and who pays/ }).getAttribute('aria-expanded')) === 'false' && (await ski.getByLabel('Cost').count()) === 0;
+  await ski.getByRole('group', { name: /Part of the day/ }).getByRole('button', { name: 'Morning' }).click();
+  r.skiParts = await ski.getByRole('group', { name: /Part of the day/ }).getByRole('button').evaluateAll((els) => els.filter((e) => e.getAttribute('aria-pressed') === 'true').map((e) => e.textContent));
+  await ski.getByLabel('Where').fill('Grands Montets');
+  await ski.scrollIntoViewIfNeeded();
   await h.shot(p, `describe-review-${label}`);
   await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 });
@@ -124,6 +134,9 @@ async function run(browser, label, opts, result) {
   r.reviewAfterReload = await p.locator('dialog[open]').count();
   r.todoCountAfterReload = await todo.getByText(QUESTIONS[0]).count();
   r.overflowTrip = await h.overflowX(p);
+  // Morning and Day on each of the six ski days, at its place.
+  r.skiSlots = await p.locator('.item-card').filter({ hasText: 'Skiing' }).count();
+  r.skiWhere = (await p.locator('#day-2027-02-06 .item-card').filter({ hasText: 'Skiing' }).first().innerText()).includes('Grands Montets');
 
   const ok =
     r.noTripMessage.length > 0 && r.textKeptAfterError && r.textKeptOnChange && r.calls === 3 &&
@@ -134,6 +147,7 @@ async function run(browser, label, opts, result) {
     /if you like/.test(r.followups) && QUESTIONS.every((q) => r.followups.includes(q)) && r.allTickedAtFirst &&
     r.todos.some((t) => t.includes(QUESTIONS[0])) && r.answeredNotParked && r.todoAssignees.every((a) => /Mike/.test(a)) &&
     r.reviewAfterReload === 0 && r.todoCountAfterReload === 1 &&
+    /Friday the 5th/.test(r.dateWarning) && r.costFolded && r.skiParts.join() === 'Morning,Day' && r.skiSlots === 12 && r.skiWhere &&
     r.overflowDescribe <= 0 && r.overflowForm <= 0 && r.overflowTrip <= 0;
   r.pass = ok;
 }

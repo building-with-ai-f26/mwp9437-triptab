@@ -58,3 +58,8 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
   app shows the message), but a 404 would read better in logs.
 - One 502 showed in the browser console during the production run, from a request outside
   Supabase; Supabase logged no 5xx then, and reloading the same pages found none.
+- The 502s in the click-throughs on dev (11/19) were `send-invite`: build2 invited an example.com
+  address, Resend answered 422 validation_error, and the function called every unknown refusal a
+  502. Fixed in the batch 5 pull request: that answer is now a 422 telling the Owner to check the
+  address, and build2 no longer emails a made-up inbox. The flows now log the address of every
+  server error, so the production one above can be traced if it comes back.

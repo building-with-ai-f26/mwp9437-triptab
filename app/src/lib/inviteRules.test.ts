@@ -4,7 +4,7 @@
  * the email itself.
  */
 import { describe, expect, it } from "vitest";
-import { buildInvite, DEFAULT_APP_URL, inviteDecision, LIMITS, pickAppUrl, type SentRow } from "../../../supabase/functions/send-invite/rules.ts";
+import { buildInvite, DEFAULT_APP_URL, inviteDecision, LIMITS, pickAppUrl, resendFailure, type SentRow } from "../../../supabase/functions/send-invite/rules.ts";
 import { CONFIRM_LIMITS } from "../../../supabase/functions/_shared/account.ts";
 
 const T = "trip-1", P = "person-1", ME = "me";
@@ -84,5 +84,17 @@ describe("the invite email", () => {
     expect(sneaky.html).not.toContain("<b>Mike</b>");
     expect(sneaky.html).toContain("&lt;b&gt;Mike&lt;/b&gt;");
     expect(sneaky.html).toContain("Trip &amp; co");
+  });
+});
+
+describe("when Resend turns an invite down", () => {
+  it("an address it won't take is the Owner's to fix, not a server error", () => {
+    expect(resendFailure(422, "validation_error")).toMatchObject({ status: 422, code: "bad_address" });
+  });
+  it("a bad key is not set up, a burst is busy, anything else is a failed send", () => {
+    expect(resendFailure(403, "invalid_api_key").code).toBe("not_set_up");
+    expect(resendFailure(429, "rate_limit_exceeded")).toMatchObject({ status: 429, code: "busy" });
+    expect(resendFailure(422, "invalid_from_address")).toMatchObject({ status: 502, code: "error" });
+    expect(resendFailure(500, null)).toMatchObject({ status: 502, code: "error" });
   });
 });

@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, CalendarPlus, Check, ExternalLink, FileUp, Sparkles } from "lucide-react";
+import { AlertTriangle, CalendarPlus, Check, ChevronDown, ExternalLink, FileUp, Sparkles } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
 import { draftProblems, toDraft, type Draft, type ImportResult } from "../../lib/importPlans";
-import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
+import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, togglePart, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
 
 const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
 const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -70,6 +70,8 @@ export function ImportDialog({
   const [result, setResult] = useState<ImportResult | null>(initial);
   const [drafts, setDrafts] = useState<Draft[]>(() => (initial ? initial.plans.map((p) => toDraft(p, trip, items)) : []));
   const [tried, setTried] = useState(false);
+  // Cost starts folded on each card unless it has one or needs a look (Mike's 11/19 review).
+  const [costOpen, setCostOpen] = useState<Record<number, boolean>>({});
   const [park, setPark] = useState<boolean[]>(() => questions.map(() => true));
   const answered = useRef(false);
   /** Hands back the questions left ticked, once, however the review ends. */
@@ -315,55 +317,102 @@ export function ImportDialog({
                           ))}
                         </select>
                       </label>
-                    ) : (
-                      <label className="mb-2 block">
-                        <span className="label-luxury mb-1 block text-white/80">Part of the day{flag("part")}</span>
-                        <select className="field-dark" value={d.part} onChange={(e) => patch(i, { part: e.target.value as Draft["part"] })} aria-label="Part of the day">
-                          {PARTS.map((p) => (
-                            <option key={p} value={p}>
+                    ) : null}
+                  </div>
+                  <label className="mb-2 block">
+                    <span className="label-luxury mb-1 block text-white/80">Where{flag("location")}</span>
+                    <input
+                      className="field-dark"
+                      value={d.location}
+                      onChange={(e) => patch(i, { location: e.target.value })}
+                      placeholder="Optional: a place, like Loon Mountain"
+                      aria-label="Where"
+                    />
+                  </label>
+                  {d.kind !== "stay" && (
+                    <div className="mb-2">
+                      <span className="label-luxury mb-1 block text-white/80">Part of the day{flag("part")}</span>
+                      {/* Pick all that apply, as in the plan dialog (11/19): it runs from the first to the last. */}
+                      <div role="group" aria-label={`Part of the day for ${d.title || "this plan"}`} className="flex flex-wrap gap-1.5">
+                        {PARTS.map((p, k) => {
+                          const from = PARTS.indexOf(d.part);
+                          const to = d.end_part ? PARTS.indexOf(d.end_part) : from;
+                          const on = k >= from && k <= to;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              aria-pressed={on}
+                              onClick={() => {
+                                const run = togglePart(from, to, k);
+                                patch(i, { part: PARTS[run.from], end_part: run.to > run.from ? PARTS[run.to] : null });
+                              }}
+                              className={`min-h-9 rounded-full px-3 text-sm transition-colors ${
+                                on ? "bg-primary font-semibold text-white" : "border border-white/15 bg-white/5 text-white/80 hover:bg-white/15"
+                              }`}
+                            >
                               {PART_LABEL[p]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/80">
-                        {d.paid ? "Paid" : "Cost"}
-                        {d.perPerson ? " (per person)" : ""}
-                        {flag("cost")}
-                      </span>
-                      <input className="field-dark" inputMode="decimal" value={d.cost} onChange={(e) => patch(i, { cost: e.target.value })} placeholder="$" aria-label="Cost" />
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <label className="mb-2 block">
-                      <span className="label-luxury mb-1 block text-white/80">Who pays{flag("who_pays")}</span>
-                      <select className="field-dark" value={d.payMode} onChange={(e) => patch(i, { payMode: e.target.value as PayMode })} aria-label="Who pays">
-                        <option value="split">{PAY_MODE_LABEL.split}</option>
-                        <option value="own">{PAY_MODE_LABEL.own}</option>
-                      </select>
-                    </label>
-                    <label className="mb-2 flex min-h-11 items-center gap-2.5 self-end text-sm text-white">
-                      <input type="checkbox" className="size-5 accent-[#8c7054]" checked={d.paid} onChange={(e) => patch(i, { paid: e.target.checked })} />
-                      <span>
-                        Already paid{flag("paid")}
-                        <span className="block text-xs text-white/55">
-                          {d.paid ? (d.payMode === "own" ? "Saves as your own cost" : "Saves as Confirmed: you paid, split evenly") : "Saves as Planned"}
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                  {(d.location || d.notes) && (
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {(() => {
+                    const open = costOpen[i] ?? (d.cost !== "" || d.paid || d.unsure.includes("cost") || d.source.cost_cents != null);
+                    const summary = d.cost
+                      ? `$${d.cost}${d.perPerson ? " per person" : ""} · ${PAY_MODE_LABEL[d.payMode]}${d.paid ? " · paid" : ""}`
+                      : `No cost yet · ${PAY_MODE_LABEL[d.payMode]}`;
+                    return (
+                      <div className="mb-2 rounded-xl border border-white/15 bg-white/5">
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          onClick={() => setCostOpen((all) => ({ ...all, [i]: !open }))}
+                          className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left text-sm text-white"
+                        >
+                          <span>
+                            <span className="font-semibold">Cost and who pays</span>
+                            {!open && <span className="block text-xs text-white/60">{summary}</span>}
+                          </span>
+                          <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+                        </button>
+                        {open && (
+                          <div className="px-3 pb-2">
+                            <label className="mb-2 block">
+                              <span className="label-luxury mb-1 block text-white/80">
+                                {d.paid ? "Paid" : "Cost"}
+                                {d.perPerson ? " (per person)" : ""}
+                                {flag("cost")}
+                              </span>
+                              <input className="field-dark" inputMode="decimal" value={d.cost} onChange={(e) => patch(i, { cost: e.target.value })} placeholder="$" aria-label="Cost" />
+                            </label>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              <label className="mb-2 block">
+                                <span className="label-luxury mb-1 block text-white/80">Who pays{flag("who_pays")}</span>
+                                <select className="field-dark" value={d.payMode} onChange={(e) => patch(i, { payMode: e.target.value as PayMode })} aria-label="Who pays">
+                                  <option value="split">{PAY_MODE_LABEL.split}</option>
+                                  <option value="own">{PAY_MODE_LABEL.own}</option>
+                                </select>
+                              </label>
+                              <label className="mb-2 flex min-h-11 items-center gap-2.5 self-end text-sm text-white">
+                                <input type="checkbox" className="size-5 accent-[#8c7054]" checked={d.paid} onChange={(e) => patch(i, { paid: e.target.checked })} />
+                                <span>
+                                  Already paid{flag("paid")}
+                                  <span className="block text-xs text-white/55">
+                                    {d.paid ? (d.payMode === "own" ? "Saves as your own cost" : "Saves as Confirmed: you paid, split evenly") : "Saves as Planned"}
+                                  </span>
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {d.notes && (
                     <div className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/75">
-                      {d.location && (
-                        <p>
-                          <span className="text-white/70">Where: </span>
-                          {d.location}
-                          {flag("location")}
-                        </p>
-                      )}
-                      {d.notes && <p className="whitespace-pre-line break-words">{d.notes}</p>}
+                      <p className="whitespace-pre-line break-words">{d.notes}</p>
                       {d.source.source_url && (
                         <a href={d.source.source_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 font-semibold text-white underline underline-offset-4">
                           Looked up here, check against your booking <ExternalLink className="size-3" />

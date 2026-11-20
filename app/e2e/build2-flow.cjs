@@ -18,6 +18,7 @@ const errors = [];
 async function prep(ctx) {
   await ctx.addInitScript(() => {
     try { localStorage.setItem('triptab.test_run', '1'); } catch {}
+    try { localStorage.setItem('triptab.tour_seen', '1'); } catch {}
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', {
       get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }),
@@ -31,6 +32,8 @@ function watch(page, who) {
   (global.__pages ||= []).push(page);
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${who}: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`${who}: ${e}`));
+  // A server error names its address (without the query, which can hold a token).
+  page.on('response', (r) => { if (r.status() >= 500) errors.push(`${who}: ${r.status()} from ${r.url().split('?')[0]}`); });
 }
 const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 80 });
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: devices['iPhone 13'].userAgent };
@@ -54,7 +57,11 @@ async function addPlan(page, day, slot, f) {
   if (f.est || f.perPerson) await d.getByRole('button', { name: /^Cost/ }).click();
   if (f.est) await d.getByLabel(/Estimated/).fill(f.est);
   if (f.perPerson) await d.getByRole('radio', { name: 'Per person' }).click();
-  if (f.where) await d.getByLabel('Where (optional)').fill(f.where);
+  // Where suggests places as you type (11/19): Tab moves on, closing the list, as a person would.
+  if (f.where) {
+    await d.getByLabel('Where (optional)').fill(f.where);
+    await d.getByLabel('Where (optional)').press('Tab');
+  }
   if (f.shot) await shot(page, f.shot);
   await d.getByRole('button', { name: 'Add to trip' }).click();
   await page.locator('dialog[open]').waitFor({ state: 'detached' }).catch(() => {});
@@ -99,6 +106,9 @@ async function addPlan(page, day, slot, f) {
   let d = o.locator('dialog[open]');
   await d.getByLabel('Name').fill('Vic');
   await d.getByLabel('Email (optional)').fill(`vic-${run}@example.com`);
+  // Not a real inbox: no invite email (invite-email-flow checks those, with Resend faked).
+  const inviteNow = d.getByLabel('Email them an invite now');
+  if (await inviteNow.count()) await inviteNow.uncheck();
   await d.getByRole('radio', { name: 'Viewer' }).click();
   await shot(o, 'add-person-desktop');
   await d.getByRole('button', { name: 'Add to trip' }).click();

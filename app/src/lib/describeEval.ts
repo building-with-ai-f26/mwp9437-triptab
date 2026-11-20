@@ -6,7 +6,11 @@
  * - plans: every expected plan is there (kind, day, and part when the text gives one).
  * - grounded: nothing invented or obeyed: no forbidden word or amount, no stop that shouldn't be
  *   one, and no clock times when the text gives none.
- * - questions: a follow-up question for each detail the text leaves out, five at most.
+ * - questions: a follow-up question for each detail the text leaves out, five at most, and none
+ *   the case rules out (a lift ticket for a ski day, the trip's dates: Mike's 11/19 review).
+ *
+ * Since 11/19 a case can also ask for a note about dates that don't fit the calendar (trip rule), a
+ * plan's place in its location and no "Depart for" titles (plans rule).
  */
 import type { Proposal } from "./importPlans";
 
@@ -14,6 +18,7 @@ export interface DescribedResult {
   trip: { name: string; stops: { name: string; start_date: string; end_date: string }[] };
   plans: Proposal[];
   questions: string[];
+  note?: string | null;
 }
 
 export interface DescribeCase {
@@ -23,8 +28,10 @@ export interface DescribeCase {
   text: string;
   today: string;
   expect: {
-    trip: null | { stops: { names: string[]; start: string; end: string }[] };
-    plans: { kind: string[]; day: string[]; part?: string[] }[];
+    /** A date can be one of several when the text itself is unclear (a weekday that isn't that date). */
+    trip: null | { stops: { names: string[]; start: string | string[]; end: string | string[] }[] };
+    /** location: the plan's place has to contain one of these words. */
+    plans: { kind: string[]; day: string[]; part?: string[]; location?: string[] }[];
     /** Each entry: some question has to mention one of these words. */
     questions: string[][];
     forbidden_words: string[];
@@ -33,6 +40,12 @@ export interface DescribeCase {
     not_a_stop?: string[];
     /** The text gives no clock times, so no plan may have one. */
     no_times?: boolean;
+    /** No question may mention any of these words (lift tickets for a ski day, the trip's dates). */
+    not_asked?: string[];
+    /** The note has to mention one of these (dates that don't fit the calendar). */
+    note_about?: string[];
+    /** No plan's title may contain these ("Depart for": a leg is "Drive to"). */
+    titles_not?: string[];
   };
 }
 
@@ -75,24 +88,44 @@ export function scoreCase(c: DescribeCase, r: DescribedResult | null): CaseScore
     const got = r.trip.stops[i];
     if (!got) return;
     const nameOk = want.names.some((n) => fold(got.name).includes(fold(n)));
-    const datesOk = got.start_date === want.start && got.end_date === want.end;
+    const oneOf = (v: string | string[]) => (Array.isArray(v) ? v : [v]);
+    const datesOk = oneOf(want.start).includes(got.start_date) && oneOf(want.end).includes(got.end_date);
     if (!nameOk || !datesOk) {
       trip = false;
-      notes.push(`Stop ${i + 1}: expected ${want.names[0]} ${want.start}..${want.end}, got ${got.name} ${got.start_date}..${got.end_date}`);
+      notes.push(`Stop ${i + 1}: expected ${want.names[0]} ${oneOf(want.start).join("/")}..${oneOf(want.end).join("/")}, got ${got.name} ${got.start_date}..${got.end_date}`);
     }
   });
+  if (e.note_about && !(r.note && e.note_about.some((w) => fold(r.note!).includes(fold(w))))) {
+    trip = false;
+    notes.push(`No note about the dates; note: ${r.note ?? "none"}`);
+  }
 
   // plans: each expected plan matched by a different proposal
   const used = new Set<number>();
   let plans = true;
   for (const want of e.plans) {
     const i = r.plans.findIndex(
-      (p, k) => !used.has(k) && want.kind.includes(p.kind) && p.day != null && want.day.includes(p.day) && (!want.part || (p.part != null && want.part.includes(p.part))),
+      (p, k) =>
+        !used.has(k) &&
+        want.kind.includes(p.kind) &&
+        p.day != null &&
+        want.day.includes(p.day) &&
+        (!want.part || (p.part != null && want.part.includes(p.part))) &&
+        (!want.location || (p.location != null && want.location.some((w) => fold(p.location!).includes(fold(w))))),
     );
     if (i === -1) {
       plans = false;
-      notes.push(`Missing a ${want.kind.join("/")} on ${want.day.join(" or ")}${want.part ? ` (${want.part.join("/")})` : ""}; got ${r.plans.map((p) => `${p.kind} ${p.day ?? "?"} ${p.part ?? "?"} "${p.title}"`).join("; ") || "no plans"}`);
+      notes.push(
+        `Missing a ${want.kind.join("/")} on ${want.day.join(" or ")}${want.part ? ` (${want.part.join("/")})` : ""}${want.location ? ` at ${want.location.join("/")}` : ""}; got ${r.plans.map((p) => `${p.kind} ${p.day ?? "?"} ${p.part ?? "?"} "${p.title}"${p.location ? ` at "${p.location}"` : ""}`).join("; ") || "no plans"}`,
+      );
     } else used.add(i);
+  }
+  for (const bad of e.titles_not ?? []) {
+    const hit = r.plans.find((p) => fold(p.title).includes(fold(bad)));
+    if (hit) {
+      plans = false;
+      notes.push(`A title says "${bad}": "${hit.title}"`);
+    }
   }
 
   // grounded
@@ -128,6 +161,13 @@ export function scoreCase(c: DescribeCase, r: DescribedResult | null): CaseScore
     if (!r.questions.some((q) => topic.some((w) => fold(q).includes(fold(w))))) {
       questions = false;
       notes.push(`No question about ${topic.join("/")}; asked: ${r.questions.join(" | ") || "nothing"}`);
+    }
+  }
+  for (const w of e.not_asked ?? []) {
+    const q = r.questions.find((x) => fold(x).includes(fold(w)));
+    if (q) {
+      questions = false;
+      notes.push(`Asked about "${w}", which it shouldn't: ${q}`);
     }
   }
 

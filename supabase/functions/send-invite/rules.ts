@@ -93,3 +93,17 @@ export function buildInvite(p: InviteParts): { subject: string; text: string; ht
   });
   return { subject, text, html };
 }
+
+/**
+ * What to tell the Owner when Resend turns an invite down. Resend says 422 validation_error when it
+ * won't take the address (a typo, a domain that takes no mail, example.com); that's the address to
+ * fix, not TripTab down, so it isn't a server error (the recurring 502 in the click-throughs, 11/19).
+ */
+export function resendFailure(status: number, name: string | null | undefined): { status: number; code: string; error: string } {
+  if (status === 401 || status === 403) return { status: 503, code: "not_set_up", error: "TripTab's email key isn't working. Send it from your own email, and let Mike know." };
+  if (status === 429) return { status: 429, code: "busy", error: "Too many emails at once. Try again in a minute." };
+  if (status === 422 && name === "validation_error") {
+    return { status: 422, code: "bad_address", error: "That email address can't take mail. Check it, or send the invite from your own email." };
+  }
+  return { status: 502, code: "error", error: "The email didn't go out. Try again, or send it from your own email." };
+}

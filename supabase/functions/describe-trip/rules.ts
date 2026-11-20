@@ -41,7 +41,11 @@ export const DESCRIBE_TOOL = {
     additionalProperties: false,
     required: ["trip", "plans", "questions", "note"],
     properties: {
-      note: { ...str, description: "One short sentence for the traveler when something needs saying, such as why no trip could be set up. Otherwise null." },
+      note: {
+        ...str,
+        description:
+          "One short sentence for the traveler when something needs saying: why no trip could be set up, or that dates they gave don't fit the calendar (a weekday that isn't that date, a day that doesn't exist) and which you used. Otherwise null.",
+      },
       trip: {
         type: "object",
         additionalProperties: false,
@@ -69,7 +73,7 @@ export const DESCRIBE_TOOL = {
         type: "array",
         items: { type: "string" },
         description:
-          "Up to 5 short follow-up questions about things the description mentions but leaves out: a flight number, the place to stay's address or link, a reservation's time. One sentence each, ending with a question mark. Empty when nothing is missing.",
+          "Up to 5 short follow-up questions about things the description mentions but leaves out: a flight number, the place to stay's address or link, a reservation's time. Nothing about extras they never mentioned, and nothing about the trip's dates (that goes in note). One sentence each, ending with a question mark. Empty when nothing is missing.",
       },
     },
   },
@@ -85,8 +89,10 @@ Return, by calling set_up_trip once:
   - Something they do on several days in a row ("skiing every day in Chamonix") is one plan with day as the first day and end_day as the last.
   - A place to stay is kind stay, from check-in day (day) to check-out day (end_day); its part is night.
   - who_pays is own for flights and personal tickets, split for shared things (a house, a car, a group dinner). paid is true only when they say it is paid.
+  - location is the place they give for a plan, kept out of its title: skiing at Loon Mountain has location "Loon Mountain". A leg of the trip is titled by how they travel and where to ("Drive to Boston"), never "Depart for".
   - Mark in unsure any field you inferred rather than read.
-- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention. No questions when nothing is missing.
+- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention, and never about the trip's dates. No questions when nothing is missing.
+- note: null, unless something needs saying. When a date they give doesn't fit the calendar (a weekday that isn't that date, a day that doesn't exist such as November 31), use your best reading, mark the dates unsure, and say in note which dates you used so they can fix them on the review screen.
 
 Rules:
 - Take nothing from outside their words. Never add a place, a booking, a time, an address, a price or a person they didn't give. A flight they mention without a number is a plan with what they gave (the day and the cities), and a question asking for the number.
@@ -119,10 +125,45 @@ const PART_WORDS: [RegExp, Proposal["part"]][] = [
 const wordsOf = (s: string): string[] => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z0-9]{3,}/g) ?? [];
 
 /**
+ * A question about whether the trip's dates are right ("Your dates don't line up with the calendar,
+ * did you mean...?"), as opposed to a plan's time ("What time is dinner?").
+ */
+const WEEKDAY = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+const MONTH_DAY = /\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?)\.? \d{1,2}(st|nd|rd|th)?\b/i;
+export const aboutTripDates = (q: string): boolean =>
+  /\bcalendar\b/i.test(q) ||
+  (/\bdates?\b/i.test(q) && /\b(line up|match|wrong|right|correct|exist|valid)\b/i.test(q)) ||
+  /\b(isn'?t|is not|wasn'?t) a (monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(q) ||
+  // "Which is correct: leaving Tuesday November 24 or November 25?"
+  (/\b(correct|right|mean|which is it)\b/i.test(q) && WEEKDAY.test(q) && MONTH_DAY.test(q)) ||
+  // "Since November has only 30 days, is the return on the 29th?"
+  /\b(has only|only has) \d+ days\b|\bhas no \d+(st|nd|rd|th)\b/i.test(q) ||
+  // Two dates to choose between.
+  (q.match(new RegExp(MONTH_DAY.source, "gi"))?.length ?? 0) >= 2;
+
+/** Extras a group sorts out itself, which the traveler never asked TripTab about (Mike's 11/19 review). */
+const EXTRAS: RegExp[] = [
+  /\blift (tickets?|pass(es)?)\b/i,
+  /\bski pass(es)?\b/i,
+  /\b(rental|rented) (gear|equipment|skis|boards?)\b/i,
+  /\b(gear|equipment|ski|board) rentals?\b/i,
+  /\binsurance\b/i,
+];
+/**
+ * A question about an extra the description never mentions ("do you have lift tickets booked?" for
+ * a ski day). The prompt asks for none; the model still asked in two of two eval runs, so the
+ * check makes sure. Naming lift tickets in the prompt cost a plan in the eval ("Lift tickets are
+ * bought" came back as a plan with no day, 2 of 6 runs), so the prompt names no extras and the check
+ * does the work. An extra the traveler did mention can still be asked about.
+ */
+export const asksAboutExtras = (q: string, inputText: string): boolean => EXTRAS.some((re) => re.test(q) && !re.test(inputText));
+
+/**
  * Checks and cleans what the model handed back. Null means nothing usable: no stop survived. A stop
  * whose name shares no word with the traveler's is dropped (nothing invented); stops are put in date
  * order, each at most MAX_SPAN_DAYS long in all; plans go through import's checks; questions are
- * trimmed to five short ones.
+ * trimmed to five short ones, one about the trip's own dates becomes the note instead, and one
+ * about an extra they never mentioned (lift tickets) is dropped.
  */
 export function checkDescribe(raw: unknown, inputText: string, today?: string): Described | null {
   if (!raw || typeof raw !== "object") return null;
@@ -166,6 +207,14 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
   const checked = checkProposals({ plans: plansIn, note: r.note ?? null }, [], inputText);
   // A plan dated outside the trip came from a misread date: it is left out rather than stretch the trip.
   const plans = (checked?.plans ?? []).filter((p) => !p.day || (p.day >= tripStart && p.day <= tripEnd));
+  // Something they say is booked but give no day for ("Lift tickets are bought") goes on the trip's
+  // first day, marked unsure, as the earlier prompt always placed it; left blank (5 of 15 eval runs
+  // of the 11/19 prompt) it reached the review screen unticked, asking for a day.
+  for (const p of plans) {
+    if (p.day) continue;
+    p.day = tripStart;
+    if (!p.unsure.includes("day")) p.unsure.push("day");
+  }
   // "Sunday brunch" came back with no part of the day in 1 eval run of 4: when the model leaves it
   // blank, a meal word in the plan's own title sets it, marked unsure for the review screen.
   for (const p of plans) {
@@ -178,9 +227,17 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
 
   const seen = new Set<string>();
   const questions: string[] = [];
+  let dateNote: string | null = null;
   for (const q of Array.isArray(r.questions) ? r.questions : []) {
     let t = text(q, 160);
     if (!t || t.length < 8) continue;
+    // A question about the trip's own dates is fixed on the review screen, not parked on the To do
+    // list (Mike's 11/19 review): it becomes the note when the model gave none.
+    if (aboutTripDates(t)) {
+      dateNote ??= t;
+      continue;
+    }
+    if (asksAboutExtras(t, inputText)) continue;
     if (!t.endsWith("?")) t = `${t.replace(/[.!]+$/, "")}?`;
     const k = t.toLowerCase();
     if (seen.has(k)) continue;
@@ -190,5 +247,8 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
   }
 
   const name = text(r.trip?.name, 60) ?? stops[0].name;
-  return { trip: { name, stops }, plans, questions, note: text(r.note, 300) };
+  // A note too short to say anything ("x" came back in the eval) counts as none.
+  const note = text(r.note, 300);
+  const said = note && note.length >= 12 && /[a-z]{3}/i.test(note) ? note : null;
+  return { trip: { name, stops }, plans, questions, note: said ?? (dateNote ? `Check the dates: ${dateNote}` : null) };
 }

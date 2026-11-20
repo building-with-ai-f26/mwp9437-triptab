@@ -11,7 +11,7 @@
 // RESEND_API_KEY is an Edge Function secret, typed in by Mike. It never appears in the app, a file
 // or a commit.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buildInvite, inviteDecision, pickAppUrl, type SentRow } from "./rules.ts";
+import { buildInvite, inviteDecision, pickAppUrl, resendFailure, type SentRow } from "./rules.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -107,10 +107,14 @@ Deno.serve(async (req) => {
   });
   if (!res.ok) {
     await log("error");
-    console.error("resend error", res.status);
-    if (res.status === 401 || res.status === 403) return fail(503, "not_set_up", "TripTab's email key isn't working. Send it from your own email, and let Mike know.");
-    if (res.status === 429) return fail(429, "busy", "Too many emails at once. Try again in a minute.");
-    return fail(502, "error", "The email didn't go out. Try again, or send it from your own email.");
+    // Resend's error name is a fixed word (validation_error); its message can hold the address, so it isn't logged.
+    const name = await res
+      .json()
+      .then((b: { name?: unknown }) => (typeof b?.name === "string" ? b.name : null))
+      .catch(() => null);
+    console.error("resend error", res.status, name);
+    const f = resendFailure(res.status, name);
+    return fail(f.status, f.code, f.error);
   }
   await log("sent");
   return json({ ok: true, to: person.name });

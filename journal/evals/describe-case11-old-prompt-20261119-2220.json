@@ -1,0 +1,206 @@
+{
+  "label": "case11-old-prompt",
+  "ran_at": "2026-11-19T22:20:52.554Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 1,
+  "passed_all_four": 0,
+  "by_rule": {
+    "trip": 1,
+    "plans": 1,
+    "grounded": 1,
+    "questions": 0
+  },
+  "total_cost_usd": 0.001723,
+  "cases": [
+    {
+      "id": "11-holiday-drive-wrong-dates",
+      "group": "messy",
+      "what": "Dictated with a weekday that isn't its date and a day that doesn't exist: the dates go in a note to fix, not a question. A ski day asks nothing about lift tickets, the drives say Drive to, and each plan's place is its location (Mike's 11/19 review).",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "trip": true,
+        "plans": true,
+        "grounded": true,
+        "questions": false
+      },
+      "notes": [
+        "Asked about \"November 25\", which it shouldn't: Did you mean to leave Tuesday November 24th, or Wednesday November 25th, since November 25 is a Wednesday this year?"
+      ],
+      "cost_usd": 0.001723,
+      "input_tokens": 2879,
+      "output_tokens": 2870,
+      "latency_ms": 11879,
+      "trip": {
+        "name": "Thanksgiving in Hartford",
+        "stops": [
+          {
+            "name": "Hartford",
+            "start_date": "2026-11-24",
+            "end_date": "2026-11-29"
+          }
+        ]
+      },
+      "plans": [
+        {
+          "kind": "transport",
+          "title": "Rental car pickup, heading to Hartford",
+          "day": "2026-11-24",
+          "part": "day",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "day",
+            "part"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Cooking with sister's family",
+          "day": "2026-11-25",
+          "part": "day",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part",
+            "location"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Drinks with friends in New Haven",
+          "day": "2026-11-25",
+          "part": "night",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "New Haven",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "part"
+          ]
+        },
+        {
+          "kind": "meal",
+          "title": "Thanksgiving dinner at Aunt Rosa's house",
+          "day": "2026-11-26",
+          "part": "evening",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Aunt Rosa's house",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Skiing at Mount Snow",
+          "day": "2026-11-27",
+          "part": "day",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Mount Snow",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "own",
+          "paid": false,
+          "unsure": [
+            "part"
+          ]
+        },
+        {
+          "kind": "activity",
+          "title": "Nephew's baptism",
+          "day": "2026-11-28",
+          "part": "morning",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": null,
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "location"
+          ]
+        },
+        {
+          "kind": "transport",
+          "title": "Drive home to Brooklyn, rental car return",
+          "day": "2026-11-29",
+          "part": "day",
+          "end_day": null,
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "Brooklyn",
+          "confirmation_code": null,
+          "cost_cents": null,
+          "currency": null,
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": false,
+          "unsure": [
+            "part"
+          ]
+        }
+      ],
+      "questions": [
+        "Did you mean to leave Tuesday November 24th, or Wednesday November 25th, since November 25 is a Wednesday this year?",
+        "Since November has only 30 days, is the return on Sunday November 29th?",
+        "What is the address of Aunt Rosa's house and the time of Thanksgiving dinner?",
+        "What time and place is the nephew's baptism on Saturday?",
+        "Where is the rental car picked up and returned, and is there a confirmation code?"
+      ],
+      "note": "Your dates don't line up: November 25, 2026 is a Wednesday, and November has no 31st. I used Tuesday the 24th to Sunday the 29th, so please check them."
+    }
+  ]
+}

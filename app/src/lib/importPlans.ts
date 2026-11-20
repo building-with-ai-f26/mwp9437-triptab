@@ -51,6 +51,8 @@ export interface Draft {
   /** Empty when the proposal's day is missing or outside the trip: the Owner picks one. */
   day: string;
   part: DayPart;
+  /** The last part of the day it runs through, when the Owner picks several (11/19); null for one. */
+  end_part: DayPart | null;
   end_day: string;
   /** Dollars as typed; empty for no cost. */
   cost: string;
@@ -149,6 +151,7 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     title: p.title,
     day,
     part: p.part ?? partFromTime(p.depart_time) ?? "day",
+    end_part: null,
     end_day,
     cost: p.cost_cents != null && usd ? String(p.cost_cents / 100) : "",
     perPerson: p.cost_is_per_person,
