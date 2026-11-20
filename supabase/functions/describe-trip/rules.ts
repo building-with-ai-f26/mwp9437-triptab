@@ -91,7 +91,7 @@ Return, by calling set_up_trip once:
   - who_pays is own for flights and personal tickets, split for shared things (a house, a car, a group dinner). paid is true only when they say it is paid.
   - title says what it is, and location says where, when they give a place: "Skiing" at "Loon Mountain", "Thanksgiving dinner" at "Grandma's house". A leg of the trip is titled by how they travel and where to: "Drive to Boston", "Train to Barcelona", "Flight to Geneva", never "Depart for" or "Leave for".
   - Mark in unsure any field you inferred rather than read.
-- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention: no lift tickets for a ski day, no rental gear, no insurance. Never ask about the trip's dates. No questions when nothing is missing.
+- questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention, and never about the trip's dates. No questions when nothing is missing.
 - note: null, unless something needs saying. When a date they give doesn't fit the calendar (a weekday that isn't that date, a day that doesn't exist such as November 31), use your best reading, mark the dates unsure, and say in note which dates you used so they can fix them on the review screen.
 
 Rules:
@@ -152,8 +152,9 @@ const EXTRAS: RegExp[] = [
 /**
  * A question about an extra the description never mentions ("do you have lift tickets booked?" for
  * a ski day). The prompt asks for none; the model still asked in two of two eval runs, so the
- * check makes sure. (A plainer prompt line naming lift tickets cost a plan in the eval, so the prompt
- * keeps its first wording and the check does the work.) An extra the traveler did mention can still be asked about.
+ * check makes sure. Naming lift tickets in the prompt cost a plan in the eval ("Lift tickets are
+ * bought" came back as a plan with no day, 2 of 6 runs), so the prompt names no extras and the check
+ * does the work. An extra the traveler did mention can still be asked about.
  */
 export const asksAboutExtras = (q: string, inputText: string): boolean => EXTRAS.some((re) => re.test(q) && !re.test(inputText));
 
