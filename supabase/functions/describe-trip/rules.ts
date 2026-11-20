@@ -89,7 +89,7 @@ Return, by calling set_up_trip once:
   - Something they do on several days in a row ("skiing every day in Chamonix") is one plan with day as the first day and end_day as the last.
   - A place to stay is kind stay, from check-in day (day) to check-out day (end_day); its part is night.
   - who_pays is own for flights and personal tickets, split for shared things (a house, a car, a group dinner). paid is true only when they say it is paid.
-  - title says what it is, and location says where, when they give a place: "Skiing" at "Loon Mountain", "Thanksgiving dinner" at "Grandma's house". A leg of the trip is titled by how they travel and where to: "Drive to Boston", "Train to Barcelona", "Flight to Geneva", never "Depart for" or "Leave for".
+  - location is the place they give for a plan, kept out of its title: skiing at Loon Mountain has location "Loon Mountain". A leg of the trip is titled by how they travel and where to ("Drive to Boston"), never "Depart for".
   - Mark in unsure any field you inferred rather than read.
 - questions: up to five short questions about details they mention but leave out, such as a flight number, the address or link of a place to stay, or a reservation's time. Ask nothing about what they didn't mention, and never about the trip's dates. No questions when nothing is missing.
 - note: null, unless something needs saying. When a date they give doesn't fit the calendar (a weekday that isn't that date, a day that doesn't exist such as November 31), use your best reading, mark the dates unsure, and say in note which dates you used so they can fix them on the review screen.
@@ -239,5 +239,8 @@ export function checkDescribe(raw: unknown, inputText: string, today?: string): 
   }
 
   const name = text(r.trip?.name, 60) ?? stops[0].name;
-  return { trip: { name, stops }, plans, questions, note: text(r.note, 300) ?? (dateNote ? `Check the dates: ${dateNote}` : null) };
+  // A note too short to say anything ("x" came back in the eval) counts as none.
+  const note = text(r.note, 300);
+  const said = note && note.length >= 12 && /[a-z]{3}/i.test(note) ? note : null;
+  return { trip: { name, stops }, plans, questions, note: said ?? (dateNote ? `Check the dates: ${dateNote}` : null) };
 }

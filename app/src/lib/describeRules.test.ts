@@ -124,6 +124,12 @@ describe("a question about the trip's dates goes to the review screen, not the T
     expect(r.note).toBe("Check the dates: Your dates don't line up with the calendar, did you mean Feb 6?");
   });
 
+  it("treats a note too short to say anything as none", () => {
+    const r = checkDescribe(answer({ note: "x", questions: ["Do your dates match the calendar?"] }), TEXT)!;
+    expect(r.note).toBe("Check the dates: Do your dates match the calendar?");
+    expect(checkDescribe(answer({ note: "x" }), TEXT)!.note).toBeNull();
+  });
+
   it("keeps the model's own note when it gave one", () => {
     const r = checkDescribe(answer({ note: "Feb 5 2027 is a Friday, so I used Friday.", questions: ["Do your dates match the calendar?"] }), TEXT)!;
     expect(r.note).toBe("Feb 5 2027 is a Friday, so I used Friday.");
