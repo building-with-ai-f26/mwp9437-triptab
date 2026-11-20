@@ -70,8 +70,9 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
   - Each trip's address carries 64 random bits (`trip+<16 hex>@triptab.org`), given only to its
     Owners (`inbox_address`, raised rights, checks the caller); an Owner can replace it, and the old
     one stops at once (tested in `inbox.live.test.ts`).
-  - Mail is read only from an address on the trip (an account's email, or the email an Owner
-    entered). **Known limit:** a From address can be forged. Someone who has a trip's address and
+  - Mail is read only from an address on the trip (an account's email or a linked sign-in's, such as
+    Google linked to an email account, or the email an Owner entered), and only when Cloudflare's
+    own check finds DMARC passed for it. **Known limit:** a From address can be forged. Someone who has a trip's address and
     knows a traveler's email could send plans in their name. They'd still wait for an Owner to
     review them; nothing reaches the itinerary on its own, and the trip takes 20 emails a day.
     Cloudflare checks SPF, DKIM and DMARC on incoming mail; reading its verdict in the Worker is
