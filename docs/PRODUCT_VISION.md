@@ -260,6 +260,13 @@ You see a real gap in the market and would keep TripTab running after the course
 - From the PostHog recordings of that review (read 11/20): in one session a trip wouldn't open. That tab still ran the build from before a deploy, and the new one no longer had its page file. The app now reloads once when that happens (in review 11/20).
 - Also from the recordings: "Add 10 to the trip" on the Describe it review was tapped three times with nothing visible happening. A card needed a fix and said so, out of view up the list. Now a note by the button says what needs fixing, and the card scrolls into view (in review 11/20).
 
+**Raised 11/20** (your import test on triptab.org, evening; not built yet)
+
+- An uploaded flight confirmation that matches a half-filled flight already on the trip is flagged as a possible duplicate. Better: merge it in, filling the existing plan from the confirmation (C25).
+- A round-trip booking's one total ($992.39 for two flights) is left blank on both legs. Needs a way to carry it (C26).
+- Already paid, but the amount isn't to hand: the review won't add the plan until you type it. Better: add it, flagged as cost to come, with a to-do for whoever paid (C27).
+- A price in euros (the chalet, EUR 6,947.50) blocks the save until you find the dollar charge on your card. Better: take the euros, convert at that day's rate, and flag the cost as pending until the payer confirms the card charge, as a to-do (C28).
+
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
 - **Adding plans needs more flexibility.** An Add a plan button at the top of the trip, not only tapping a slot. A plan can run across several days with a start and end time (skiing 9 AM to 4 PM every day in Chamonix) instead of picking Morning and Day on each day. The four parts of the day stay as how the itinerary is laid out, and empty slots still show, so a gap like Thursday night stands out.
