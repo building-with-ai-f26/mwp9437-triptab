@@ -7,7 +7,7 @@ import { LANDING_PHOTO } from "../lib/photos";
  * TripTab's privacy page (Build 3), linked from the landing page, sign-in and Google's consent
  * screen. Every line describes what the code does today: change it with the code it describes.
  */
-const UPDATED = "November 18, 2026";
+const UPDATED = "November 21, 2026";
 const CONTACT = "privacy@triptab.org";
 
 const SECTIONS: { title: string; body: ReactNode }[] = [
@@ -35,6 +35,13 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           are saved on all your trips, and on trips you join later, until you change or clear them.
         </li>
         <li>
+          <b>Emails you forward to a trip:</b> each trip can have its own address. An email someone on the trip
+          forwards there is read once by AI import; TripTab keeps who on the trip sent it, its subject and the plans
+          it found, for the trip's Owners to review. The email itself is never stored. An email from an address that
+          isn't on the trip is turned away, and the email service's logs keep why, with only the sender's first letter
+          and domain.
+        </li>
+        <li>
           <b>Logs:</b> a record of each AI request (who asked, on which trip, when, how long the input was and what it
           cost) and of each invite email (who sent it, to which person, when). They hold counts and costs, never your
           text or anyone's email, and they stay after a trip is deleted so TripTab's costs and daily limits add up.
@@ -55,10 +62,11 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           or make a new one at any time.
         </li>
         <li>Emails and phone numbers of the people on a trip are shown to its Owners only.</li>
+        <li>Bookings forwarded to a trip's address, and who sent them, are shown to its Owners only.</li>
         <li>
           Your Venmo username and Zelle phone or email, if you add them, are shown to the people on your trips, so they
-          can pay you. Only you can add your Zelle. Once you save your own, only you can change either one; until then, a
-          trip's Owners can add or fix your Venmo username on that trip.
+          can pay you. Once you save your own, only you can change either one; until then, a trip's Owners can add or fix
+          your Venmo username and Zelle on that trip.
         </li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
@@ -73,13 +81,15 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           <b>Supabase</b> stores accounts and trips and runs TripTab's server code.
         </li>
         <li>
-          <b>Cloudflare</b> serves the site at triptab.org.
+          <b>Cloudflare</b> serves the site at triptab.org, and receives email sent to a trip's own address and hands
+          it to TripTab.
         </li>
         <li>
           <b>Anthropic (Claude)</b> reads what you give the AI buttons, such as a pasted booking email, a PDF or a
           screenshot, along with the trip's name, dates, stops and plans, and suggests plans back. It may search the
           web to check things like a flight's times. On Start a trip, "Set it up" sends it the description you typed
-          and today's date, and nothing else. Nothing goes to it unless you tap one of these buttons, and under
+          and today's date, and nothing else. An email forwarded to a trip's address goes to it the same way. Nothing goes to it unless you tap one of
+          these buttons or forward an email, and under
           Anthropic's terms for businesses it isn't used to train its models. Nothing is saved until you review it.
         </li>
         <li>
