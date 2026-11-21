@@ -96,6 +96,32 @@ const flightNo = (s: string) => {
 };
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+/**
+ * A name that says what kind of plan it is but not which one: "Airbnb", "Hotel", "Flight home",
+ * "Rental car (TBD)". Someone put it on the trip before the booking was made (C34, Mike's call
+ * 11/21: the chalet merged into a plan called Airbnb). Kept short on purpose: a name with anything
+ * of its own in it ("Ski chalet in Chamonix") is someone's choice and stays.
+ */
+const GENERAL_NAMES = new Set([
+  "airbnb", "vrbo", "booking com", "hotel", "hostel", "lodging", "accommodation", "accommodations", "stay", "place to stay",
+  "where we stay", "apartment", "house", "rental", "villa", "chalet", "condo", "cabin", "flight", "flights", "flight out",
+  "flight there", "flight home", "flight back", "outbound flight", "return flight", "car", "rental car", "car rental", "train",
+  "bus", "ferry", "transfer", "shuttle", "taxi", "transport", "dinner", "lunch", "breakfast", "brunch", "restaurant", "meal",
+  "activity", "tickets", "tour",
+]);
+const FILLER = /\b(tbd|tba|tbc|placeholder|to book|maybe|our|the|a)\b/g;
+export function isGeneralName(title: string): boolean {
+  const n = norm(title).replace(FILLER, " ").replace(/\s+/g, " ").trim();
+  return n === "" || GENERAL_NAMES.has(n);
+}
+
+/** The name a merge gives the plan already on the trip: the booking's, when that plan's is general (C34); else null, and it keeps its own. */
+export function mergedTitle(existingTitle: string, incomingTitle: string | null | undefined): string | null {
+  const next = (incomingTitle ?? "").trim();
+  if (!next || !isGeneralName(existingTitle) || norm(next) === norm(existingTitle)) return null;
+  return next;
+}
+
 /** A plan already on the trip that a proposal looks like: the same flight that day, the same stay dates, or the same name that day. */
 export function possibleDuplicate(p: Pick<Proposal, "kind" | "title" | "day" | "end_day">, items: Item[]): Item | null {
   for (const it of items) {
@@ -251,8 +277,12 @@ export function noteTotalCents(note: string | null | undefined): number | null {
 
 const STATUS_RANK: Record<ItemStatus, number> = { suggested: 0, planned: 1, confirmed: 2 };
 
-/** What a merged draft adds to a plan already on the trip: only what that plan is missing (C25). */
+/**
+ * What a merged draft adds to a plan already on the trip: only what that plan is missing (C25), and
+ * the booking's name in place of a general one (C34). Cost and paid stay as that plan has them.
+ */
 export interface PlanFields {
+  title?: string;
   location: string | null;
   notes: string | null;
   start_time?: string | null;
@@ -264,6 +294,8 @@ export interface PlanFields {
 }
 export function mergePatch(existing: Item, incoming: PlanFields): Partial<PlanFields> {
   const patch: Partial<PlanFields> = {};
+  const title = mergedTitle(existing.title, incoming.title);
+  if (title) patch.title = title;
   if (!existing.location && incoming.location) patch.location = incoming.location;
   if (!existing.start_time && incoming.start_time) patch.start_time = incoming.start_time;
   if (!existing.end_time && incoming.end_time) patch.end_time = incoming.end_time;

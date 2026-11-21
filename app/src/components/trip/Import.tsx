@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from
 import { AlertTriangle, CalendarPlus, Check, ChevronDown, ExternalLink, FileUp, Info, Plane, Sparkles, X } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
-import { atEstimate, costToCome, draftProblems, noteTotalCents, oneFare, sharedFareLegs, toDraft, type Draft, type ImportResult } from "../../lib/importPlans";
+import { atEstimate, costToCome, draftProblems, mergedTitle, noteTotalCents, oneFare, sharedFareLegs, toDraft, type Draft, type ImportResult } from "../../lib/importPlans";
 import { foreignLabel, toUsdCents, usdRate } from "../../lib/rates";
 import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, togglePart, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
 
@@ -372,8 +372,14 @@ export function ImportDialog({
                     <p className="mb-2 flex gap-2 rounded-xl bg-sky-400/15 px-3 py-2 text-xs text-sky-100" data-testid="merge-note">
                       <Info className="mt-0.5 size-3.5 shrink-0" />
                       <span>
-                        Updates "{d.mergeInto.title}", already on the trip: fills in what it's missing (times, place, cost) and keeps what's there. Untick
-                        to leave it as it is.
+                        Updates "{d.mergeInto.title}", already on the trip
+                        {mergedTitle(d.mergeInto.title, d.title) ? (
+                          // A general name takes the booking's (C34): shown here so it can be changed under What first.
+                          <>
+                            , and names it <b data-testid="merge-rename">"{d.title.trim()}"</b> (change it under What)
+                          </>
+                        ) : null}
+                        : fills in what it's missing (times, place, cost) and keeps what's there. Untick to leave it as it is.
                       </span>
                     </p>
                   )}

@@ -4,6 +4,8 @@ import {
   costToCome,
   draftCents,
   draftProblems,
+  isGeneralName,
+  mergedTitle,
   mergePatch,
   noteTotalCents,
   notesFor,
@@ -197,6 +199,41 @@ describe("filling in a plan already on the trip (C25)", () => {
   it("changes nothing that's already filled in, and never steps a status back", () => {
     const full = item({ start_time: "17:05", end_time: "07:10", location: "EWR", notes: "Departs 17:05", est_cents: 50000, status: "confirmed" });
     expect(mergePatch(full, { location: "Newark", notes: "Departs 17:05", start_time: "18:00", end_time: null, end_day: null, est_cents: 99239, status: "planned" })).toEqual({});
+  });
+});
+
+describe("a booking merging into a plan with a general name (C34)", () => {
+  it("knows a placeholder name from one someone chose", () => {
+    for (const t of ["Airbnb", "airbnb (TBD)", "Hotel?", "The hotel", "Booking.com", "Flight home", "Rental car", "Dinner", "Stay", ""]) {
+      expect(isGeneralName(t), t).toBe(true);
+    }
+    for (const t of ["Ski chalet in Chamonix", "UA 57 Newark to Geneva", "Dinner at La Calèche", "Chalet Les Tissourds", "Hotel Mont-Blanc"]) {
+      expect(isGeneralName(t), t).toBe(false);
+    }
+  });
+  it("takes the booking's name only over a general one, and only when it's different", () => {
+    expect(mergedTitle("Airbnb", "Chalet Les Tissourds")).toBe("Chalet Les Tissourds");
+    expect(mergedTitle("Airbnb", "  Chalet Les Tissourds  ")).toBe("Chalet Les Tissourds");
+    expect(mergedTitle("Ski chalet in Chamonix", "Chalet Les Tissourds")).toBeNull();
+    expect(mergedTitle("Airbnb", "airbnb")).toBeNull();
+    expect(mergedTitle("Airbnb", "")).toBeNull();
+    expect(mergedTitle("Airbnb", null)).toBeNull();
+  });
+  it("renames in the merge, and leaves cost and paid as the plan has them", () => {
+    const placeholder = item({ kind: "stay", title: "Airbnb", location: null, notes: null, est_cents: 120000, status: "confirmed" });
+    const patch = mergePatch(placeholder, {
+      title: "Chalet Les Tissourds",
+      location: "Chamonix",
+      notes: "Confirmation: HM4ZK2",
+      end_day: "2027-02-12",
+      est_cents: 694750,
+      status: "planned",
+    });
+    expect(patch).toEqual({ title: "Chalet Les Tissourds", location: "Chamonix", notes: "Confirmation: HM4ZK2" });
+  });
+  it("keeps a name someone chose", () => {
+    const chosen = item({ kind: "stay", title: "Ski chalet in Chamonix", location: "Chamonix", notes: null, est_cents: null, status: "planned" });
+    expect(mergePatch(chosen, { title: "Chalet Les Tissourds", location: "Chamonix", notes: null, end_day: null, est_cents: null, status: "planned" })).toEqual({});
   });
 });
 
