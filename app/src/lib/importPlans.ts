@@ -25,6 +25,10 @@ export interface Proposal {
   who_pays: PayMode;
   paid: boolean;
   unsure: string[];
+  /** The booking's or listing's page, as written in the input (C32). Import only. */
+  link?: string | null;
+  /** A listing's headline or description as written: it goes in Notes, not Where (C32). */
+  details?: string | null;
 }
 
 export interface ImportUsage {
@@ -61,6 +65,8 @@ export interface Draft {
   payMode: PayMode;
   paid: boolean;
   location: string;
+  /** The booking's or listing's page (C32): saved as the plan's Link. */
+  link: string;
   notes: string;
   /** Fields to mark "check this". */
   unsure: string[];
@@ -139,6 +145,8 @@ export function possibleDuplicate(p: Pick<Proposal, "kind" | "title" | "day" | "
 /** Times and the confirmation code go in the plan's notes, with where looked-up times came from. */
 export function notesFor(p: Proposal): string {
   const lines: string[] = [];
+  // A listing's headline ("4*, central, hot tub") is worth keeping, but not as the address (C32).
+  if (p.details) lines.push(p.details);
   if (p.depart_time || p.arrive_time) {
     const lands = p.kind === "flight" && p.end_day && p.day && p.end_day > p.day ? ` on ${longDay(p.end_day)}` : "";
     const times = [p.depart_time && `Departs ${p.depart_time}`, p.arrive_time && `arrives ${p.arrive_time}${lands}`].filter(Boolean).join(", ");
@@ -200,6 +208,7 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     // Paid with no amount found is fine: the amount comes later, as a to-do (C27).
     paid: p.paid,
     location: p.location ?? "",
+    link: p.link ?? "",
     notes: notesFor(p),
     unsure: [...p.unsure],
     warnings,
@@ -284,6 +293,7 @@ const STATUS_RANK: Record<ItemStatus, number> = { suggested: 0, planned: 1, conf
 export interface PlanFields {
   title?: string;
   location: string | null;
+  link?: string | null;
   notes: string | null;
   start_time?: string | null;
   end_time?: string | null;
@@ -297,6 +307,7 @@ export function mergePatch(existing: Item, incoming: PlanFields): Partial<PlanFi
   const title = mergedTitle(existing.title, incoming.title);
   if (title) patch.title = title;
   if (!existing.location && incoming.location) patch.location = incoming.location;
+  if (!existing.link && incoming.link) patch.link = incoming.link;
   if (!existing.start_time && incoming.start_time) patch.start_time = incoming.start_time;
   if (!existing.end_time && incoming.end_time) patch.end_time = incoming.end_time;
   if (existing.kind !== "stay" && !existing.end_day && incoming.end_day) patch.end_day = incoming.end_day;

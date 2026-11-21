@@ -4,7 +4,7 @@
 // use import's exact format and checks (supabase/functions/import-bookings/rules.ts), so the app
 // reviews them on import's screen. No imports beyond those rules, so the app's unit tests
 // (app/src/lib/describeRules.test.ts) run this same file.
-import { checkProposals, PROPOSE_TOOL, type Proposal } from "../import-bookings/rules.ts";
+import { BASE_PLANS_SCHEMA, checkProposals, type Proposal } from "../import-bookings/rules.ts";
 
 export { capDecision, costUsd, EFFORT, MODEL, nyDayStart, readCap, TIMEOUT_MS, WORST_CASE_CALL_USD, type Usage } from "../import-bookings/rules.ts";
 
@@ -68,7 +68,8 @@ export const DESCRIBE_TOOL = {
           },
         },
       },
-      plans: PROPOSE_TOOL.input_schema.properties.plans,
+      // Import's plan fields before C32 (no link or details), so this tool doesn't change with import's.
+      plans: BASE_PLANS_SCHEMA,
       questions: {
         type: "array",
         items: { type: "string" },

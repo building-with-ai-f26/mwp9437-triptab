@@ -59,6 +59,8 @@ Paid Nov 9, 2026 with Mastercard ending 2208
     "expect": {"plans": [{
         "kind": ["stay"], "day": "2027-02-05", "end_day": "2027-02-12",
         "cost_cents": 321240, "currency": "USD", "who_pays": ["split"], "paid": True, "title_has": ["Aiguilles"],
+        # C32: Where is the street address; there is no listing page in the text, so no link.
+        "location_has": ["Route des Pelerins"], "link": None,
     }]},
 })
 
@@ -246,6 +248,37 @@ VISA ****4417           23.18
 Thank you!
 """,
     "expect": {"plans": []},
+})
+
+# C32 (Mike's call, 11/21): shaped like his chalet email, made up. A listing headline full of
+# selling words, the street address under it, and the listing's page: Where gets the address, the
+# headline goes to Notes, and the page to Link.
+cases.append({
+    "id": "11-listing-headline-and-link", "group": "messy",
+    "what": "A rental confirmation whose listing headline is full of selling words, with a street address and the listing's page.",
+    "text": """Your reservation is confirmed
+Chalet Le Lognan 5*, ski-in, sauna, mountain views
+Hosted by Bastien. Confirmation code: HMQ7RL22XC
+
+Check-in   Fri, Feb 5, 2027 after 3:00 PM
+Checkout   Fri, Feb 12, 2027 by 10:00 AM
+Guests     8
+
+Getting there
+48 Chemin du Lavancher, 74400 Chamonix-Mont-Blanc, France
+
+View the listing: https://www.airbnb.com/rooms/48213377
+
+Payment
+Total (EUR)   €5,812.40
+Paid Nov 14, 2026 with Visa ending 4417
+""",
+    "expect": {"plans": [{
+        "kind": ["stay"], "day": "2027-02-05", "end_day": "2027-02-12",
+        "cost_cents": 581240, "currency": "EUR", "who_pays": ["split"], "paid": True, "title_has": ["Lognan"],
+        "location_has": ["Chemin du Lavancher"], "location_not": ["sauna", "ski-in", "views"],
+        "link": "https://www.airbnb.com/rooms/48213377",
+    }]},
 })
 
 for c in cases:

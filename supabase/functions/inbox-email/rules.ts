@@ -56,6 +56,31 @@ export function isOnTrip(sender: string | null, emails: (string | null | undefin
   return emails.some((e) => e && e.trim().toLowerCase() === sender);
 }
 
+/** Links that are never a booking's page: leaving a list, help, social, app stores, pictures. */
+const NOT_A_PAGE =
+  /unsubscribe|optout|opt-out|preferences|privacy|terms|\/help|support\.|facebook\.com|instagram\.com|twitter\.com|\/\/x\.com|linkedin\.com|apps\.apple\.com|play\.google\.com|\.(png|jpe?g|gif|svg|webp)(\?|$)/i;
+/** The most links an email hands to import. */
+export const MAX_EMAIL_LINKS = 12;
+
+/**
+ * The web pages an HTML email links to, with each link's text (C32, Mike's call 11/21): a
+ * listing's or booking's page is usually behind a button, not written out, so the text alone loses
+ * it. Only http(s) pages, once each, without the ones that are never a booking's page.
+ */
+export function emailLinks(html: string): { label: string; href: string }[] {
+  const out: { label: string; href: string }[] = [];
+  const seen = new Set<string>();
+  for (const m of html.matchAll(/<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi)) {
+    const href = m[2].replace(/&amp;/gi, "&").trim();
+    if (!/^https?:\/\/[^\s"'<>]+$/i.test(href) || href.length > 500 || NOT_A_PAGE.test(href) || seen.has(href)) continue;
+    seen.add(href);
+    const label = htmlToText(m[3]).replace(/\s+/g, " ").trim().slice(0, 80);
+    out.push({ label, href });
+    if (out.length >= MAX_EMAIL_LINKS) break;
+  }
+  return out;
+}
+
 /** HTML mail as plain lines: no tags, scripts or styles, common entities decoded, blank runs folded. */
 export function htmlToText(html: string): string {
   return html
@@ -99,12 +124,15 @@ const toBase64 = (bytes: Uint8Array): string => {
 /**
  * What goes to import: the email's text (or its HTML as text), cut to import's limit, and its first
  * PDF (else its first photo) that import takes and that fits under 3 MB. Null when there's nothing to
- * read at all.
+ * read at all. The HTML's links that the text doesn't already show come first, a short list, so a
+ * long email can't push the listing's page past the limit (C32).
  */
 export function importInput(mail: ParsedMail): ImportInput | null {
   const body = (mail.text && mail.text.trim()) || (mail.html ? htmlToText(mail.html) : "");
   const subject = mail.subject?.trim() ? mail.subject.trim().slice(0, 200) : null;
-  const text = [subject ? `Subject: ${subject}` : "", body].filter(Boolean).join("\n\n").slice(0, MAX_TEXT_CHARS);
+  const links = mail.html ? emailLinks(mail.html).filter((l) => !body.includes(l.href)) : [];
+  const linkBlock = links.length ? `Links in the email:\n${links.map((l) => (l.label ? `${l.label}: ${l.href}` : l.href)).join("\n")}` : "";
+  const text = [subject ? `Subject: ${subject}` : "", linkBlock, body].filter(Boolean).join("\n\n").slice(0, MAX_TEXT_CHARS);
   const usable = (mail.attachments ?? [])
     .map((a) => ({ type: (a.mimeType ?? "").toLowerCase(), bytes: a.content instanceof Uint8Array ? a.content : new Uint8Array(a.content) }))
     .filter((a) => FILE_TYPES.includes(a.type) && a.bytes.length > 0 && a.bytes.length <= MAX_FILE_BYTES);

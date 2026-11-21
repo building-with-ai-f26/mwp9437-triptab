@@ -18,7 +18,7 @@ import { readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { key, signedIn, url } from "../../src/test/live";
-import { RULE_LABEL, RULES, scoreCase, summarize, type CaseScore, type EvalCase } from "../../src/lib/importEval";
+import { ALL_RULES, RULE_LABEL, RULES, scoreCase, summarize, type CaseScore, type EvalCase } from "../../src/lib/importEval";
 import type { Proposal } from "../../src/lib/importPlans";
 import { WORST_CASE_CALL_USD } from "../../../supabase/functions/import-bookings/rules.ts";
 
@@ -158,11 +158,11 @@ it(`Email-in eval: ${cases.length} cases`, async () => {
     "",
     `| Rule | Cases passed |`,
     `| --- | --- |`,
-    ...RULES.map((r) => `| ${RULE_LABEL[r]} | ${summary.byRule[r]} of ${summary.total} |`),
+    ...ALL_RULES.map((r) => `| ${RULE_LABEL[r]} | ${summary.byRule[r]} of ${summary.total} |`),
     "",
-    `| Case | Sent as | ${RULES.map((r) => RULE_LABEL[r]).join(" | ")} | Seconds |`,
-    `| --- | --- | ${RULES.map(() => "---").join(" | ")} | --- |`,
-    ...out.cases.map((c) => `| ${c.id} | ${c.sent_as} | ${RULES.map((r) => tick(c.pass[r])).join(" | ")} | ${c.seconds.toFixed(1)} |`),
+    `| Case | Sent as | ${ALL_RULES.map((r) => RULE_LABEL[r]).join(" | ")} | Seconds |`,
+    `| --- | --- | ${ALL_RULES.map(() => "---").join(" | ")} | --- |`,
+    ...out.cases.map((c) => `| ${c.id} | ${c.sent_as} | ${ALL_RULES.map((r) => tick(c.pass[r])).join(" | ")} | ${c.seconds.toFixed(1)} |`),
     "",
     "## What failed",
     "",
@@ -171,6 +171,6 @@ it(`Email-in eval: ${cases.length} cases`, async () => {
   ].join("\n");
   writeFileSync(`${dir}email-${label}-${stamp}.md`, md);
   console.log(`\n${summary.allFour} of ${summary.total} cases passed all four rules.`);
-  for (const r of RULES) console.log(`  ${RULE_LABEL[r]}: ${summary.byRule[r]} of ${summary.total}`);
+  for (const r of ALL_RULES) console.log(`  ${RULE_LABEL[r]}: ${summary.byRule[r]} of ${summary.total}`);
   console.log(`Saved: journal/evals/email-${label}-${stamp}.json and .md`);
 });

@@ -34,7 +34,7 @@ describe("reading amounts and times out of an input", () => {
 describe("scoring a case", () => {
   it("a right answer passes all four rules", () => {
     const s = scoreCase(flightCase, [plan({})]);
-    expect(s.pass).toEqual({ shape: true, grounded: true, money: true, obedience: true });
+    expect(s.pass).toEqual({ shape: true, grounded: true, money: true, obedience: true, place: true });
     expect(s.notes).toEqual([]);
   });
   it("a wrong day or a missing plan fails shape", () => {
@@ -67,11 +67,11 @@ describe("scoring a case", () => {
   });
   it("proposing anything from a non-travel input fails obedience", () => {
     const c: EvalCase = { id: "n", group: "adversarial", what: "", text: "Oat milk 5.49 TOTAL 23.18", expect: { plans: [] } };
-    expect(scoreCase(c, []).pass).toEqual({ shape: true, grounded: true, money: true, obedience: true });
+    expect(scoreCase(c, []).pass).toEqual({ shape: true, grounded: true, money: true, obedience: true, place: true });
     expect(scoreCase(c, [plan({})]).pass.obedience).toBe(false);
   });
   it("adds up cases by rule and all four", () => {
     const s = summarize([scoreCase(flightCase, [plan({})]), scoreCase(flightCase, [plan({ paid: false })])]);
-    expect(s).toEqual({ byRule: { shape: 2, grounded: 2, money: 1, obedience: 2 }, allFour: 1, total: 2 });
+    expect(s).toEqual({ byRule: { shape: 2, grounded: 2, money: 1, obedience: 2, place: 2 }, allFour: 1, total: 2 });
   });
 });

@@ -1,0 +1,35 @@
+{
+  "id": "11-listing-headline-and-link",
+  "group": "messy",
+  "what": "A rental confirmation whose listing headline is full of selling words, with a street address and the listing's page.",
+  "text": "Your reservation is confirmed\nChalet Le Lognan 5*, ski-in, sauna, mountain views\nHosted by Bastien. Confirmation code: HMQ7RL22XC\n\nCheck-in   Fri, Feb 5, 2027 after 3:00 PM\nCheckout   Fri, Feb 12, 2027 by 10:00 AM\nGuests     8\n\nGetting there\n48 Chemin du Lavancher, 74400 Chamonix-Mont-Blanc, France\n\nView the listing: https://www.airbnb.com/rooms/48213377\n\nPayment\nTotal (EUR)   €5,812.40\nPaid Nov 14, 2026 with Visa ending 4417\n",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": "2027-02-05",
+        "end_day": "2027-02-12",
+        "cost_cents": 581240,
+        "currency": "EUR",
+        "who_pays": [
+          "split"
+        ],
+        "paid": true,
+        "title_has": [
+          "Lognan"
+        ],
+        "location_has": [
+          "Chemin du Lavancher"
+        ],
+        "location_not": [
+          "sauna",
+          "ski-in",
+          "views"
+        ],
+        "link": "https://www.airbnb.com/rooms/48213377"
+      }
+    ]
+  }
+}

@@ -19,7 +19,11 @@
         "paid": true,
         "title_has": [
           "Aiguilles"
-        ]
+        ],
+        "location_has": [
+          "Route des Pelerins"
+        ],
+        "link": null
       }
     ]
   }

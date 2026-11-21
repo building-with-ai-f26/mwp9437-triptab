@@ -77,6 +77,7 @@ import {
   canEdit,
   clock,
   dateRange,
+  cleanLink,
   dollars,
   longDay,
   nightsBetween,
@@ -296,6 +297,8 @@ export default function TripPage() {
         start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
         end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
         location: d.location.trim() || null,
+        // The booking's or listing's page (C32); one that isn't a web address is left off.
+        link: cleanLink(d.link).value,
         notes: notes.join("\n") || null,
         // Booked: Confirmed now, its cost to come (C21 lets a plan be Confirmed without one).
         status: later || (onFare && d.paid) ? "confirmed" : "planned",
