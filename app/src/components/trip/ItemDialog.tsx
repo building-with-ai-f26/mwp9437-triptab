@@ -31,7 +31,8 @@ import {
 } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import { foreignLabel, toUsdCents } from "../../lib/rates";
-import { CurrencySelect, useUsdRate } from "./Currency";
+import { CurrencySelect } from "./Currency";
+import { useUsdRate } from "../../lib/useUsdRate";
 import type { ItemInput } from "../../lib/api";
 import { whenText } from "../../lib/timeline";
 import { PlaceInput } from "../PlaceInput";

@@ -25,7 +25,7 @@ async function run(browser, label, opts, result) {
   await h.openCost(d);
   await d.getByRole('radio', { name: 'Yes, log it now' }).click();
   await d.getByLabel('What it cost in total').fill('6947.50');
-  await d.getByLabel('Currency').selectOption('EUR');
+  await d.getByLabel('Currency', { exact: true }).selectOption('EUR');
   r.about = (await d.getByTestId('fx-about').innerText()).replace(/\s+/g, ' ').trim();
   await h.shot(p, `fx-paid-now-${label}`);
   await d.getByRole('button', { name: 'Add to trip' }).click();
@@ -55,7 +55,7 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByRole('button', { name: 'Confirm with the real cost' }).click();
   const c = h.dlg(p);
   await c.getByLabel('What it cost').fill('80');
-  await c.getByLabel('Currency').selectOption('GBP');
+  await c.getByLabel('Currency', { exact: true }).selectOption('GBP');
   await c.getByRole('radio', { name: 'Total' }).click();
   r.confirmAbout = (await c.getByTestId('fx-about').innerText()).replace(/\s+/g, ' ').trim();
   await c.getByRole('button', { name: 'Confirm and log' }).click();

@@ -8,7 +8,8 @@ import { clock, dollars, longDay, tripDays, type CostType, type Item, type Trave
 import { parseDollars, toCents, totalCents } from "../../lib/money";
 import { computeSplit, SPLIT_LABEL, type SplitMode } from "../../lib/split";
 import { foreignLabel, toUsdCents } from "../../lib/rates";
-import { CurrencySelect, useUsdRate } from "./Currency";
+import { CurrencySelect } from "./Currency";
+import { useUsdRate } from "../../lib/useUsdRate";
 
 export type ExpenseTarget = { kind: "item"; item: Item; expense?: ExpenseRow } | { kind: "general"; expense?: ExpenseRow };
 
