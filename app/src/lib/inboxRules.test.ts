@@ -3,7 +3,7 @@
  * it, and what part of a forwarded email goes to AI import. Made-up emails only.
  */
 import { describe, expect, it } from "vitest";
-import { accountEmails, dmarcPassed, htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
+import { accountEmails, dmarcPassed, htmlToText, importInput, inboxAddress, inboxToken, isOnTrip, maskedAddress, sameSecret, senderAddress } from "../../../supabase/functions/inbox-email/rules.ts";
 import { inboxAddressFor } from "./inbox";
 
 const TOKEN = "3f9a0b1c2d3e4f5a";
@@ -36,6 +36,15 @@ describe("who sent it", () => {
     expect(isOnTrip("mike@example.com", ["Mike@example.com ", null])).toBe(true);
     expect(isOnTrip("stranger@example.com", ["mike@example.com"])).toBe(false);
     expect(isOnTrip(null, ["mike@example.com"])).toBe(false);
+  });
+});
+
+describe("a refused sender in the logs (C31)", () => {
+  it("keeps the first letter and the domain, never the whole address", () => {
+    expect(maskedAddress("mike.personal@gmail.com")).toBe("m***@gmail.com");
+    expect(maskedAddress("x@stern.nyu.edu")).toBe("x***@stern.nyu.edu");
+    expect(maskedAddress(null)).toBe("(none)");
+    expect(maskedAddress("not an address")).toBe("(none)");
   });
 });
 

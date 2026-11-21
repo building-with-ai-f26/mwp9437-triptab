@@ -21,7 +21,9 @@ import {
   capDecision, checkProposals, costUsd, EFFORT, MAX_SEARCHES, MAX_TOKENS, MODEL, nyDayStart, PROPOSE_TOOL, readCap,
   SYSTEM_PROMPT, TIMEOUT_MS, type Usage,
 } from "../import-bookings/rules.ts";
-import { accountEmails, dmarcPassed, importInput, inboxToken, isOnTrip, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress } from "./rules.ts";
+import {
+  accountEmails, dmarcPassed, importInput, inboxToken, isOnTrip, maskedAddress, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress,
+} from "./rules.ts";
 
 const DEV_PROJECT = "iivseqkvixmvcpldarqy";
 const REAL = ["ok", "no_plans", "refused", "invalid_output", "timeout", "error"];
@@ -35,6 +37,12 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 // The Worker only needs to know whether to bounce the email; the reason is for the logs.
 const done = (status: number, code: string) => json({ code }, status);
+// A refused sender (C31, Mike's call 11/21): the Worker's bounce names the address the email came
+// from (a bounce goes back only to that address), and the logs say why, with the address masked.
+const refuse = (code: string, sender: string | null) => {
+  console.log(`inbox refused: ${code}, from ${maskedAddress(sender)}`);
+  return json({ code, from: sender }, 403);
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -87,11 +95,11 @@ Deno.serve(async (req) => {
   }
 
   // A From address can be forged: Cloudflare's own check (DMARC) says whether this one was.
-  if (!testRun && !dmarcPassed(req.headers.get("x-auth-results"))) return done(403, "not_verified");
+  const sender = senderAddress(mail.from?.address ?? null);
+  if (!testRun && !dmarcPassed(req.headers.get("x-auth-results"))) return refuse("not_verified", sender);
 
   // The sender has to be on the trip: their account's email, or the email an Owner entered for them.
   const { data: people } = await admin.from("travelers").select("id, user_id, email, role").eq("trip_id", tripId);
-  const sender = senderAddress(mail.from?.address ?? null);
   const accounts = await Promise.all(
     (people ?? []).filter((p) => p.user_id).map(async (p) => ({ id: p.id as string, user_id: p.user_id as string, emails: accountEmails((await admin.auth.admin.getUserById(p.user_id)).data.user) })),
   );
@@ -103,7 +111,7 @@ Deno.serve(async (req) => {
     const me = (people ?? []).find((p) => p.user_id === testUser);
     if (me?.role !== "owner") return done(403, "not_owner");
   } else if (!match) {
-    return done(403, "not_on_trip");
+    return refuse("not_on_trip", sender);
   }
   const fromTraveler = testRun ? ((people ?? []).find((p) => p.user_id === testUser)?.id as string) : match!.id;
   // Its AI call counts toward the sender's own daily imports, or the trip's creator's when they have no account.

@@ -22,15 +22,9 @@ interface IncomingEmail {
   setReject(reason: string): void;
 }
 
-const MAX_EMAIL_BYTES = 8_000_000;
+import { bounceFor, type InboxAnswer } from "./bounce";
 
-/** What the sender's mail program tells them when the email can't be taken. */
-const BOUNCE: Record<number, string> = {
-  403: "Only people on the trip can send it bookings. Forward it from the email address you use for TripTab, from your usual mail app.",
-  404: "There's no TripTab trip at that address. Copy the address again from the trip's People panel.",
-  413: "That email is too big for TripTab (8 MB at most).",
-  429: "That trip has taken in all the emails it can today. Try again tomorrow, or add the booking in the app.",
-};
+const MAX_EMAIL_BYTES = 8_000_000;
 
 export default {
   fetch(request: Request, env: Env): Promise<Response> {
@@ -38,7 +32,7 @@ export default {
   },
 
   async email(message: IncomingEmail, env: Env): Promise<void> {
-    if (message.rawSize > MAX_EMAIL_BYTES) return message.setReject(BOUNCE[413]);
+    if (message.rawSize > MAX_EMAIL_BYTES) return message.setReject(bounceFor(413, null)!);
     if (!env.INBOX_SECRET || !env.INBOX_URL) return message.setReject("TripTab's email inbox isn't set up yet. Add the booking in the app for now.");
     const raw = await new Response(message.raw).arrayBuffer();
     const res = await fetch(env.INBOX_URL, {
@@ -54,7 +48,9 @@ export default {
       },
       body: raw,
     });
-    if (BOUNCE[res.status]) return message.setReject(BOUNCE[res.status]);
+    const answer = (await res.json().catch(() => null)) as InboxAnswer | null;
+    const bounce = bounceFor(res.status, answer);
+    if (bounce) return message.setReject(bounce);
     // Anything else was taken: plans to review, or a note on the trip saying why there were none.
   },
 };

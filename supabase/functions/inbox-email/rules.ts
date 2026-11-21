@@ -39,6 +39,17 @@ export function accountEmails(user: { email?: string | null; identities?: { iden
   return [...new Set(all.filter((e): e is string => typeof e === "string" && e.includes("@")).map((e) => e.trim().toLowerCase()))];
 }
 
+/**
+ * An address as the function's logs show it (C31): its first letter, then the domain
+ * ("m***@gmail.com"), enough to tell which of someone's addresses a refused email came from without
+ * keeping the address itself in the logs.
+ */
+export function maskedAddress(address: string | null | undefined): string {
+  const [local, domain] = String(address ?? "").split("@");
+  if (!local || !domain) return "(none)";
+  return `${local[0]}***@${domain}`;
+}
+
 /** A sender counts when the address matches one on the trip (an account's email or the email an Owner entered). */
 export function isOnTrip(sender: string | null, emails: (string | null | undefined)[]): boolean {
   if (!sender) return false;
