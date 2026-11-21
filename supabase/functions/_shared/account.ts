@@ -33,15 +33,86 @@ export function signUpDecision(lastHour: EventRow[], ipHash: string, dev: boolea
   return null;
 }
 
+/** Emails that count toward the day's total: confirm-your-email links and Also forward from codes (C31). */
+const ACCOUNT_SENDS = ["confirm_sent", "forward_code_sent"];
+
 export function confirmSendDecision(lastDay: EventRow[], userId: string): Refusal | null {
   const sends = lastDay.filter((r) => r.kind === "confirm_sent");
   if (sends.filter((r) => r.user_id === userId).length >= CONFIRM_LIMITS.perUser) {
     return { code: "capped_user", message: "We've sent you 3 links today. Check your spam folder, or try again tomorrow." };
   }
-  if (sends.length >= CONFIRM_LIMITS.total) {
+  if (lastDay.filter((r) => ACCOUNT_SENDS.includes(r.kind)).length >= CONFIRM_LIMITS.total) {
     return { code: "capped_total", message: "TripTab has sent all its confirmation emails for today. Try again tomorrow." };
   }
   return null;
+}
+
+// ---------- Also forward from (C31, Mike's call 11/21) ----------
+// More addresses an account forwards bookings from, each confirmed by a 6-digit code sent there.
+export const FORWARD_LIMITS = { addresses: 3, codesPerUser: 3, minutes: 30, tries: 5 } as const;
+
+/** An address as typed, ready to compare and keep: trimmed, lower case, or null if it isn't one. */
+export function normalAddress(raw: unknown): string | null {
+  const s = String(raw ?? "").trim().toLowerCase();
+  return s.length >= 6 && s.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) ? s : null;
+}
+
+/** Whether another code may go out: per person today, the day's total (shared with confirm links), and how many addresses they have. */
+export function forwardSendDecision(lastDay: EventRow[], userId: string, otherAddresses: number): Refusal | null {
+  if (otherAddresses >= FORWARD_LIMITS.addresses) {
+    return { code: "too_many", message: `You can forward from ${FORWARD_LIMITS.addresses} more addresses at most. Remove one first.` };
+  }
+  if (lastDay.filter((r) => r.kind === "forward_code_sent" && r.user_id === userId).length >= FORWARD_LIMITS.codesPerUser) {
+    return { code: "capped_user", message: `We've sent you ${FORWARD_LIMITS.codesPerUser} codes today. Check that address's spam folder, or try again tomorrow.` };
+  }
+  if (lastDay.filter((r) => ACCOUNT_SENDS.includes(r.kind)).length >= CONFIRM_LIMITS.total) {
+    return { code: "capped_total", message: "TripTab has sent all the codes it can today. Try again tomorrow." };
+  }
+  return null;
+}
+
+/** A 6-digit code, random. */
+export function newCode(): string {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
+  return String(n).padStart(6, "0");
+}
+
+/** A code's hash, tied to its address's row, so a code for one address never works for another. */
+export const codeHash = (rowId: string, code: string) => tokenHash(`forward:${rowId}:${code}`);
+
+/** Why a typed code doesn't confirm the address, or null when it does. */
+export function forwardCodeDecision(
+  row: { code_hash: string | null; code_sent_at: string | null; tries: number; confirmed_at: string | null },
+  typedHash: string,
+  now = Date.now(),
+): Refusal | null {
+  if (row.confirmed_at) return null;
+  if (!row.code_hash || !row.code_sent_at || now - new Date(row.code_sent_at).getTime() > FORWARD_LIMITS.minutes * 60 * 1000) {
+    return { code: "expired", message: "That code has run out. Send a new one." };
+  }
+  if (row.tries >= FORWARD_LIMITS.tries) return { code: "too_many_tries", message: "Too many wrong tries. Send a new code." };
+  if (typedHash !== row.code_hash) return { code: "wrong_code", message: "That code doesn't match. Check the latest email and try again." };
+  return null;
+}
+
+export function buildForwardCodeEmail(p: { name: string; code: string; address: string; url: string }): { subject: string; text: string; html: string } {
+  const subject = `${p.code} is your TripTab code`;
+  const text = [
+    `Hi ${p.name},`,
+    "",
+    `Your code is ${p.code}. Type it in TripTab to forward bookings from ${p.address} to your trips.`,
+    "",
+    `It works for ${FORWARD_LIMITS.minutes} minutes. Didn't ask for it? Ignore this email: nothing changes.`,
+  ].join("\n");
+  const html = emailHtml({
+    preview: `Your code is ${p.code}.`,
+    label: "Your TripTab account",
+    title: `Your code: ${p.code}`,
+    paragraphs: [`Hi ${p.name}, type this code in TripTab, under Also forward from, to forward bookings from ${p.address} to your trips.`],
+    button: { text: "Open TripTab", url: p.url },
+    footnote: `It works for ${FORWARD_LIMITS.minutes} minutes. Didn't ask for it? Ignore this email: nothing changes.`,
+  });
+  return { subject, text, html };
 }
 
 // ---------- Addresses never emailed ----------

@@ -7,7 +7,8 @@ describe("bounceFor", () => {
     const text = bounceFor(403, { code: "not_on_trip", from: "mike.personal@gmail.com" })!;
     expect(text).toContain("This came from mike.personal@gmail.com");
     expect(text).toContain("isn't on this trip");
-    expect(text).toContain("sign in to TripTab with");
+    expect(text).toContain("the email you sign in with");
+    expect(text).toContain("or add mike.personal@gmail.com under Also forward from on My trips");
   });
 
   it("says when the sender couldn't be checked, not that they're off the trip", () => {
@@ -26,7 +27,7 @@ describe("bounceFor", () => {
     const text = bounceFor(403, { code: "not_on_trip", from: "évil\r\nX-Header: 1@x.com" })!;
     expect(text).toMatch(/^[\x20-\x7e]+$/);
     const long = bounceFor(403, { code: "not_on_trip", from: `${"a".repeat(300)}@x.com` })!;
-    expect(long.length).toBeLessThan(260);
+    expect(long.length).toBeLessThan(400);
   });
 
   it("keeps the other bounces, and takes everything else", () => {

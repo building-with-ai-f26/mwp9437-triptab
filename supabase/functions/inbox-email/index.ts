@@ -12,7 +12,8 @@
 //
 // On TripTab dev only, a signed-in Owner of the trip may post a made-up email instead of the Worker
 // (test_run), so the click-throughs and tests can run without a real mailbox; production never
-// takes that path. Anyone signed in may ask whether email-in is ready ({ probe: true }): on
+// takes that path. With check_sender, that test also runs the real sender check (who it's from,
+// including Also forward from addresses, C31); only the Worker's secret and DMARC are skipped. Anyone signed in may ask whether email-in is ready ({ probe: true }): on
 // production, that's once Mike has set INBOX_SECRET (checked by name, never read out).
 import Anthropic from "npm:@anthropic-ai/sdk@^1.9.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
   const secret = Deno.env.get("INBOX_SECRET") ?? "";
   const fromWorker = sameSecret(req.headers.get("x-inbox-secret") ?? "", secret);
   let testRun = false;
+  let checkSender = false;
   let testUser: string | null = null;
   let raw: ArrayBuffer;
   let envelopeTo = req.headers.get("x-envelope-to");
@@ -64,7 +66,7 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization") ?? "";
     const { data: who } = await admin.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
     if (!who?.user) return done(401, "not_allowed");
-    let body: { to?: unknown; raw?: unknown; probe?: unknown };
+    let body: { to?: unknown; raw?: unknown; probe?: unknown; check_sender?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -77,6 +79,7 @@ Deno.serve(async (req) => {
     raw = new TextEncoder().encode(body.raw).buffer as ArrayBuffer;
     envelopeTo = String(body.to ?? "");
     testRun = true;
+    checkSender = body.check_sender === true;
     testUser = who.user.id;
   }
   if (raw.byteLength > MAX_EMAIL_BYTES) return done(413, "too_large");
@@ -103,20 +106,27 @@ Deno.serve(async (req) => {
   const accounts = await Promise.all(
     (people ?? []).filter((p) => p.user_id).map(async (p) => ({ id: p.id as string, user_id: p.user_id as string, emails: accountEmails((await admin.auth.admin.getUserById(p.user_id)).data.user) })),
   );
+  // Also forward from (C31): each account's confirmed extra addresses count as its own.
+  const userIds = accounts.map((a) => a.user_id);
+  const { data: extra } = userIds.length
+    ? await admin.from("forward_addresses").select("user_id, email").in("user_id", userIds).not("confirmed_at", "is", null)
+    : { data: [] as { user_id: string; email: string }[] };
+  for (const a of accounts) a.emails.push(...(extra ?? []).filter((x) => x.user_id === a.user_id).map((x) => String(x.email)));
   const match =
     accounts.find((a) => isOnTrip(sender, a.emails)) ??
     (people ?? []).map((p) => ({ id: p.id as string, user_id: (p.user_id as string | null) ?? null, email: p.email as string | null })).find((p) => isOnTrip(sender, [p.email]));
-  if (testRun) {
+  if (testRun && !checkSender) {
     // A dev test stands in for a sender: it has to be an Owner of this trip.
     const me = (people ?? []).find((p) => p.user_id === testUser);
     if (me?.role !== "owner") return done(403, "not_owner");
   } else if (!match) {
     return refuse("not_on_trip", sender);
   }
-  const fromTraveler = testRun ? ((people ?? []).find((p) => p.user_id === testUser)?.id as string) : match!.id;
+  const standIn = testRun && !checkSender;
+  const fromTraveler = standIn ? ((people ?? []).find((p) => p.user_id === testUser)?.id as string) : match!.id;
   // Its AI call counts toward the sender's own daily imports, or the trip's creator's when they have no account.
   const { data: trip } = await admin.from("trips").select("name, start_date, end_date, created_by").eq("id", tripId).single();
-  const billedTo = testRun ? testUser! : (match!.user_id ?? (trip?.created_by as string));
+  const billedTo = standIn ? testUser! : (match!.user_id ?? (trip?.created_by as string));
 
   const { count: todayCount } = await admin
     .from("inbox_items").select("id", { count: "exact", head: true }).eq("trip_id", tripId).gte("received_at", nyDayStart());
