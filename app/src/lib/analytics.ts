@@ -107,6 +107,8 @@ export type EventName =
   | "pay info skipped"
   | "ai help opened"
   | "import opened"
+  | "plan merged"
+  | "cost to come"
   | "inbox review opened"
   | "inbox reviewed"
   | "inbox dismissed"

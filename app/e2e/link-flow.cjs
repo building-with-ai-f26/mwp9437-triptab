@@ -20,7 +20,7 @@ async function run(browser, label, opts, result) {
   await offer.click();
   await h.dlg(p).getByRole('heading', { name: 'Import bookings' }).waitFor();
   r.importOpen = true;
-  r.filePicker = (await h.dlg(p).getByLabel('Attach a file').count()) === 1;
+  r.filePicker = (await h.dlg(p).getByLabel('Attach files').count()) === 1;
   r.onePlanDialog = (await p.locator('dialog[open]').count()) === 1;
   await h.dlg(p).getByRole('button', { name: 'Cancel' }).click();
   await h.dlg(p).waitFor({ state: 'detached' });
