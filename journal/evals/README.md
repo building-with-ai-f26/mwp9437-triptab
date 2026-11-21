@@ -62,6 +62,24 @@ From the cost log (`ai_calls`) at the end of the evening: 53 calls reached the m
 - **The daily cap blocks a call once it is reached.** The cap is a secret the tests can't change, so a marked row of $7.00 (`cap_check_fixture`, a test run) was put in `ai_calls` for under a minute. A call then came back refused with "TripTab has reached its AI budget for today" and was logged at $0 with no tokens. The marker row was deleted straight after and is not in any total above. Test: `src/import.live.test.ts`, "the daily cap" (runs with `VITE_CAP_FIXTURE=1`).
 - **Paste, review, save, in the browser, against the real function** (`node e2e/import-flow.cjs --live`, at 1280 and 390 wide). From "We fly UA 57 on Feb 4. Airbnb in Chamonix Feb 5 to 12, 3,200 euros, Mike paid. Lift passes Sat Feb 6, $84 each, paid." it proposed three plans: the flight, with times from one web search and a note saying so, left unticked because Feb 4 is outside the trip; the Airbnb, kept in euros with the dollar amount left for the Owner to type; and the lift passes, saved as an $84 own cost.
 
+## C32: Where gets the address, the listing's page goes in Link (Nov 21, about 1:05 PM New York)
+
+Mike's 11/21 email test: Where got a listing's headline, and the link to the listing wasn't kept (C32, yes 11/21, "after an eval shows no drop"). The prompt now asks for the street address in location (else the place's name, never selling words), a `link` to the booking's or listing's page as written, and `details` for a headline (it goes to Notes). The eval gained a made-up case 11 shaped like his chalet email (a headline full of selling words, a street address, a listing link, a euro total) and a fifth check reported beside the four, "Where and link": Where holds the address and not the headline, and Link holds the page when the input gives one and is blank when it doesn't (case 02). "All four" still counts only the four rules, so runs compare like for like.
+
+| Run | What was on dev | The four rules | Where and link | Real cost |
+| --- | --- | --- | --- | --- |
+| baseline-c32 | the old prompt | 10 of 10 (the ten cases) | not in the set yet | $0.0209 |
+| c32-old-prompt (cases 02 and 11) | the old prompt | 2 of 2 | 1 of 2: case 11 kept no link | $0.0019 |
+| after-c32 | the new prompt | 11 of 11 | 11 of 11 | $0.0221 |
+| after-c32-2 | the new prompt | 11 of 11 | 11 of 11 | $0.0221 |
+| email after-c32 (the 11 cases as forwarded emails) | the new prompt | 11 of 11 | 11 of 11 | $0.0222 |
+
+- **No drop:** the ten earlier cases passed all four rules in both runs on the new prompt (20 of 20), as on the old one (10 of 10).
+- **Case 11 fixed:** Where came back as the street address and Link as the listing's page in both runs and by email; the headline went to Notes.
+- The checks in code back it up whatever the model does: a link survives only if it's an http(s) page written in the pasted text, and details only in the input's own words (`src/lib/c32.test.ts`).
+- Describe your trip's tool didn't change (it uses the plan fields as they were, byte for byte), so its eval wasn't rerun.
+- Eleven made-up cases, two runs: results on these cases, not a quality rate. All five runs: **$0.0892** at list price, test runs in dev's `ai_calls`, covered by the Max plan's API credit.
+
 # Plan with AI eval: results
 
 Built the night of Nov 16, 2026 (New York time), after Mike's call to go on to the next AI features. Plan with AI suggests real places for a trip's empty slots; an Owner keeps or drops each idea, and kept ones are added as Suggested. To run it: `cd app && npm run eval:plan`.

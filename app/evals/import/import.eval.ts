@@ -15,7 +15,7 @@ import { readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { key, signedIn, url } from "../../src/test/live";
-import { RULE_LABEL, RULES, scoreCase, summarize, type CaseScore, type EvalCase } from "../../src/lib/importEval";
+import { ALL_RULES, RULE_LABEL, RULES, scoreCase, summarize, type CaseScore, type EvalCase } from "../../src/lib/importEval";
 import type { ImportResult } from "../../src/lib/importPlans";
 import { WORST_CASE_CALL_USD } from "../../../supabase/functions/import-bookings/rules.ts";
 
@@ -126,13 +126,13 @@ it(`AI import eval: ${cases.length} cases`, async () => {
     "",
     `| Rule | Cases passed |`,
     `| --- | --- |`,
-    ...RULES.map((r) => `| ${RULE_LABEL[r]} | ${summary.byRule[r]} of ${summary.total} |`),
+    ...ALL_RULES.map((r) => `| ${RULE_LABEL[r]} | ${summary.byRule[r]} of ${summary.total} |`),
     "",
-    `| Case | Group | ${RULES.map((r) => RULE_LABEL[r]).join(" | ")} | Cost | Searches | Seconds |`,
-    `| --- | --- | ${RULES.map(() => "---").join(" | ")} | --- | --- | --- |`,
+    `| Case | Group | ${ALL_RULES.map((r) => RULE_LABEL[r]).join(" | ")} | Cost | Searches | Seconds |`,
+    `| --- | --- | ${ALL_RULES.map(() => "---").join(" | ")} | --- | --- | --- |`,
     ...out.cases.map(
       (c) =>
-        `| ${c.id} | ${c.group} | ${RULES.map((r) => tick(c.pass[r])).join(" | ")} | ${c.cost_usd == null ? "n/a" : `$${c.cost_usd.toFixed(4)}`} | ${c.searches ?? "n/a"} | ${c.latency_ms == null ? "n/a" : (c.latency_ms / 1000).toFixed(1)} |`,
+        `| ${c.id} | ${c.group} | ${ALL_RULES.map((r) => tick(c.pass[r])).join(" | ")} | ${c.cost_usd == null ? "n/a" : `$${c.cost_usd.toFixed(4)}`} | ${c.searches ?? "n/a"} | ${c.latency_ms == null ? "n/a" : (c.latency_ms / 1000).toFixed(1)} |`,
     ),
     "",
     "## What failed",
@@ -142,7 +142,7 @@ it(`AI import eval: ${cases.length} cases`, async () => {
   ].join("\n");
   writeFileSync(`${dir}import-${label}-${stamp}.md`, md);
   console.log(`\n${summary.allFour} of ${summary.total} cases passed all four rules.`);
-  for (const r of RULES) console.log(`  ${RULE_LABEL[r]}: ${summary.byRule[r]} of ${summary.total}`);
+  for (const r of ALL_RULES) console.log(`  ${RULE_LABEL[r]}: ${summary.byRule[r]} of ${summary.total}`);
   console.log(`Real cost of this run: $${out.total_cost_usd.toFixed(4)} at list price.`);
   console.log(`Saved: journal/evals/import-${label}-${stamp}.json and .md`);
 });

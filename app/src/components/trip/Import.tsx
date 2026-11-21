@@ -4,7 +4,7 @@ import { Button, DarkField, Dialog } from "../ui";
 import { importBookings } from "../../lib/api";
 import { atEstimate, costToCome, draftProblems, mergedTitle, noteTotalCents, oneFare, sharedFareLegs, toDraft, type Draft, type ImportResult } from "../../lib/importPlans";
 import { foreignLabel, toUsdCents, usdRate } from "../../lib/rates";
-import { addDays, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, togglePart, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
+import { addDays, cleanLink, KIND_LABEL, longDay, PART_LABEL, PARTS, PAY_MODE_LABEL, togglePart, tripDays, widenTrip, type Item, type ItemKind, type PayMode, type Trip } from "../../lib/model";
 
 const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
 const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -187,7 +187,7 @@ export function ImportDialog({
         all.map((d) => {
           if (!d.extendTo || d.extendTo < longer.start_date || d.extendTo > longer.end_date) return d;
           const fresh = toDraft(d.source, longer, items);
-          return { ...fresh, keep: true, title: d.title, cost: d.cost, perPerson: d.perPerson, payMode: d.payMode, paid: d.paid, location: d.location, notes: d.notes, converted: d.converted, fareOn: d.fareOn };
+          return { ...fresh, keep: true, title: d.title, cost: d.cost, perPerson: d.perPerson, payMode: d.payMode, paid: d.paid, location: d.location, link: d.link, notes: d.notes, converted: d.converted, fareOn: d.fareOn };
         }),
       );
     } catch (e) {
@@ -472,6 +472,23 @@ export function ImportDialog({
                       placeholder="Optional: a place, like Loon Mountain"
                       aria-label="Where"
                     />
+                  </label>
+                  <label className="mb-2 block">
+                    <span className="label-luxury mb-1 block text-white/80">Link</span>
+                    {/* The booking's or listing's page (C32), so everyone can look at the place. */}
+                    <input
+                      className="field-dark"
+                      type="text"
+                      inputMode="url"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      value={d.link}
+                      onChange={(e) => patch(i, { link: e.target.value })}
+                      placeholder="Optional: the booking or listing page"
+                      aria-label="Link"
+                    />
+                    {cleanLink(d.link).problem && <span className="mt-1 block text-xs text-amber-200">{cleanLink(d.link).problem}</span>}
                   </label>
                   {d.kind !== "stay" && (
                     <div className="mb-2">

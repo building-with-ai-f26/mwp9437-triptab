@@ -1,0 +1,107 @@
+{
+  "label": "c32-old-prompt",
+  "ran_at": "2026-11-21T18:09:30.961Z",
+  "model": "claude-haiku-5-5",
+  "effort": "low",
+  "cases_run": 2,
+  "passed_all_four": 2,
+  "by_rule": {
+    "shape": 2,
+    "grounded": 2,
+    "money": 2,
+    "obedience": 2,
+    "place": 1
+  },
+  "total_cost_usd": 0.001902,
+  "cases": [
+    {
+      "id": "02-stay-confirmation",
+      "group": "normal",
+      "what": "A home-rental confirmation: check-in and check-out, an address, a paid total.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true,
+        "place": true
+      },
+      "notes": [],
+      "cost_usd": 0.00092,
+      "searches": 0,
+      "input_tokens": 5247,
+      "output_tokens": 790,
+      "latency_ms": 4021,
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Chalet des Aiguilles (Chamonix)",
+          "day": "2027-02-05",
+          "part": "day",
+          "end_day": "2027-02-12",
+          "depart_time": null,
+          "arrive_time": null,
+          "times_from": null,
+          "source_url": null,
+          "location": "114 Route des Pelerins, 74400 Chamonix-Mont-Blanc, France",
+          "confirmation_code": "HMXT4K29PZ",
+          "cost_cents": 321240,
+          "currency": "USD",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": true,
+          "unsure": []
+        }
+      ],
+      "note": "One stay found: the Chalet des Aiguilles booking runs Feb 5 to Feb 12, 2027, a day later than the Chamonix stop starting Feb 4, so you may want to check the arrival date."
+    },
+    {
+      "id": "11-listing-headline-and-link",
+      "group": "messy",
+      "what": "A rental confirmation whose listing headline is full of selling words, with a street address and the listing's page.",
+      "http_status": 200,
+      "error": null,
+      "pass": {
+        "shape": true,
+        "grounded": true,
+        "money": true,
+        "obedience": true,
+        "place": false
+      },
+      "notes": [
+        "Where and link (C32): \"Chalet Le Lognan 5* (Chamonix)\" link blank, expected https://www.airbnb.com/rooms/48213377"
+      ],
+      "cost_usd": 0.000982,
+      "searches": 0,
+      "input_tokens": 5251,
+      "output_tokens": 913,
+      "latency_ms": 4198,
+      "plans": [
+        {
+          "kind": "stay",
+          "title": "Chalet Le Lognan 5* (Chamonix)",
+          "day": "2027-02-05",
+          "part": "day",
+          "end_day": "2027-02-12",
+          "depart_time": "10:00",
+          "arrive_time": "15:00",
+          "times_from": "input",
+          "source_url": null,
+          "location": "48 Chemin du Lavancher, 74400 Chamonix-Mont-Blanc, France",
+          "confirmation_code": "HMQ7RL22XC",
+          "cost_cents": 581240,
+          "currency": "EUR",
+          "cost_is_per_person": false,
+          "who_pays": "split",
+          "paid": true,
+          "unsure": [
+            "arrive_time",
+            "depart_time"
+          ]
+        }
+      ],
+      "note": "One stay found: the Chalet Le Lognan booking in Chamonix, paid in full. Check-in and checkout times are written as \"after 3:00 PM\" and \"by 10:00 AM\", so I entered 15:00 and 10:00 and flagged them as unsure."
+    }
+  ]
+}

@@ -110,9 +110,48 @@ export interface Proposal {
   paid: boolean;
   /** Fields the model wasn't sure of; the review screen marks them. */
   unsure: string[];
+  /**
+   * The booking's or listing's web page, exactly as written in the input (C32, Mike's call 11/21: a
+   * link to the listing, so everyone can look at the house). Import only; null elsewhere.
+   */
+  link?: string | null;
+  /** A listing's headline or a short description as written ("4*, central, hot tub"): it goes in Notes, not Where (C32). */
+  details?: string | null;
 }
 
 const str = { type: ["string", "null"] };
+/**
+ * One proposed plan's fields, as Describe your trip also asks for them (describe-trip/rules.ts uses
+ * this as it stands, so its tool doesn't change when import's does).
+ */
+const PLAN_REQUIRED = [
+  "kind", "title", "day", "part", "end_day", "depart_time", "arrive_time", "times_from", "source_url",
+  "location", "confirmation_code", "cost_cents", "currency", "cost_is_per_person", "who_pays", "paid", "unsure",
+];
+const PLAN_PROPERTIES = {
+  kind: { type: "string", enum: [...KINDS] },
+  title: { type: "string", description: "Short name, like 'UA 57 Newark to Geneva' or 'Chamonix Airbnb'." },
+  day: { ...str, description: "YYYY-MM-DD. A flight's departure day; a stay's check-in day. Null if the input doesn't give it." },
+  part: { anyOf: [{ type: "string", enum: [...PARTS] }, { type: "null" }], description: "Part of the day it starts, from its time when known. Null if unknown." },
+  end_day: { ...str, description: "YYYY-MM-DD. A stay's check-out day; for a flight, the arrival day only when it lands on a later day." },
+  depart_time: { ...str, description: "24-hour HH:MM, local. Only if written in the input or read from a web search result." },
+  arrive_time: { ...str, description: "24-hour HH:MM, local. Only if written in the input or read from a web search result." },
+  times_from: { anyOf: [{ type: "string", enum: ["input", "lookup"] }, { type: "null" }] },
+  source_url: { ...str, description: "The exact URL of the web search result the times were read from. Null unless times_from is lookup." },
+  location: { ...str, description: "Address or place, only as written in the input." },
+  confirmation_code: str,
+  cost_cents: { type: ["integer", "null"], description: "The price in cents (the currency's smallest unit), only if the input states it." },
+  currency: { ...str, description: "ISO code of the price as written (USD, EUR). Null when there is no price." },
+  cost_is_per_person: { type: "boolean" },
+  who_pays: { type: "string", enum: ["split", "own"], description: "own: each traveler buys their own (flights, individual tickets). split: one bill shared by the group (a stay, a rental car, a group dinner)." },
+  paid: { type: "boolean", description: "True only when the input shows it was paid (a receipt, a charged card, a paid confirmation)." },
+  unsure: { type: "array", items: { type: "string", enum: [...FLAGGABLE] }, description: "Fields you are not sure of." },
+};
+export const BASE_PLANS_SCHEMA = {
+  type: "array",
+  items: { type: "object", additionalProperties: false, required: PLAN_REQUIRED, properties: PLAN_PROPERTIES },
+};
+
 /** The tool the model must call once: its input is the list of proposed plans. */
 export const PROPOSE_TOOL = {
   name: "propose_plans",
@@ -130,28 +169,13 @@ export const PROPOSE_TOOL = {
         items: {
           type: "object",
           additionalProperties: false,
-          required: [
-            "kind", "title", "day", "part", "end_day", "depart_time", "arrive_time", "times_from", "source_url",
-            "location", "confirmation_code", "cost_cents", "currency", "cost_is_per_person", "who_pays", "paid", "unsure",
-          ],
+          required: [...PLAN_REQUIRED, "link", "details"],
           properties: {
-            kind: { type: "string", enum: [...KINDS] },
-            title: { type: "string", description: "Short name, like 'UA 57 Newark to Geneva' or 'Chamonix Airbnb'." },
-            day: { ...str, description: "YYYY-MM-DD. A flight's departure day; a stay's check-in day. Null if the input doesn't give it." },
-            part: { anyOf: [{ type: "string", enum: [...PARTS] }, { type: "null" }], description: "Part of the day it starts, from its time when known. Null if unknown." },
-            end_day: { ...str, description: "YYYY-MM-DD. A stay's check-out day; for a flight, the arrival day only when it lands on a later day." },
-            depart_time: { ...str, description: "24-hour HH:MM, local. Only if written in the input or read from a web search result." },
-            arrive_time: { ...str, description: "24-hour HH:MM, local. Only if written in the input or read from a web search result." },
-            times_from: { anyOf: [{ type: "string", enum: ["input", "lookup"] }, { type: "null" }] },
-            source_url: { ...str, description: "The exact URL of the web search result the times were read from. Null unless times_from is lookup." },
-            location: { ...str, description: "Address or place, only as written in the input." },
-            confirmation_code: str,
-            cost_cents: { type: ["integer", "null"], description: "The price in cents (the currency's smallest unit), only if the input states it." },
-            currency: { ...str, description: "ISO code of the price as written (USD, EUR). Null when there is no price." },
-            cost_is_per_person: { type: "boolean" },
-            who_pays: { type: "string", enum: ["split", "own"], description: "own: each traveler buys their own (flights, individual tickets). split: one bill shared by the group (a stay, a rental car, a group dinner)." },
-            paid: { type: "boolean", description: "True only when the input shows it was paid (a receipt, a charged card, a paid confirmation)." },
-            unsure: { type: "array", items: { type: "string", enum: [...FLAGGABLE] }, description: "Fields you are not sure of." },
+            ...PLAN_PROPERTIES,
+            title: { type: "string", description: "Short name, like 'UA 57 Newark to Geneva', 'Chalet des Aiguilles' or 'Chamonix Airbnb': the place's own name, without a listing's selling words." },
+            location: { ...str, description: "The street address when the input gives one, else the place's name, only as written. Never a listing's headline or selling words." },
+            link: { ...str, description: "The web address of this booking's or listing's page (the rental or hotel page, the reservation), exactly as written in the input. Null if none." },
+            details: { ...str, description: "A listing's headline or a short description as written (\"4*, central, hot tub\"), when it says more than the name. Null otherwise." },
           },
         },
       },
@@ -171,7 +195,8 @@ Never invent anything. Every date, time, price, address and confirmation code mu
 - Dates: use the trip's dates below to resolve a missing year. Read dates in the order the document uses; a date like 05/02/2027 in a European document is 5 February. If the order is ambiguous, add day to unsure.
 - Prices: the amount and currency exactly as written, in cents. Never convert currencies. A total for the group is not per person.
 - part: when the input gives a clock time for the plan (a departure, a pickup, a reservation, the time printed on a receipt), set part from it: before 12:00 is morning, 12:00 to 16:59 is day, 17:00 to 20:59 is evening, 21:00 or later is night. With no time in the input, leave part null.
-- location: only an address or place written in the input, in its words. Do not add airport codes, city names or anything else it doesn't say.
+- location: the street address when the input gives one (from the booking or the listing), in its words; otherwise the place's name as written. Never a listing's headline or selling words ("4*, central, hot tub"): put those in details. Do not add airport codes, city names or anything else it doesn't say.
+- link: the web address of the booking's or listing's own page (the rental or hotel listing, the reservation), copied exactly from the input. Not a link to unsubscribe, help, an app, a map or an image. Null when there is none.
 - paid is true only when the input shows payment was taken.
 - who_pays: flights and individually bought tickets are own; a stay, a rental car, a group meal or one shared bill is split.
 
@@ -188,6 +213,25 @@ const realDate = (v: unknown): string | null => {
   const d = new Date(`${v}T00:00:00Z`);
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? null : v;
 };
+
+/**
+ * A booking's or listing's page (C32): an http(s) address with a host, at most 500 characters. From
+ * pasted text it must be written there, character for character, so a made-up link never gets
+ * through; from a PDF or photo it can't be checked here, so it only has to be a web address.
+ */
+export function cleanBookingLink(v: unknown, inputText: string): string | null {
+  const raw = typeof v === "string" ? v.trim().replace(/[).,;]+$/, "") : "";
+  if (!raw || raw.length > 500 || /\s/.test(raw)) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if ((url.protocol !== "https:" && url.protocol !== "http:") || !url.hostname.includes(".")) return null;
+  if (inputText && !inputText.includes(raw)) return null;
+  return raw;
+}
 
 /** The words of a text, lower case, without accents, three letters or digits and up. */
 const wordsOf = (s: string): string[] => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z0-9]{3,}/g) ?? [];
@@ -280,6 +324,8 @@ export function checkProposals(raw: unknown, searchUrls: string[], inputText = "
       who_pays: p.who_pays === "own" ? "own" : "split",
       paid: p.paid === true && cents != null,
       unsure: [...unsure],
+      link: cleanBookingLink(p.link, inputText),
+      details: inInput(text(p.details, 200)) ? text(p.details, 200) : null,
     });
   }
   return { plans, note: text((raw as { note?: unknown }).note, 300) };
