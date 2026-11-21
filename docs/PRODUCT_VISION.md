@@ -260,12 +260,15 @@ You see a real gap in the market and would keep TripTab running after the course
 - From the PostHog recordings of that review (read 11/20): in one session a trip wouldn't open. That tab still ran the build from before a deploy, and the new one no longer had its page file. The app now reloads once when that happens (in review 11/20).
 - Also from the recordings: "Add 10 to the trip" on the Describe it review was tapped three times with nothing visible happening. A card needed a fix and said so, out of view up the list. Now a note by the button says what needs fixing, and the card scrolls into view (in review 11/20).
 
-**Raised 11/20** (your import test on triptab.org, evening; not built yet)
+**Raised 11/21** (your import test on triptab.org, Saturday morning; after the freeze)
 
 - An uploaded flight confirmation that matches a half-filled flight already on the trip is flagged as a possible duplicate. Better: merge it in, filling the existing plan from the confirmation (C25).
 - A round-trip booking's one total ($992.39 for two flights) is left blank on both legs. Needs a way to carry it (C26).
 - Already paid, but the amount isn't to hand: the review won't add the plan until you type it. Better: add it, flagged as cost to come, with a to-do for whoever paid (C27).
 - A price in euros (the chalet, EUR 6,947.50) blocks the save until you find the dollar charge on your card. Better: take the euros, convert at that day's rate, and flag the cost as pending until the payer confirms the card charge, as a to-do (C28).
+- Only one photo can be picked at a time: several screenshots mean several uploads. PostHog shows the first try abandoned after picking one (C29).
+- A screenshot can't be pasted into import; it has to be saved first (C29).
+- From PostHog (read 11/21): two imports, read in 8 and 5 seconds, $0.0027 in all, no errors. Each save was blocked once (the paid amount, then the euro price) and went through on the next tap, with the note by the button. Jonas on Ski School was tapped out and back in, three taps in two seconds; each tap registered.
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
