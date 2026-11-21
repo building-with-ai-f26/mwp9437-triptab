@@ -28,7 +28,8 @@ import { AiChoiceDialog } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
 import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
-import { draftCents, type Draft } from "../lib/importPlans";
+import { atEstimate, costToCome, draftCents, mergePatch, type Draft } from "../lib/importPlans";
+import { foreignLabel } from "../lib/rates";
 import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
 import {
@@ -262,35 +263,67 @@ export default function TripPage() {
     for (const d of kept) {
       const cents = draftCents(d);
       const stay = d.kind === "stay";
+      // Paid with the amount to come (C27); a leg whose fare is on another (C26); a price in another
+      // currency, converted at the day's rate and pending the card's charge (C28).
+      const later = costToCome(d);
+      const onFare = d.fareOn != null;
+      const pending = atEstimate(d);
       const paid: PaidNow | undefined =
-        d.paid && cents != null && meId
+        !onFare && d.paid && cents != null && meId
           ? d.payMode === "own"
             ? { mode: "own", cents, withPoints: false }
             : { mode: "split", totalCents: d.perPerson && !stay ? cents * travelers.length : cents, paidBy: meId }
           : undefined;
-      await createPlan(
-        {
-          kind: d.kind,
-          title: d.title.trim(),
-          day: d.day,
-          part: stay ? "night" : d.part,
-          end_day: stay ? d.end_day : spanEnd(d),
-          // The parts picked on the review card (11/19), else a same-day trip's arrival part.
-          end_part: stay
-            ? null
-            : d.end_part ?? (travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null),
-          start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
-          end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
-          location: d.location.trim() || null,
-          notes: d.notes.trim() || null,
-          status: "planned",
-          est_cents: paid ? null : cents,
-          cost_type: d.perPerson && !stay ? "per_person" : "total",
-          pay_mode: d.payMode,
-        },
-        paid,
-        via,
-      );
+      const notes = [
+        d.notes.trim(),
+        onFare ? `Fare paid with ${d.fareTitle ?? "the other leg"}: one cost for the round trip.` : "",
+        pending && d.foreign && d.converted && cents != null
+          ? `Priced ${foreignLabel(d.foreign.currency, d.foreign.cents)}: about ${dollars(cents)} at ${d.converted.rate} (European Central Bank, ${d.converted.date}). ${d.paid ? "Check what your card was charged." : "An estimate until it's paid."}`
+          : d.foreign
+            ? `Priced ${foreignLabel(d.foreign.currency, d.foreign.cents)}.`
+            : "",
+      ].filter(Boolean);
+      const input: ItemInput = {
+        kind: d.kind,
+        title: d.title.trim(),
+        day: d.day,
+        part: stay ? "night" : d.part,
+        end_day: stay ? d.end_day : spanEnd(d),
+        // The parts picked on the review card (11/19), else a same-day trip's arrival part.
+        end_part: stay
+          ? null
+          : d.end_part ?? (travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null),
+        start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
+        end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
+        location: d.location.trim() || null,
+        notes: notes.join("\n") || null,
+        // Booked: Confirmed now, its cost to come (C21 lets a plan be Confirmed without one).
+        status: later || (onFare && d.paid) ? "confirmed" : "planned",
+        est_cents: paid || onFare ? null : cents,
+        cost_type: d.perPerson && !stay ? "per_person" : "total",
+        pay_mode: d.payMode,
+      };
+      // Already on the trip: fill in what it's missing instead of adding a second one (C25).
+      const existing = d.mergeInto ? items.find((i) => i.id === d.mergeInto!.id) : undefined;
+      let title = input.title;
+      if (existing) {
+        const patch = mergePatch(existing, input);
+        // An each-pays-their-own plan with some costs in confirms itself once everyone's booked.
+        if (patch.status === "confirmed" && existing.pay_mode === "own" && ownMarks.some((m) => m.item_id === existing.id)) delete patch.status;
+        if (Object.keys(patch).length) await updateItem(existing.id, patch);
+        track("plan merged", { kind: existing.kind, fields: Object.keys(patch).length, paid: Boolean(paid), via });
+        if (paid && !costIsIn(existing)) await applyPaid({ ...existing, ...patch } as Item, paid, existing.status);
+        title = existing.title;
+      } else {
+        await createPlan(input, paid, via);
+      }
+      if (later && meId) {
+        await addAction(trip.id, todoTitle("Add what you paid for ", title, ""), meId, null);
+        track("cost to come", { kind: d.kind, via });
+      }
+      if (pending && d.paid && d.foreign && cents != null && meId) {
+        await addAction(trip.id, todoTitle("Check what your card was charged for ", title, ` (${foreignLabel(d.foreign.currency, d.foreign.cents)}, about ${dollars(cents)})`), meId, null);
+      }
     }
     await reload();
   };
@@ -418,17 +451,26 @@ export default function TripPage() {
       already_paid: Boolean(paid),
       via,
     });
-    if (paid?.mode === "split") {
-      const inIds = added.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
-      const parts = splitEqually(paid.totalCents, inIds);
-      await confirmItem(added.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
-      track("plan confirmed", { kind: added.kind, split: "even", people: inIds.length, from_status: "new", who_pays: "split" });
-      track("plan status changed", { kind: added.kind, from: "planned", to: "confirmed", who_pays: "split" });
-    } else if (paid?.mode === "own" && meId) {
-      const after = await logOwnLine(added.id, meId, paid.cents, paid.withPoints);
-      trackOwn(added, meId, paid.cents, paid.withPoints, "planned", after);
-    }
+    if (paid) await applyPaid(added, paid, "new");
     return added;
+  };
+
+  /** Logs what was paid on a plan: the one bill (split evenly among who's in), or your own line. */
+  const applyPaid = async (item: Item, paid: PaidNow, from: Item["status"] | "new") => {
+    if (paid.mode === "split") {
+      const inIds = item.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
+      const parts = splitEqually(paid.totalCents, inIds);
+      await confirmItem(item.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
+      track("plan confirmed", { kind: item.kind, split: "even", people: inIds.length, from_status: from, who_pays: "split" });
+      track("plan status changed", { kind: item.kind, from: from === "new" ? "planned" : from, to: "confirmed", who_pays: "split" });
+    } else if (paid.mode === "own" && meId) {
+      const after = await logOwnLine(item.id, meId, paid.cents, paid.withPoints);
+      trackOwn(item, meId, paid.cents, paid.withPoints, from === "new" ? "planned" : from, after);
+    } else if (paid.mode === "later" && meId) {
+      // Paid, the amount to come (C27): the plan is already Confirmed; adding it waits on your To do list.
+      await addAction(trip.id, todoTitle("Add what you paid for ", item.title, ""), meId, null);
+      track("cost to come", { kind: item.kind, via: "form" });
+    }
   };
 
   const travelKind = (kind: Item["kind"]) => kind === "flight" || kind === "transport";
@@ -1227,4 +1269,11 @@ export default function TripPage() {
 function inboxHeading(item: InboxItem, travelers: Traveler[]): string {
   const who = travelers.find((t) => t.id === item.from_traveler)?.name;
   return who ? `From ${who}'s email` : "From an email";
+}
+
+/** A to-do's title, kept to the 140 characters a to-do holds by shortening the plan's name. */
+function todoTitle(before: string, plan: string, after: string): string {
+  const room = 140 - before.length - after.length;
+  const name = plan.length > room ? `${plan.slice(0, Math.max(1, room - 3)).trimEnd()}...` : plan;
+  return `${before}${name}${after}`;
 }

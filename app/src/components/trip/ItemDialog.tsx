@@ -51,7 +51,9 @@ const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
  */
 export type PaidNow =
   | { mode: "split"; totalCents: number; paidBy: string }
-  | { mode: "own"; cents: number; withPoints: boolean };
+  | { mode: "own"; cents: number; withPoints: boolean }
+  // Paid, the amount not to hand: Confirmed now, and adding it goes on your To do list (C27).
+  | { mode: "later" };
 
 /**
  * Add or edit a plan. Owners only: viewers see the plan read-only (Build 3 adds opting in or out).
@@ -214,13 +216,17 @@ function ItemForm({
   // A flight or transfer may arrive the day after the trip ends; an activity stays inside it.
   const lastDays = tripDays(addDays(day, 1), travel ? addDays(tripNow.end_date, 1) : tripNow.end_date).slice(0, travel ? 3 : 60);
   const paidNow = !it && paid;
-  const paidTyped = paidAmount.trim() === "" ? (payMode === "own" && points ? 0 : NaN) : parseDollars(paidAmount);
-  const paidBad = Number.isNaN(paidTyped) || paidTyped < 0;
+  // Paid with no amount typed is fine: the amount comes later, as a to-do (C27, Mike's call 11/21).
+  const amountLater = paidNow && paidAmount.trim() === "" && !(payMode === "own" && points);
+  const paidTyped = paidAmount.trim() === "" ? 0 : parseDollars(paidAmount);
+  const paidBad = !amountLater && (Number.isNaN(paidTyped) || paidTyped < 0);
   const paidInput: PaidNow | undefined = !paidNow || paidBad
     ? undefined
-    : payMode === "own"
-      ? { mode: "own", cents: toCents(paidTyped), withPoints: points }
-      : { mode: "split", totalCents: toCents(paidTyped), paidBy };
+    : amountLater
+      ? { mode: "later" }
+      : payMode === "own"
+        ? { mode: "own", cents: toCents(paidTyped), withPoints: points }
+        : { mode: "split", totalCents: toCents(paidTyped), paidBy };
 
   const linked = cleanLink(link);
   const input: ItemInput = {
@@ -235,7 +241,7 @@ function ItemForm({
     location: location.trim() || null,
     link: linked.value,
     notes: notes.trim() || null,
-    status: paidNow ? "planned" : status,
+    status: paidNow ? (amountLater ? "confirmed" : "planned") : status,
     est_cents: paidNow ? null : estCents,
     cost_type: isStay ? "total" : costType,
     ...(it ? {} : { pay_mode: payMode }),
@@ -243,7 +249,7 @@ function ItemForm({
   const costProblems = [
     ...(!paidNow && typed != null && Number.isNaN(typed) ? ["Type the estimate as a number, like 45 or $45."] : []),
     ...(paidNow && paidBad ? ["Enter what it cost, like 120 or $120."] : []),
-    ...(paidNow && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
+    ...(paidNow && !amountLater && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
   ];
   const problems = [...validateItem(input, tripNow), ...(linked.problem ? [linked.problem] : []), ...costProblems];
   // Non-travel plans: the run of parts covered, as indexes into PARTS.
@@ -789,6 +795,11 @@ function ItemForm({
                   onChange={(e) => setPaidAmount(e.target.value)}
                   placeholder="$"
                 />
+                {amountLater && (
+                  <span className="mt-1 block text-xs text-white/60" data-testid="amount-later">
+                    Don't have it to hand? Leave it empty: it saves as Confirmed, and adding what you paid goes on your To do list.
+                  </span>
+                )}
               </DarkField>
               {payMode === "own" ? (
                 <>

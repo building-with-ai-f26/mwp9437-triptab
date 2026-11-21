@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { draftCents, draftProblems, notesFor, possibleDuplicate, toDraft, usdCost, type Proposal } from "./importPlans";
+import {
+  atEstimate,
+  costToCome,
+  draftCents,
+  draftProblems,
+  mergePatch,
+  noteTotalCents,
+  notesFor,
+  oneFare,
+  possibleDuplicate,
+  sharedFareLegs,
+  toDraft,
+  usdCost,
+  type Proposal,
+} from "./importPlans";
 import type { Item } from "./model";
 
 const trip = { start_date: "2027-02-05", end_date: "2027-02-16" };
@@ -75,10 +89,11 @@ describe("a proposal becomes a draft to review", () => {
     expect(d.notes).toBe("Departs 17:05, arrives 07:10 on Sat, Feb 6\nConfirmation: QK7RWD");
     expect(d.warnings).toEqual([]);
   });
-  it("a possible duplicate starts unticked", () => {
+  it("a booking that matches a plan already on the trip starts ticked, to fill that plan in (C25)", () => {
     const d = toDraft(proposal({}), trip, [item({})]);
-    expect(d.keep).toBe(false);
+    expect(d.keep).toBe(true);
     expect(d.duplicateOf).toBe("UA57 EWR-GVA");
+    expect(d.mergeInto?.id).toBe("i1");
   });
   it("a day outside the trip is left for the Owner to pick, and starts unticked", () => {
     const d = toDraft(proposal({ day: "2027-02-04" }), trip, []);
@@ -89,11 +104,13 @@ describe("a proposal becomes a draft to review", () => {
     expect(d.extendTo).toBe("2027-02-04");
     expect(draftProblems({ ...d, keep: true }, trip)).toContain("Pick a day inside the trip.");
   });
-  it("a price in another currency is never converted: the cost is left blank with a note", () => {
+  it("a price in another currency is kept as found, for the review to convert at the day's rate (C28)", () => {
     const d = toDraft(proposal({ kind: "stay", title: "Chalet", end_day: "2027-02-12", cost_cents: 320000, currency: "EUR", paid: true, who_pays: "split" }), trip, []);
     expect(d.cost).toBe("");
-    expect(d.paid).toBe(false);
-    expect(d.warnings.join(" ")).toContain("Priced in EUR 3200.00");
+    expect(d.paid).toBe(true);
+    expect(d.foreign).toEqual({ currency: "EUR", cents: 320000 });
+    expect(d.converted).toBeNull();
+    expect(draftProblems(d, trip)).toEqual([]);
   });
   it("a price with no currency is kept but flagged, never assumed silently", () => {
     const d = toDraft(proposal({ cost_cents: 6400, currency: null, unsure: ["cost"] }), trip, []);
@@ -131,11 +148,18 @@ describe("what stops a draft from being saved", () => {
     expect(draftProblems(ok, trip)).toEqual([]);
     expect(draftCents(ok)).toBe(42000);
   });
-  it("a missing name, a cost that isn't a number, or Paid with no amount", () => {
+  it("a missing name, or a cost that isn't a number", () => {
     expect(draftProblems({ ...ok, title: " " }, trip)).toContain("Give it a name.");
     expect(draftProblems({ ...ok, cost: "about 400" }, trip)).toContain("Type the cost as a number, like 420.");
-    expect(draftProblems({ ...ok, cost: "", paid: true }, trip)).toContain("Enter what was paid, or untick Paid.");
     expect(draftCents({ cost: "$1,200.50" })).toBe(120050);
+  });
+  it("lets Paid with no amount through, the amount to come (C27)", () => {
+    expect(draftProblems({ ...ok, cost: "", paid: true }, trip)).toEqual([]);
+    expect(costToCome({ ...ok, cost: "", paid: true })).toBe(true);
+    expect(costToCome({ ...ok, cost: "120", paid: true })).toBe(false);
+    expect(costToCome({ ...ok, cost: "", paid: false })).toBe(false);
+    // A leg whose fare is on another leg has nothing to come.
+    expect(costToCome({ ...ok, cost: "", paid: true, fareOn: 0 })).toBe(false);
   });
 });
 
@@ -143,5 +167,71 @@ describe("the cost of an import", () => {
   it("shows fractions of a cent, and cents from one cent up", () => {
     expect(usdCost(0.00069)).toBe("$0.0007");
     expect(usdCost(0.0316)).toBe("$0.03");
+  });
+});
+
+describe("filling in a plan already on the trip (C25)", () => {
+  const half = item({ start_time: null, end_time: null, location: null, notes: "Seat 12A", est_cents: null, status: "suggested" });
+  it("adds only what the plan is missing, and keeps what's there", () => {
+    const patch = mergePatch(half, {
+      location: "Newark to Geneva",
+      notes: "Seat 12A\nDeparts 17:05, arrives 07:10\nConfirmation: K7QX2P",
+      start_time: "17:05",
+      end_time: "07:10",
+      end_day: "2027-02-06",
+      end_part: "morning",
+      est_cents: 99239,
+      status: "planned",
+    });
+    expect(patch).toEqual({
+      location: "Newark to Geneva",
+      start_time: "17:05",
+      end_time: "07:10",
+      end_day: "2027-02-06",
+      end_part: "morning",
+      notes: "Seat 12A\nDeparts 17:05, arrives 07:10\nConfirmation: K7QX2P",
+      est_cents: 99239,
+      status: "planned",
+    });
+  });
+  it("changes nothing that's already filled in, and never steps a status back", () => {
+    const full = item({ start_time: "17:05", end_time: "07:10", location: "EWR", notes: "Departs 17:05", est_cents: 50000, status: "confirmed" });
+    expect(mergePatch(full, { location: "Newark", notes: "Departs 17:05", start_time: "18:00", end_time: null, end_day: null, est_cents: 99239, status: "planned" })).toEqual({});
+  });
+});
+
+describe("a round trip's one fare (C26: two plans and one expense)", () => {
+  const leg = (title: string, day: string) => toDraft(proposal({ title, day, cost_cents: null, paid: true }), trip, []);
+  it("finds legs with no cost of their own, in trip order", () => {
+    const drafts = [leg("UA 58 Geneva to Newark", "2027-02-16"), leg("UA 57 Newark to Geneva", "2027-02-05")];
+    expect(sharedFareLegs(drafts)).toEqual([1, 0]);
+    expect(sharedFareLegs([drafts[0]])).toEqual([]);
+  });
+  it("puts the whole fare on the first leg; the other's fare is on it", () => {
+    const drafts = [leg("UA 58 Geneva to Newark", "2027-02-16"), leg("UA 57 Newark to Geneva", "2027-02-05")];
+    const out = oneFare(drafts, sharedFareLegs(drafts), 99239);
+    expect(out[1].cost).toBe("992.39");
+    expect(out[1].notes).toContain("One fare for the round trip, with UA 58 Geneva to Newark.");
+    expect(out[0].cost).toBe("");
+    expect(out[0].fareOn).toBe(1);
+    expect(sharedFareLegs(out)).toEqual([]);
+  });
+  it("reads the one total an import's note names", () => {
+    expect(noteTotalCents("Two United flights; the $992.39 total covers both flights, so I left cost blank on each.")).toBe(99239);
+    expect(noteTotalCents("Total $1,984.78 for two travelers")).toBe(198478);
+    expect(noteTotalCents("$120 deposit, $480 balance")).toBeNull();
+    expect(noteTotalCents(null)).toBeNull();
+  });
+});
+
+describe("a foreign price's estimate (C28)", () => {
+  const d = { foreign: { currency: "EUR", cents: 694750 }, converted: { rate: 1.099, date: "2026-11-20" }, cost: "7635.30" };
+  it("is pending while the cost is the converted estimate", () => {
+    expect(atEstimate(d)).toBe(true);
+  });
+  it("isn't once the real charge is typed over it, or with no rate", () => {
+    expect(atEstimate({ ...d, cost: "7702.18" })).toBe(false);
+    expect(atEstimate({ ...d, converted: null })).toBe(false);
+    expect(atEstimate({ ...d, foreign: null })).toBe(false);
   });
 });

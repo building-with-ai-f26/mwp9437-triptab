@@ -102,6 +102,11 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           trip attached.
         </li>
         <li>
+          <b>Frankfurter</b> gives the European Central Bank's daily exchange rate when an imported booking is priced in
+          another currency, so TripTab can show it in dollars. It gets only the currency code (EUR, say), with no
+          amount, account or trip attached.
+        </li>
+        <li>
           <b>Google Fonts</b> and <b>Unsplash</b> supply the type and the destination photos, so your browser asks
           them for those files.
         </li>

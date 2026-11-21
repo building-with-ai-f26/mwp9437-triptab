@@ -197,6 +197,17 @@ describe("status follows the lines", () => {
     expect(back.error).toBeNull();
   });
 
+  it("Confirmed by hand with nobody's line in, it stays Confirmed when people opt in or out (11/21)", async () => {
+    // A round trip's return leg, Confirmed on the outbound's fare (C26), or paid with the amount to come (C27).
+    expect((await owner.from("items").update({ status: "confirmed" }).eq("id", flight).select("id")).error).toBeNull();
+    await owner.from("item_people").upsert({ item_id: flight, traveler_id: ids.Mike, going: true });
+    expect((await status(flight)).status).toBe("confirmed");
+    await owner.from("item_people").upsert({ item_id: flight, traveler_id: ids.Mike, going: false });
+    expect((await status(flight)).status).toBe("confirmed");
+    await owner.from("item_people").delete().eq("item_id", flight).eq("traveler_id", ids.Mike);
+    expect((await owner.from("items").update({ status: "planned" }).eq("id", flight).select("id")).error).toBeNull();
+  });
+
   it("clearing a line takes it back to Planned", async () => {
     const { data, error } = await clear(owner, lift, "Mike");
     expect(error).toBeNull();

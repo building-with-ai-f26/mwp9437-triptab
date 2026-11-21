@@ -45,8 +45,12 @@ async function run(browser, label, opts, result) {
   // A plan already on the trip, so the import has a duplicate to catch.
   await h.addPlan(p, '2027-02-06', 'Add to evening', { title: 'Fondue at La Caleche', kind: 'Meal', status: 'Planned' });
 
-  // The canned run never calls the real function, so it costs nothing.
+  // The canned run never calls the real function, so it costs nothing. The day's euro rate is
+  // fixed too (C28), so the converted cost is the same every run.
   if (!LIVE) {
+    await p.route('**/api.frankfurter.dev/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ amount: 1, base: 'EUR', date: '2026-11-20', rates: { USD: 1.099 } }) }),
+    );
     await p.route('**/functions/v1/import-bookings', (route) =>
       route.request().method() === 'POST'
         ? route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(CANNED) })
@@ -74,12 +78,19 @@ async function run(browser, label, opts, result) {
     // than the "outside the trip's dates" warning a day further out gets.
     r.flightOffersExtend = (await cards.nth(0).innerText()).includes('is before the trip');
     r.flightMarkedCheckThis = (await cards.nth(0).innerText()).includes('check this');
-    r.euroNote = (await cards.nth(1).innerText()).includes('Priced in EUR 3200.00');
-    r.euroCostLeftBlank = (await cards.nth(1).getByLabel('Cost').inputValue()) === '';
-    r.duplicateFlagged = (await cards.nth(3).innerText()).includes('Possible duplicate');
+    // A price in euros comes converted at the day's rate, as an estimate (C28).
+    await cards.nth(1).getByText(/About \$3516\.80 at today's rate/).waitFor();
+    r.euroNote = (await cards.nth(1).getByTestId('foreign-note').innerText()).trim();
+    r.euroConverted = await cards.nth(1).getByLabel('Cost').inputValue();
+    // A plan already on the trip is filled in, not flagged as a duplicate (C25).
+    r.mergeNote = (await cards.nth(3).getByTestId('merge-note').innerText()).trim();
+    r.mergeTicked = await keep(3).isChecked();
+    if (r.euroConverted !== '3516.80' || !/Updates "Fondue at La Caleche"/.test(r.mergeNote) || !r.mergeTicked) {
+      throw new Error(`review: ${JSON.stringify([r.euroConverted, r.mergeNote, r.mergeTicked])}`);
+    }
     // The flight's day was outside the trip: keeping it without a day is refused, then fixed.
     await keep(0).check();
-    await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
+    await h.dlg(p).getByRole('button', { name: /Add 4 to the trip/ }).click();
     r.refusedWithoutDay = (await cards.nth(0).getByRole('alert').innerText()).trim();
     // By the button too, and the card that needs the fix is brought into view (Mike's 11/19 review:
     // three taps on Add did nothing he could see, since the reason was up on a card).
@@ -96,7 +107,7 @@ async function run(browser, label, opts, result) {
     await cards.nth(1).getByLabel(/Already paid/).check();
     await cards.nth(1).scrollIntoViewIfNeeded();
     await h.shot(p, `${SHOTS}-review-edited-${label}`);
-    await h.dlg(p).getByRole('button', { name: /Add 3 to the trip/ }).click();
+    await h.dlg(p).getByRole('button', { name: /Add 4 to the trip/ }).click();
     await p.locator('dialog[open]').waitFor({ state: 'detached', timeout: 30000 }).catch(() => {});
     if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});
     await p.locator('#day-2027-02-05 .item-card').filter({ hasText: 'UA 57 Newark to Geneva' }).waitFor();

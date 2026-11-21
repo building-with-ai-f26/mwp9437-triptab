@@ -3,7 +3,8 @@
  * draft the Owner reviews, spotting likely duplicates, and saying what still blocks saving one.
  * Pure functions, tested offline. Nothing here saves anything: the review step does.
  */
-import { addDays, canExtendTo, defaultPayMode, dollars, longDay, type DayPart, type Item, type ItemKind, type PayMode, type Trip } from "./model";
+import { addDays, canExtendTo, defaultPayMode, dollars, longDay, type DayPart, type Item, type ItemKind, type ItemStatus, type PayMode, type Trip } from "./model";
+import type { UsdRate } from "./rates";
 
 /** A proposed plan, as the Edge Function returns it (supabase/functions/import-bookings/rules.ts). */
 export interface Proposal {
@@ -67,6 +68,22 @@ export interface Draft {
   warnings: string[];
   /** The title of a plan already on the trip that this looks like. */
   duplicateOf: string | null;
+  /**
+   * That plan: kept, the draft fills in what it's missing instead of adding a second one (C25,
+   * Mike's call 11/21).
+   */
+  mergeInto: Item | null;
+  /** A price in another currency, as found (C28): converted to dollars at the day's rate for review. */
+  foreign: { currency: string; cents: number } | null;
+  /** The rate the cost was converted at, once looked up. */
+  converted: UsdRate | null;
+  /**
+   * A leg whose fare is on another plan (C26, Mike's call 11/21: a round trip is two plans and one
+   * expense): which draft on the review carries the one fare.
+   */
+  fareOn: number | null;
+  /** That leg's title, filled in when the review is saved. */
+  fareTitle?: string;
   /** A day just outside the trip that the trip can be extended to in one tap (the proposal's day). */
   extendTo: string | null;
   source: Proposal;
@@ -137,16 +154,14 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     }
   }
   const usd = p.currency === "USD" || (p.cost_cents != null && !p.currency);
-  if (p.cost_cents != null && p.currency && p.currency !== "USD") {
-    warnings.push(`Priced in ${p.currency} ${(p.cost_cents / 100).toFixed(2)}. TripTab keeps the tab in US dollars: enter what your card was charged.`);
-  }
   if (p.cost_cents != null && !p.currency) warnings.push("No currency was found for this price. Check that it's in US dollars before saving.");
   if (p.kind === "flight" && !p.depart_time && !p.arrive_time) warnings.push("No times found. Add times in the notes once you have them.");
   if (p.times_from === "lookup") warnings.push("Times were looked up, not in what you pasted. Check them against your booking.");
   const dup = possibleDuplicate(p, items);
   const ready = Boolean(day) && (p.kind !== "stay" || warnings.every((w) => !w.includes("check-out") && !w.includes("Check-out")));
   return {
-    keep: !dup && ready,
+    // A match is merged into the plan already on the trip (C25), so it starts ticked too.
+    keep: ready,
     kind: p.kind,
     title: p.title,
     day,
@@ -156,12 +171,17 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     cost: p.cost_cents != null && usd ? String(p.cost_cents / 100) : "",
     perPerson: p.cost_is_per_person,
     payMode: p.who_pays ?? defaultPayMode(p.kind),
-    paid: p.paid && usd && p.cost_cents != null,
+    // Paid with no amount found is fine: the amount comes later, as a to-do (C27).
+    paid: p.paid,
     location: p.location ?? "",
     notes: notesFor(p),
     unsure: [...p.unsure],
     warnings,
     duplicateOf: dup?.title ?? null,
+    mergeInto: dup,
+    foreign: p.cost_cents != null && p.currency && p.currency !== "USD" ? { currency: p.currency, cents: p.cost_cents } : null,
+    converted: null,
+    fareOn: null,
     extendTo,
     source: p,
   };
@@ -180,8 +200,81 @@ export function draftProblems(d: Draft, trip: Pick<Trip, "start_date" | "end_dat
   if (!d.day || d.day < trip.start_date || d.day > trip.end_date) out.push("Pick a day inside the trip.");
   if (d.kind === "stay" && (!d.end_day || d.end_day <= d.day)) out.push("Pick a check-out day after check-in.");
   if (d.cost.trim() !== "" && draftCents(d) == null) out.push("Type the cost as a number, like 420.");
-  if (d.paid && draftCents(d) == null) out.push("Enter what was paid, or untick Paid.");
   return out;
+}
+
+/**
+ * A foreign price still at the day's converted estimate (C28): pending until whoever paid checks the
+ * card. A dollar amount typed over it is the real charge, and isn't.
+ */
+export function atEstimate(d: Pick<Draft, "foreign" | "converted" | "cost">): boolean {
+  if (!d.foreign || !d.converted) return false;
+  return draftCents(d) === Math.round(d.foreign.cents * d.converted.rate);
+}
+
+/** Paid, with the amount to come: it saves as Confirmed and the payer gets a to-do (C27). Not a leg on another's fare. */
+export const costToCome = (d: Pick<Draft, "paid" | "cost" | "fareOn">): boolean => d.paid && draftCents(d) == null && d.fareOn == null;
+
+/**
+ * Legs of one booking with one fare (C26): flights or transfers kept on the review with no cost of
+ * their own and not already on another leg's fare. Two or more, in trip order.
+ */
+export function sharedFareLegs(drafts: Draft[]): number[] {
+  const legs = drafts
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => d.keep && (d.kind === "flight" || d.kind === "transport") && d.cost.trim() === "" && d.fareOn == null)
+    .sort((a, b) => (a.d.day || "9999").localeCompare(b.d.day || "9999"));
+  return legs.length >= 2 ? legs.map(({ i }) => i) : [];
+}
+
+/** Puts one fare on the first leg, and marks the others as on it (C26). */
+export function oneFare(drafts: Draft[], legs: number[], totalCents: number): Draft[] {
+  if (legs.length < 2) return drafts;
+  const [first, ...rest] = legs;
+  const carrier = drafts[first];
+  const others = rest.map((i) => drafts[i].title);
+  return drafts.map((d, i) => {
+    if (i === first) {
+      const line = `One fare for the round trip, with ${others.join(" and ")}.`;
+      return { ...d, cost: String(totalCents / 100), perPerson: false, notes: [d.notes, line].filter(Boolean).join("\n") };
+    }
+    if (rest.includes(i)) return { ...d, cost: "", fareOn: first, paid: carrier.paid };
+    return d;
+  });
+}
+
+/** The one dollar amount an import's note names ("the $992.39 total covers both flights"), or null. */
+export function noteTotalCents(note: string | null | undefined): number | null {
+  const found = new Set([...String(note ?? "").matchAll(/\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/g)].map((m) => Math.round(Number(m[1].replace(/,/g, "")) * 100)));
+  return found.size === 1 ? [...found][0] : null;
+}
+
+const STATUS_RANK: Record<ItemStatus, number> = { suggested: 0, planned: 1, confirmed: 2 };
+
+/** What a merged draft adds to a plan already on the trip: only what that plan is missing (C25). */
+export interface PlanFields {
+  location: string | null;
+  notes: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  end_day: string | null;
+  end_part?: DayPart | null;
+  est_cents: number | null;
+  status: ItemStatus;
+}
+export function mergePatch(existing: Item, incoming: PlanFields): Partial<PlanFields> {
+  const patch: Partial<PlanFields> = {};
+  if (!existing.location && incoming.location) patch.location = incoming.location;
+  if (!existing.start_time && incoming.start_time) patch.start_time = incoming.start_time;
+  if (!existing.end_time && incoming.end_time) patch.end_time = incoming.end_time;
+  if (existing.kind !== "stay" && !existing.end_day && incoming.end_day) patch.end_day = incoming.end_day;
+  if (existing.kind !== "stay" && !existing.end_part && incoming.end_part) patch.end_part = incoming.end_part;
+  const had = (existing.notes ?? "").split("\n").map((l) => l.trim());
+  const added = (incoming.notes ?? "").split("\n").map((l) => l.trim()).filter((l) => l && !had.includes(l));
+  if (added.length) patch.notes = [existing.notes?.trim(), ...added].filter(Boolean).join("\n");
+  if (existing.est_cents == null && incoming.est_cents != null && existing.status !== "confirmed") patch.est_cents = incoming.est_cents;
+  if (STATUS_RANK[incoming.status] > STATUS_RANK[existing.status]) patch.status = incoming.status;
+  return patch;
 }
 
 /** The cost of one import, shown to the Owner: "$0.0012", or "$0.03" from a cent up. */
