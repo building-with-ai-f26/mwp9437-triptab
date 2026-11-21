@@ -4,6 +4,7 @@ import { CalendarDays, LogOut, MapPin, Plus, Users } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
 import { LinkGoogle } from "../components/LinkGoogle";
+import { ForwardFrom } from "../components/ForwardFrom";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
 import { listMyTrips, type TripSummary } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -94,6 +95,7 @@ export default function Trips() {
             </ul>
           )}
           <LinkGoogle />
+          <ForwardFrom />
         </main>
       </div>
     </div>

@@ -122,8 +122,8 @@ export function ForwardAddress({
         <Mail className="size-4 shrink-0" /> Or forward it to this trip
       </p>
       <p className="mt-1 text-xs text-white/70">
-        Send booking emails here from the email you use for TripTab. They show up on the trip for an Owner to review, and nothing is
-        saved until then.
+        Send booking emails here from the email you use for TripTab, or one you've added under Also forward from on My trips. They
+        show up on the trip for an Owner to review, and nothing is saved until then.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <code className="min-w-0 break-all rounded-lg bg-black/25 px-2 py-1 text-[13px] text-white" data-testid="forward-address-text">

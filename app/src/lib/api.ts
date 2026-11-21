@@ -774,3 +774,51 @@ export async function importBookings(
   }
   return data as ImportResult;
 }
+
+// ---------- Also forward from (C31, Mike's call 11/21) ----------
+// More addresses an account forwards bookings from, each confirmed by a code emailed there. The
+// confirm-email Edge Function adds them and checks codes; a person reads and removes their own.
+
+export interface ForwardFrom {
+  id: string;
+  email: string;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
+/** The function's own message when it refused, else a general one. */
+async function functionMessage(error: unknown, fallback: string): Promise<string> {
+  const response = (error as { context?: unknown }).context;
+  if (response instanceof Response) {
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body?.error) return body.error;
+    } catch {
+      // not JSON
+    }
+  }
+  return fallback;
+}
+
+export async function myForwardAddresses(): Promise<ForwardFrom[]> {
+  const { data, error } = await supabase.from("forward_addresses").select("id, email, confirmed_at, created_at").order("created_at");
+  return must(data as ForwardFrom[] | null, error) ?? [];
+}
+
+/** Sends a code to an address (a new one, or a fresh code for one still waiting). Dev test addresses get the code back. */
+export async function addForwardAddress(email: string): Promise<{ id: string; confirmed: boolean; devCode: string | null }> {
+  const { data, error } = await supabase.functions.invoke("confirm-email", { body: { action: "forward_add", email } });
+  if (error) throw new Error(await functionMessage(error, "Couldn't send a code just now. Try again in a bit."));
+  const d = data as { id: string; confirmed?: boolean; dev_code?: string };
+  return { id: d.id, confirmed: Boolean(d.confirmed), devCode: d.dev_code ?? null };
+}
+
+export async function confirmForwardAddress(id: string, code: string): Promise<void> {
+  const { error } = await supabase.functions.invoke("confirm-email", { body: { action: "forward_confirm", id, code } });
+  if (error) throw new Error(await functionMessage(error, "Couldn't check that code just now. Try again."));
+}
+
+export async function removeForwardAddress(id: string): Promise<void> {
+  const { data, error } = await supabase.from("forward_addresses").delete().eq("id", id).select("id");
+  if (!must(data, error)?.length) throw new Error("Couldn't remove that address. Try again.");
+}

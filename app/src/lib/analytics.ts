@@ -108,6 +108,8 @@ export type EventName =
   | "ai help opened"
   | "import opened"
   | "plan merged"
+  | "forward address code sent"
+  | "forward address confirmed"
   | "cost to come"
   | "inbox review opened"
   | "inbox reviewed"

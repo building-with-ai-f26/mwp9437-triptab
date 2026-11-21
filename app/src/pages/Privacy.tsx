@@ -35,8 +35,13 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           are saved on all your trips, and on trips you join later, until you change or clear them.
         </li>
         <li>
+          <b>Addresses you forward from:</b> if you add another email address under Also forward from, TripTab keeps it
+          on your account and emails it a 6-digit code once, to check it's yours; only a scrambled form of the code is
+          kept. Only you see these addresses, and you can remove them at any time.
+        </li>
+        <li>
           <b>Emails you forward to a trip:</b> each trip can have its own address. An email someone on the trip
-          forwards there is read once by AI import; TripTab keeps who on the trip sent it, its subject and the plans
+          forwards there, from the email they use for TripTab or an address they've added, is read once by AI import; TripTab keeps who on the trip sent it, its subject and the plans
           it found, for the trip's Owners to review. The email itself is never stored. An email from an address that
           isn't on the trip is turned away, and the email service's logs keep why, with only the sender's first letter
           and domain.

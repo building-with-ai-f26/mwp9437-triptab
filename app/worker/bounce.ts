@@ -31,7 +31,9 @@ export function bounceFor(status: number, answer: InboxAnswer | null): string | 
     if (answer?.code === "not_verified") {
       return `${it}, but TripTab couldn't check it really came from there. Forward it again straight from your own mail app.`;
     }
-    return `${it}, which isn't on this trip in TripTab. Forward it from the email you sign in to TripTab with.`;
+    // Also forward from (C31): the address can be added to the account, confirmed by a code.
+    const add = from ? `add ${from}` : "add it";
+    return `${it}, which isn't on this trip in TripTab. Forward it from the email you sign in with, or ${add} under Also forward from on My trips.`;
   }
   return BY_STATUS[status] ?? null;
 }
