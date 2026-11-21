@@ -311,9 +311,10 @@ export default function TripPage() {
         // An each-pays-their-own plan with some costs in confirms itself once everyone's booked.
         if (patch.status === "confirmed" && existing.pay_mode === "own" && ownMarks.some((m) => m.item_id === existing.id)) delete patch.status;
         if (Object.keys(patch).length) await updateItem(existing.id, patch);
-        track("plan merged", { kind: existing.kind, fields: Object.keys(patch).length, paid: Boolean(paid), via });
+        track("plan merged", { kind: existing.kind, fields: Object.keys(patch).length, paid: Boolean(paid), renamed: Boolean(patch.title), via });
         if (paid && !costIsIn(existing)) await applyPaid({ ...existing, ...patch } as Item, paid, existing.status);
-        title = existing.title;
+        // A general name ("Airbnb") takes the booking's (C34); the to-dos below use whichever it ends up with.
+        title = patch.title ?? existing.title;
       } else {
         await createPlan(input, paid, via);
       }
