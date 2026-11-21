@@ -7,6 +7,9 @@ import { goingList, groupExpenses, isGoing, myNumbers } from "../../lib/ledger";
 import { clock, dollars, longDay, tripDays, type CostType, type Item, type Traveler, type Trip } from "../../lib/model";
 import { parseDollars, toCents, totalCents } from "../../lib/money";
 import { computeSplit, SPLIT_LABEL, type SplitMode } from "../../lib/split";
+import { foreignLabel, toUsdCents } from "../../lib/rates";
+import { CurrencySelect } from "./Currency";
+import { useUsdRate } from "../../lib/useUsdRate";
 
 export type ExpenseTarget = { kind: "item"; item: Item; expense?: ExpenseRow } | { kind: "general"; expense?: ExpenseRow };
 
@@ -17,6 +20,8 @@ export interface ExpenseSubmit {
   paidBy: string;
   mode: SplitMode;
   shares: ShareInput[];
+  /** Typed in another currency (C33): the amount as written; total is then dollars at the day's rate. */
+  foreign: { currency: string; cents: number } | null;
 }
 
 const MODES: SplitMode[] = ["even", "shares", "percent", "exact"];
@@ -107,8 +112,16 @@ function ExpenseForm({
   const [description, setDescription] = useState(ex?.description ?? "");
   const [day, setDay] = useState<string>(ex?.day ?? item?.day ?? "");
   const [amount, setAmount] = useState(
-    ex ? String(ex.total_cents / 100) : item?.est_cents ? String(item.est_cents / 100) : "",
+    ex?.currency && ex.foreign_cents != null
+      ? String(ex.foreign_cents / 100)
+      : ex
+        ? String(ex.total_cents / 100)
+        : item?.est_cents
+          ? String(item.est_cents / 100)
+          : "",
   );
+  const [currency, setCurrency] = useState(ex?.currency ?? "USD");
+  const rate = useUsdRate(currency);
   const [costType, setCostType] = useState<CostType>(ex ? "total" : (item?.cost_type ?? "total"));
   const [paidBy, setPaidBy] = useState(ex?.paid_by ?? meId ?? travelers[0]?.id ?? "");
   const [inIds, setInIds] = useState<string[]>(startIn);
@@ -120,7 +133,12 @@ function ExpenseForm({
 
   const people = travelers.filter((t) => inIds.includes(t.id)).map((t) => t.id);
   const typed = parseDollars(amount);
-  const total = Number.isNaN(typed) || typed < 0 ? NaN : totalCents(typed, costType, people.length);
+  const typedTotal = Number.isNaN(typed) || typed < 0 ? NaN : totalCents(typed, costType, people.length);
+  // Another currency (C33): the split works in dollars at today's rate. An expense saved before in
+  // the same currency and amount keeps the dollars it had, so editing it doesn't move the rate.
+  const foreign = currency !== "USD" && !Number.isNaN(typedTotal) ? { currency, cents: typedTotal } : null;
+  const keptRate = Boolean(foreign && ex?.currency === foreign.currency && ex.foreign_cents === foreign.cents);
+  const total = !foreign ? typedTotal : keptRate ? ex!.total_cents : rate ? toUsdCents(foreign.cents, rate.rate) : NaN;
   const numeric = Object.fromEntries(
     people.map((id) => {
       const v = parseDollars(values[id] ?? "");
@@ -134,7 +152,9 @@ function ExpenseForm({
     ? { shares: {} as Record<string, number>, error: "Enter the cost, like 120 or $120." }
     : computeSplit({ mode, total, people, values: numeric });
   const descriptionMissing = target.kind === "general" && !description.trim();
-  const problem = descriptionMissing ? "Say what it was for." : !paidBy ? "Pick who paid." : split.error;
+  const rateProblem =
+    foreign && !keptRate && rate === null ? `Couldn't get today's rate for ${currency}. Type the amount in USD for now.` : null;
+  const problem = descriptionMissing ? "Say what it was for." : !paidBy ? "Pick who paid." : (rateProblem ?? split.error);
 
   const toggle = (id: string) => setInIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
@@ -155,6 +175,7 @@ function ExpenseForm({
           amount_cents: split.shares[id] ?? 0,
           weight: mode === "shares" || mode === "percent" ? numeric[id] : null,
         })),
+        foreign,
       });
       onClose();
     } catch (e) {
@@ -203,14 +224,29 @@ function ExpenseForm({
 
       <div className="grid grid-cols-[1fr_auto] items-end gap-2">
         <DarkField label={item ? "What it cost" : "Amount"}>
-          <input
-            className="field-dark"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="$"
-            autoFocus={Boolean(item)}
-          />
+          <span className="flex gap-2">
+            <input
+              className="field-dark min-w-0 flex-1"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={currency === "USD" ? "$" : currency}
+              autoFocus={Boolean(item)}
+              aria-label={item ? "What it cost" : "Amount"}
+            />
+            <CurrencySelect value={currency} onChange={setCurrency} />
+          </span>
+          {foreign && (
+            <span className="mt-1 block text-xs text-white/70" data-testid="fx-about">
+              {keptRate
+                ? `${foreignLabel(foreign.currency, foreign.cents)}, ${dollars(ex!.total_cents)} in the split, as saved.`
+                : rate
+                  ? `${foreignLabel(foreign.currency, foreign.cents)} is about ${dollars(total)} at today's rate (${rate.rate} from the European Central Bank). It's an estimate until whoever paid enters what their card charged.`
+                  : rate === undefined
+                    ? "Looking up today's rate..."
+                    : null}
+            </span>
+          )}
         </DarkField>
         {item && (
           <div className="mb-3">
@@ -345,6 +381,7 @@ export function MoneyCard({
   onShowAll,
   onAdd,
   onSettle,
+  onSettleFx,
 }: {
   travelers: Traveler[];
   expenses: ExpenseRow[];
@@ -361,8 +398,11 @@ export function MoneyCard({
   onShowAll?: () => void;
   onAdd: () => void;
   onSettle: () => void;
+  /** C33: what the card charged for a pending foreign cost (dollars), or null to keep the estimate. */
+  onSettleFx?: (expense: ExpenseRow, totalCents: number | null) => Promise<void>;
 }) {
   const mine = myNumbers(expenses, meId, payments ?? []);
+  const pendingFx = expenses.filter((e) => e.fx_pending && !e.own && e.currency && e.foreign_cents != null);
   const anyMoney = groupExpenses(expenses).length > 0 || (payments?.length ?? 0) > 0;
 
   return (
@@ -416,6 +456,16 @@ export function MoneyCard({
         <p className="mb-3 text-sm text-muted-foreground">Nothing on the tab yet. Confirm a plan with its cost, or add an expense.</p>
       )}
 
+      {pendingFx.length > 0 && (
+        <FxPending
+          expenses={pendingFx}
+          travelers={travelers}
+          meId={meId}
+          canEdit={canEdit}
+          onSettleFx={onSettleFx}
+        />
+      )}
+
       <div className="flex flex-col gap-2">
         {onShowAll && lineCount > 0 && (
           <Button variant="glass" className="w-full" onClick={onShowAll} aria-pressed={showingAll}>
@@ -426,6 +476,93 @@ export function MoneyCard({
           <Scale /> Settle up
         </Button>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Costs in another currency still at the day's estimate (C33, Mike's call 11/21), shown above Settle
+ * up: whoever paid enters what their card charged (everyone's part scales to it) or keeps the
+ * estimate. Settle up works with the estimate until then.
+ */
+function FxPending({
+  expenses,
+  travelers,
+  meId,
+  canEdit,
+  onSettleFx,
+}: {
+  expenses: ExpenseRow[];
+  travelers: Traveler[];
+  meId: string | null;
+  canEdit: boolean;
+  onSettleFx?: (expense: ExpenseRow, totalCents: number | null) => Promise<void>;
+}) {
+  const [charge, setCharge] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const name = (id: string) => (id === meId ? "you" : (travelers.find((t) => t.id === id)?.name ?? "whoever paid"));
+  const act = async (e: ExpenseRow, cents: number | null) => {
+    if (!onSettleFx) return;
+    setBusy(e.id);
+    setError(null);
+    try {
+      await onSettleFx(e, cents);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setBusy(null);
+  };
+  return (
+    <section className="mb-3 rounded-2xl bg-amber-100/70 p-3 text-sm" aria-labelledby="fx-title" data-testid="fx-pending">
+      <h3 id="fx-title" className="font-semibold text-foreground">
+        {expenses.length === 1 ? "A cost is still an estimate" : `${expenses.length} costs are still estimates`}
+      </h3>
+      <ul className="mt-1 space-y-2">
+        {expenses.map((e) => {
+          const mayAct = Boolean(onSettleFx) && (canEdit || e.paid_by === meId);
+          const typed = parseDollars(charge[e.id] ?? "");
+          const ok = !Number.isNaN(typed) && typed >= 0 && (charge[e.id] ?? "").trim() !== "";
+          return (
+            <li key={e.id} data-testid="fx-item">
+              <p className="text-foreground">
+                <b>{e.description}</b>: {foreignLabel(e.currency!, e.foreign_cents!)}, about {dollars(e.total_cents)} at the day's rate.{" "}
+                {e.paid_by === meId ? "Enter what your card charged" : `Waiting for ${name(e.paid_by)} to enter what their card charged`}, or keep
+                the estimate.
+              </p>
+              {mayAct && (
+                <form
+                  className="mt-1.5 flex flex-wrap items-center gap-2"
+                  onSubmit={(ev) => {
+                    ev.preventDefault();
+                    if (ok) act(e, toCents(typed));
+                  }}
+                >
+                  <input
+                    className="field w-32"
+                    inputMode="decimal"
+                    placeholder="$ charged"
+                    aria-label={`What the card charged for ${e.description}`}
+                    value={charge[e.id] ?? ""}
+                    onChange={(ev) => setCharge((c) => ({ ...c, [e.id]: ev.target.value }))}
+                  />
+                  <Button size="sm" type="submit" disabled={busy != null || !ok}>
+                    Save
+                  </Button>
+                  <Button size="sm" type="button" variant="ghost" disabled={busy != null} onClick={() => act(e, null)}>
+                    Keep the estimate
+                  </Button>
+                </form>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {error && (
+        <p role="alert" className="mt-2 rounded-xl bg-destructive/10 px-3 py-2 text-destructive">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

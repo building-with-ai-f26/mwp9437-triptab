@@ -133,6 +133,14 @@ export interface ExpenseRow {
   with_points: boolean;
   created_at: string;
   expense_shares: ExpenseShare[];
+  /**
+   * A cost in another currency (C33, Mike's call 11/21): the amount as written. total_cents is then
+   * dollars at the day's rate, an estimate while fx_pending, until whoever paid enters the card's
+   * charge or keeps it. Undefined on a database without the columns yet.
+   */
+  currency?: string | null;
+  foreign_cents?: number | null;
+  fx_pending?: boolean;
 }
 
 /** Someone has logged their own line on a plan (booked). Everyone on the trip sees this, never the price. */
@@ -554,8 +562,8 @@ export async function saveExpense(
   paidBy: string,
   mode: SplitMode,
   shares: ShareInput[],
-) {
-  const { error } = await supabase.rpc("save_expense", {
+): Promise<string> {
+  const { data, error } = await supabase.rpc("save_expense", {
     p_trip: tripId,
     p_expense: expenseId,
     p_description: description.trim(),
@@ -565,6 +573,32 @@ export async function saveExpense(
     p_split_mode: mode,
     p_shares: shares,
   });
+  if (error) throw new Error(friendly(error));
+  return data as string;
+}
+
+// ---------- A cost in another currency (C33, Mike's call 11/21) ----------
+
+/** The split bill's expense on a plan, once it's confirmed. */
+export async function expenseIdForItem(itemId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("expenses").select("id").eq("item_id", itemId).eq("own", false).maybeSingle();
+  if (error) throw new Error(friendly(error));
+  return (data?.id as string | undefined) ?? null;
+}
+
+/** Owners: mark an expense as priced in another currency (an estimate, pending), or clear that with a null currency. */
+export async function setExpenseFx(expenseId: string, foreign: { currency: string; cents: number } | null) {
+  const { error } = await supabase.rpc("set_expense_fx", {
+    p_expense: expenseId,
+    p_currency: foreign?.currency ?? null,
+    p_foreign_cents: foreign?.cents ?? null,
+  });
+  if (error) throw new Error(friendly(error));
+}
+
+/** Whoever paid, or an Owner: what the card charged in dollars (everyone's part scales to it), or null to keep the estimate. */
+export async function settleFx(expenseId: string, totalCents: number | null) {
+  const { error } = await supabase.rpc("settle_fx", { p_expense: expenseId, p_total_cents: totalCents });
   if (error) throw new Error(friendly(error));
 }
 

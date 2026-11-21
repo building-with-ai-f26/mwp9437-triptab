@@ -61,6 +61,10 @@ import {
   removeTraveler,
   resetLink,
   saveExpense,
+  expenseIdForItem,
+  setExpenseFx,
+  settleFx,
+  type ExpenseRow,
   setActionDone,
   setGoing,
   setRole,
@@ -273,7 +277,13 @@ export default function TripPage() {
         !onFare && d.paid && cents != null && meId
           ? d.payMode === "own"
             ? { mode: "own", cents, withPoints: false }
-            : { mode: "split", totalCents: d.perPerson && !stay ? cents * travelers.length : cents, paidBy: meId }
+            : {
+                mode: "split",
+                totalCents: d.perPerson && !stay ? cents * travelers.length : cents,
+                paidBy: meId,
+                // C28's converted price, marked pending on the expense the same way a typed one is (C33).
+                foreign: pending && d.foreign ? { currency: d.foreign.currency, cents: d.perPerson && !stay ? d.foreign.cents * travelers.length : d.foreign.cents } : null,
+              }
           : undefined;
       const notes = [
         d.notes.trim(),
@@ -325,7 +335,8 @@ export default function TripPage() {
         await addAction(trip.id, todoTitle("Add what you paid for ", title, ""), meId, null);
         track("cost to come", { kind: d.kind, via });
       }
-      if (pending && d.paid && d.foreign && cents != null && meId) {
+      // A split bill's to-do comes with its pending mark (applyPaid); an own price or a leg on a fare gets it here.
+      if (pending && d.paid && d.foreign && cents != null && meId && !(paid?.mode === "split" && paid.foreign)) {
         await addAction(trip.id, todoTitle("Check what your card was charged for ", title, ` (${foreignLabel(d.foreign.currency, d.foreign.cents)}, about ${dollars(cents)})`), meId, null);
       }
     }
@@ -460,11 +471,35 @@ export default function TripPage() {
   };
 
   /** Logs what was paid on a plan: the one bill (split evenly among who's in), or your own line. */
+  /**
+   * A cost in another currency (C33, Mike's call 11/21): the expense keeps the amount as written and is
+   * an estimate until whoever paid enters what their card charged; that goes on their To do list.
+   * Only when the foreign amount changed, so re-saving doesn't mark a settled cost pending again.
+   */
+  const markForeign = async (
+    expenseId: string | null,
+    foreign: { currency: string; cents: number } | null | undefined,
+    before: ExpenseRow | undefined,
+    title: string,
+    payer: string,
+    usdCents: number,
+  ) => {
+    if (!expenseId) return;
+    if (foreign && before?.currency === foreign.currency && before?.foreign_cents === foreign.cents) return;
+    if (!foreign && !before?.currency) return;
+    await setExpenseFx(expenseId, foreign ?? null);
+    if (foreign) {
+      await addAction(trip.id, todoTitle("Check what your card was charged for ", title, ` (${foreignLabel(foreign.currency, foreign.cents)}, about ${dollars(usdCents)})`), payer, null);
+      track("foreign cost", { currency: foreign.currency });
+    }
+  };
+
   const applyPaid = async (item: Item, paid: PaidNow, from: Item["status"] | "new") => {
     if (paid.mode === "split") {
       const inIds = item.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
       const parts = splitEqually(paid.totalCents, inIds);
       await confirmItem(item.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
+      if (paid.foreign) await markForeign(await expenseIdForItem(item.id), paid.foreign, undefined, item.title, paid.paidBy, paid.totalCents);
       track("plan confirmed", { kind: item.kind, split: "even", people: inIds.length, from_status: from, who_pays: "split" });
       track("plan status changed", { kind: item.kind, from: from === "new" ? "planned" : from, to: "confirmed", who_pays: "split" });
     } else if (paid.mode === "own" && meId) {
@@ -815,6 +850,11 @@ export default function TripPage() {
                   if (!moneyOpen) track("money list opened", { lines: lineCount });
                 } : undefined}
                 onAdd={() => setExpenseTarget({ kind: "general" })}
+                onSettleFx={async (e, cents) => {
+                  await settleFx(e.id, cents);
+                  track("fx settled", { kept: cents == null, currency: e.currency });
+                  await reload();
+                }}
                 onSettle={() => {
                   setSettling(true);
                   track("settle up viewed", { transfers: transfers.length, people: travelers.length });
@@ -1144,6 +1184,9 @@ export default function TripPage() {
         onSubmit={async (target, input) => {
           if (target.kind === "item") {
             await confirmItem(target.item.id, input.total, input.paidBy, input.mode, input.shares);
+            if (input.foreign || target.expense?.currency) {
+              await markForeign(await expenseIdForItem(target.item.id), input.foreign, target.expense, target.item.title, input.paidBy, input.total);
+            }
             track(target.expense ? "plan updated" : "plan confirmed", {
               kind: target.item.kind,
               split: input.mode,
@@ -1155,7 +1198,8 @@ export default function TripPage() {
               track("plan status changed", { kind: target.item.kind, from: target.item.status, to: "confirmed", who_pays: "split" });
             }
           } else {
-            await saveExpense(trip.id, target.expense?.id ?? null, input.description, input.day, input.total, input.paidBy, input.mode, input.shares);
+            const id = await saveExpense(trip.id, target.expense?.id ?? null, input.description, input.day, input.total, input.paidBy, input.mode, input.shares);
+            await markForeign(id ?? target.expense?.id ?? null, input.foreign, target.expense, input.description.trim(), input.paidBy, input.total);
             if (!target.expense) track("expense added", { split: input.mode, people: input.shares.length });
           }
           await reload();
