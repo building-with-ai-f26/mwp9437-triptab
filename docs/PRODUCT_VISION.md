@@ -260,7 +260,7 @@ You see a real gap in the market and would keep TripTab running after the course
 - From the PostHog recordings of that review (read 11/20): in one session a trip wouldn't open. That tab still ran the build from before a deploy, and the new one no longer had its page file. The app now reloads once when that happens (in review 11/20).
 - Also from the recordings: "Add 10 to the trip" on the Describe it review was tapped three times with nothing visible happening. A card needed a fix and said so, out of view up the list. Now a note by the button says what needs fixing, and the card scrolls into view (in review 11/20).
 
-**Raised 11/21** (your import test on triptab.org, Saturday morning; after the freeze)
+**Raised 11/21** (your import test on triptab.org, Saturday morning; building before the security audit)
 
 - An uploaded flight confirmation that matches a half-filled flight already on the trip is flagged as a possible duplicate. Better: merge it in, filling the existing plan from the confirmation (C25).
 - A round-trip booking's one total ($992.39 for two flights) is left blank on both legs. Needs a way to carry it (C26).
@@ -269,6 +269,16 @@ You see a real gap in the market and would keep TripTab running after the course
 - Only one photo can be picked at a time: several screenshots mean several uploads. PostHog shows the first try abandoned after picking one (C29).
 - A screenshot can't be pasted into import; it has to be saved first (C29).
 - From PostHog (read 11/21): two imports, read in 8 and 5 seconds, $0.0027 in all, no errors. Each save was blocked once (the paid amount, then the euro price) and went through on the next tap, with the note by the button. Jonas on Ski School was tapped out and back in, three taps in two seconds; each tap registered.
+
+**Raised 11/21, second test** (forwarding bookings to the trip's address on triptab.org, Saturday midday; logged to build in the next session)
+
+- Two flight confirmations forwarded to the trip's address bounced: "Only people on the trip can send it bookings." They came from an address that isn't on your TripTab account, most likely your personal Gmail; the chalet, forwarded from your Stern alias a minute earlier, arrived. The bounce should name the address it came from and how to fix it, and an account should take more than one forwarding address (C31).
+- The chalet was flagged as a possible duplicate of the Airbnb placeholder instead of filling it in. This test ran on the code before pull request 58, which merges (C30). When a booking fills in a plan with a general name, it should take the booking's name (C34).
+- Where got the listing's headline (Chalet Les Tissourds 4\*, central, hot tub Chamonix), not an address. Better: the street address from the booking or the listing, ideally checked on a map (C32).
+- A link to the listing, so everyone can look at the house; one day, its photos too (C32; photos later).
+- The euro price left the cost blank (old code; pull request 58 converts it, C30). Your simpler idea: a currency next to Cost, the euro amount as written, paid ticked, and an FX pending flag until someone enters the dollar charge when the bill is split, or TripTab converts it (C33).
+- Already paid without the amount still blocked the save (old code; fixed in pull request 58, C30).
+- From production (read 11/21): the chalet email arrived at 12:21, was read and saved; the two refusals came 17 and 30 seconds later.
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
