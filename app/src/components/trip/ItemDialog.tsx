@@ -268,6 +268,7 @@ function ItemForm({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const chain = useRef<Promise<boolean>>(Promise.resolve(true));
   const closed = useRef(false);
+  const adding = useRef<Promise<boolean> | null>(null);
   const warned = useRef(false);
   const dirty = Boolean(it) && snapshot !== savedSnap;
   const valid = problems.length === 0;
@@ -306,6 +307,9 @@ function ItemForm({
 
   const closeFn = async (): Promise<boolean> => {
     if (closed.current || !canEdit) return true;
+    // A new plan already being added (Add to trip, then the X before it closed): wait for that one
+    // rather than adding it again (found 11/21, a second copy of the same plan).
+    if (adding.current) return adding.current;
     if (it ? !dirty : !title.trim()) {
       await chain.current;
       return (closed.current = true);
@@ -319,15 +323,29 @@ function ItemForm({
       return false;
     }
     if (it) return (closed.current = await saveChanges(snapshot, input, savedSnap));
+    return addOnce(false);
+  };
+
+  /** Adds a new plan once, however many taps (Add, Enter, the X) ask for it while it's saving. */
+  const addOnce = (closeAfter: boolean): Promise<boolean> => {
+    if (adding.current) return adding.current;
     setBusy(true);
-    try {
-      await onSave(input, null, paidInput);
-      return (closed.current = true);
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-      return false;
-    }
+    setError(null);
+    adding.current = (async () => {
+      try {
+        await onSave(input, null, paidInput);
+        closed.current = true;
+        if (closeAfter) onClose();
+        return true;
+      } catch (e) {
+        setError((e as Error).message);
+        setBusy(false);
+        return false;
+      } finally {
+        adding.current = null;
+      }
+    })();
+    return adding.current;
   };
   useEffect(() => {
     registerClose(closeFn);
@@ -400,6 +418,10 @@ function ItemForm({
     setTried(true);
     if (costProblems.length) setCostOpen(true);
     if (problems.length) return;
+    if (!it) {
+      await addOnce(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
