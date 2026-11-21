@@ -1,8 +1,8 @@
 /**
  * Also forward from (C31, Mike's call 11/21), checked against TripTab dev: an account adds another
  * address to forward bookings from, confirmed by a code; only its owner reads or removes it, and
- * nobody writes it but the confirm-email function. A forwarded email from that address is refused
- * (naming the address) until the code is in, then taken. The email is sent through inbox-email's
+ * nobody writes it but the confirm-email function. A forwarded email from that address counts as from
+ * someone not on the trip (held for an Owner, C36) until the code is in, then as its owner's. The email is sent through inbox-email's
  * dev-only test path with check_sender, which runs the real sender check, and has nothing to read,
  * so no AI call is made. Test addresses are @example.com, which dev hands the code back for.
  * Run: npm run test:rls (needs app/.env.local).
@@ -97,10 +97,12 @@ describe("who can see and change it", () => {
 });
 
 describe("a booking forwarded from it", () => {
-  it("is refused while the address waits for its code, and the refusal names it", async () => {
+  it("while the address waits for its code, counts as from someone not on the trip (C36), under that address", async () => {
     const r = await call("inbox-email", owner, { to: inbox, raw: forwarded(extra), check_sender: true });
-    expect(r.status).toBe(403);
-    expect(r.body).toEqual({ code: "not_on_trip", from: extra });
+    expect(r.status).toBe(200);
+    expect(r.body.code).toBe("empty");
+    const { data } = await owner.from("inbox_items").select("from_traveler, from_address").eq("trip_id", tripId);
+    expect(data).toEqual([{ from_traveler: null, from_address: extra }]);
   });
 
   it("a wrong code doesn't confirm it; the right one does", async () => {
@@ -116,15 +118,16 @@ describe("a booking forwarded from it", () => {
     const r = await call("inbox-email", owner, { to: inbox, raw: forwarded(extra), check_sender: true });
     expect(r.status).toBe(200);
     expect(r.body.code).toBe("empty");
-    const { data } = await owner.from("inbox_items").select("from_traveler, status").eq("trip_id", tripId);
+    const { data } = await owner.from("inbox_items").select("from_traveler, status").eq("trip_id", tripId).is("from_address", null);
     const { data: me } = await owner.from("travelers").select("id").eq("trip_id", tripId).single();
     expect(data).toEqual([{ from_traveler: me!.id, status: "failed" }]);
   });
 
-  it("is refused again once the address is removed", async () => {
+  it("counts as from someone not on the trip again once the address is removed", async () => {
     const del = await owner.from("forward_addresses").delete().eq("id", rowId).select("id");
     expect(del.data).toHaveLength(1);
-    const r = await call("inbox-email", owner, { to: inbox, raw: forwarded(extra), check_sender: true });
-    expect(r.body).toEqual({ code: "not_on_trip", from: extra });
+    await call("inbox-email", owner, { to: inbox, raw: forwarded(extra), check_sender: true });
+    const { count } = await owner.from("inbox_items").select("id", { count: "exact", head: true }).eq("trip_id", tripId).eq("from_address", extra);
+    expect(count).toBe(2);
   });
 });

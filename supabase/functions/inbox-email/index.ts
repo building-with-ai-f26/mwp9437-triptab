@@ -10,20 +10,26 @@
 // the trip's emails today, the AI key and today's caps. Then one call to the
 // Claude API, the same model, prompt, tool and checks as import-bookings, logged to ai_calls.
 //
+// From someone who isn't on the trip (C36, Mike's call 11/21): not bounced and not read. It's held on
+// the trip, its address shown, until an Owner taps Read it (read_held, below) or That's me (that
+// address counts as theirs from then on), at most MAX_HELD_PER_TRIP_DAY a trip a day. Only what
+// import would read is kept meanwhile (inbox_held, service role only), for HELD_DAYS at most.
+//
 // On TripTab dev only, a signed-in Owner of the trip may post a made-up email instead of the Worker
 // (test_run), so the click-throughs and tests can run without a real mailbox; production never
 // takes that path. With check_sender, that test also runs the real sender check (who it's from,
 // including Also forward from addresses, C31); only the Worker's secret and DMARC are skipped. Anyone signed in may ask whether email-in is ready ({ probe: true }): on
 // production, that's once Mike has set INBOX_SECRET (checked by name, never read out).
 import Anthropic from "npm:@anthropic-ai/sdk@^1.9.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import PostalMime from "npm:postal-mime@2.4.4";
 import {
   capDecision, checkProposals, costUsd, EFFORT, MAX_SEARCHES, MAX_TOKENS, MODEL, nyDayStart, PROPOSE_TOOL, readCap,
   SYSTEM_PROMPT, TIMEOUT_MS, type Usage,
 } from "../import-bookings/rules.ts";
 import {
-  accountEmails, dmarcPassed, importInput, inboxToken, isOnTrip, maskedAddress, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY, sameSecret, senderAddress,
+  accountEmails, dmarcPassed, HELD_DAYS, importInput, inboxToken, isOnTrip, maskedAddress, MAX_EMAIL_BYTES, MAX_EMAILS_PER_TRIP_DAY,
+  MAX_HELD_PER_TRIP_DAY, sameSecret, senderAddress, type ImportInput,
 } from "./rules.ts";
 
 const DEV_PROJECT = "iivseqkvixmvcpldarqy";
@@ -66,7 +72,7 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization") ?? "";
     const { data: who } = await admin.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
     if (!who?.user) return done(401, "not_allowed");
-    let body: { to?: unknown; raw?: unknown; probe?: unknown; check_sender?: unknown };
+    let body: { to?: unknown; raw?: unknown; probe?: unknown; check_sender?: unknown; action?: unknown; item_id?: unknown; mine?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -74,6 +80,8 @@ Deno.serve(async (req) => {
     }
     // Ready: the Worker can hand mail on (production), or the test path is open (dev).
     if (body.probe === true) return json({ ready: secret.length > 0 || dev });
+    // An Owner reads a held email (C36), on production too.
+    if (body.action === "read_held") return await readHeld(admin, who.user, body.item_id, body.mine === true, dev);
     if (!dev) return done(401, "not_allowed");
     if (typeof body.raw !== "string") return done(400, "bad_request");
     raw = new TextEncoder().encode(body.raw).buffer as ArrayBuffer;
@@ -119,14 +127,14 @@ Deno.serve(async (req) => {
     // A dev test stands in for a sender: it has to be an Owner of this trip.
     const me = (people ?? []).find((p) => p.user_id === testUser);
     if (me?.role !== "owner") return done(403, "not_owner");
-  } else if (!match) {
-    return refuse("not_on_trip", sender);
   }
   const standIn = testRun && !checkSender;
-  const fromTraveler = standIn ? ((people ?? []).find((p) => p.user_id === testUser)?.id as string) : match!.id;
+  // Nobody on the trip has this address: held for an Owner, not read (C36).
+  const held = !standIn && !match;
+  const fromTraveler = standIn ? ((people ?? []).find((p) => p.user_id === testUser)?.id as string) : (match?.id ?? null);
   // Its AI call counts toward the sender's own daily imports, or the trip's creator's when they have no account.
-  const { data: trip } = await admin.from("trips").select("name, start_date, end_date, created_by").eq("id", tripId).single();
-  const billedTo = standIn ? testUser! : (match!.user_id ?? (trip?.created_by as string));
+  const { data: trip } = await admin.from("trips").select("created_by").eq("id", tripId).single();
+  const billedTo = standIn ? testUser! : (match?.user_id ?? (trip?.created_by as string));
 
   const { count: todayCount } = await admin
     .from("inbox_items").select("id", { count: "exact", head: true }).eq("trip_id", tripId).gte("received_at", nyDayStart());
@@ -141,16 +149,108 @@ Deno.serve(async (req) => {
   // The subject is kept even when nothing else in the email can be read, so the Owner knows which one it was.
   const subject = mail.subject?.trim() ? mail.subject.trim().slice(0, 200) : null;
   const keep = (row: Record<string, unknown>) =>
-    admin.from("inbox_items").insert({ trip_id: tripId, from_traveler: fromTraveler, subject, ...row });
+    admin.from("inbox_items").insert({ trip_id: tripId, from_traveler: fromTraveler, from_address: held ? sender : null, subject, ...row });
+
+  if (held) {
+    // With no address to show the Owner, there's nothing to hold it under.
+    if (!sender) return refuse("not_on_trip", null);
+    // Held emails past their days go first, so nothing waits longer than HELD_DAYS.
+    await clearOldHeld(admin);
+    const { count: heldToday } = await admin
+      .from("inbox_items").select("id", { count: "exact", head: true }).eq("trip_id", tripId).not("from_address", "is", null).gte("received_at", nyDayStart());
+    if ((heldToday ?? 0) >= MAX_HELD_PER_TRIP_DAY) {
+      console.log(`inbox refused: held_capped, from ${maskedAddress(sender)}`);
+      return json({ code: "held_capped", from: sender }, 429);
+    }
+    if (!input) {
+      await keep({ status: "failed", note: "That email had nothing to read." });
+      return done(200, "empty");
+    }
+    const { data: item, error } = await keep({ status: "held" }).select("id").single();
+    if (error || !item) return done(500, "error");
+    const { error: heldError } = await admin.from("inbox_held").insert({ item_id: item.id, input });
+    if (heldError) {
+      await admin.from("inbox_items").update({ status: "failed", note: "That email couldn't be kept to read." }).eq("id", item.id);
+      return done(500, "error");
+    }
+    console.log(`inbox held: from ${maskedAddress(sender)}`);
+    return done(200, "held");
+  }
+
   if (!input) {
     await keep({ status: "failed", note: "That email had nothing to read." });
     return done(200, "empty");
   }
+  const read = await readEmail(admin, { tripId, input, billedTo, testRun, keep });
+  return done(read.status, read.code);
+});
 
+/** Held emails past HELD_DAYS: what was kept to read goes, and the email says so on the trip. */
+async function clearOldHeld(admin: SupabaseClient) {
+  const before = new Date(Date.now() - HELD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data: old } = await admin.from("inbox_held").delete().lt("created_at", before).select("item_id");
+  if (old?.length) {
+    await admin
+      .from("inbox_items").update({ status: "failed", note: `Not read within ${HELD_DAYS} days, so it was cleared.` })
+      .in("id", old.map((o) => o.item_id)).eq("status", "held");
+  }
+}
+
+/**
+ * An Owner of the trip taps Read it (or That's me, mine) on a held email (C36). The held copy is
+ * taken first, so two taps can't read it twice; That's me adds the address to the tapper's account
+ * as confirmed (it came through Cloudflare's DMARC check, and it only lets that address's forwards
+ * into trips they're on); then the AI reads it, billed to the tapper, as any forward is.
+ */
+async function readHeld(
+  admin: SupabaseClient,
+  user: { id: string; email?: string | null; identities?: { identity_data?: { email?: unknown } | null }[] | null },
+  itemId: unknown,
+  mine: boolean,
+  dev: boolean,
+): Promise<Response> {
+  const id = String(itemId ?? "");
+  if (!/^[0-9a-f-]{36}$/.test(id)) return done(400, "bad_request");
+  const { data: item } = await admin.from("inbox_items").select("id, trip_id, status, from_address").eq("id", id).maybeSingle();
+  if (!item) return done(404, "not_found");
+  const { data: me } = await admin.from("travelers").select("id, role").eq("trip_id", item.trip_id).eq("user_id", user.id).maybeSingle();
+  if (me?.role !== "owner") return done(403, "not_owner");
+  if (item.status !== "held") return done(409, "not_held");
+  const { data: taken } = await admin.from("inbox_held").delete().eq("item_id", id).select("input");
+  if (!taken?.length) return done(409, "not_held");
+  const input = taken[0].input as ImportInput;
+  const address = String(item.from_address ?? "");
+  if (mine && address && !accountEmails(user).includes(address)) {
+    await admin
+      .from("forward_addresses")
+      .upsert({ user_id: user.id, email: address, confirmed_at: new Date().toISOString(), code_hash: null, tries: 0 }, { onConflict: "user_id,email" });
+  }
+  const read = await readEmail(admin, {
+    tripId: item.trip_id as string,
+    input,
+    billedTo: user.id,
+    testRun: dev,
+    keep: (row) => admin.from("inbox_items").update({ ...row, ...(mine ? { from_traveler: me.id } : {}) }).eq("id", id),
+  });
+  return done(read.status, read.code);
+}
+
+
+/**
+ * Reads one email with AI import and keeps what it found: the same model, prompt, tool, checks,
+ * caps and cost log for a forward from someone on the trip and for an Owner's Read it on a held one
+ * (C36). `keep` writes the result onto the email's inbox item.
+ */
+async function readEmail(
+  admin: SupabaseClient,
+  o: { tripId: string; input: ImportInput; billedTo: string; testRun: boolean; keep: (row: Record<string, unknown>) => PromiseLike<unknown> },
+): Promise<{ status: number; code: string }> {
+  const { tripId, input, billedTo, testRun, keep } = o;
+  const { data: trip } = await admin.from("trips").select("name, start_date, end_date").eq("id", tripId).single();
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
   if (!apiKey) {
     await keep({ status: "failed", note: "AI import isn't set up yet." });
-    return done(200, "not_set_up");
+    return { status: 200, code: "not_set_up" };
   }
   const cap = readCap(Deno.env.get("AI_DAILY_CAP_USD"));
   const inputKind = input.file ? (input.file.media_type === "application/pdf" ? "pdf" : "image") : "text";
@@ -163,14 +263,14 @@ Deno.serve(async (req) => {
     }).select("id").single();
 
   const { data: today, error: capError } = await admin.from("ai_calls").select("cost_usd, user_id, result").gte("created_at", nyDayStart());
-  if (capError) return done(500, "error");
+  if (capError) return { status: 500, code: "error" };
   const spent = (today ?? []).reduce((s, r) => s + Number(r.cost_usd), 0);
   const mine = (today ?? []).filter((r) => r.user_id === billedTo && REAL.includes(r.result)).length;
   const blocked = capDecision(cap, spent, mine);
   if (blocked) {
     await log(blocked.code, null, null, null);
     await keep({ status: "failed", note: blocked.message });
-    return done(200, blocked.code);
+    return { status: 200, code: blocked.code };
   }
 
   const { data: stops } = await admin.from("stops").select("name, start_date, end_date").eq("trip_id", tripId).order("position");
@@ -230,21 +330,21 @@ Deno.serve(async (req) => {
     await log(timedOut ? "timeout" : "error", usage, Date.now() - started, null);
     await keep({ status: "failed", note: timedOut ? "Reading that email took too long." : "The AI couldn't read that email." });
     console.error("inbox import error", error instanceof Error ? error.name : "unknown");
-    return done(200, "error");
+    return { status: 200, code: "error" };
   }
 
   const ms = Date.now() - started;
   if (refused) {
     await log("refused", usage, ms, null);
     await keep({ status: "failed", note: "The AI declined to read that email." });
-    return done(200, "refused");
+    return { status: 200, code: "refused" };
   }
   const checked = proposed === undefined ? null : checkProposals(proposed, searchUrls, input.file ? "" : input.text);
   const { data: call } = await log(checked?.plans.length ? "ok" : proposed === undefined ? "no_plans" : checked ? "no_plans" : "invalid_output", usage, ms, checked?.plans.length ?? 0);
   if (!checked || checked.plans.length === 0) {
     await keep({ status: "failed", note: "No plans found in that email.", call_id: call?.id ?? null });
-    return done(200, "no_plans");
+    return { status: 200, code: "no_plans" };
   }
   await keep({ status: "new", plans: checked.plans, note: checked.note?.slice(0, 500) ?? null, call_id: call?.id ?? null });
-  return done(200, "ok");
-});
+  return { status: 200, code: "ok" };
+}

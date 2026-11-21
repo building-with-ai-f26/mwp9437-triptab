@@ -11,22 +11,37 @@ const whenIn = (iso: string) =>
 /**
  * Emails forwarded to the trip's address that wait for an Owner (email-in, Mike's call 11/20): each
  * one's plans open on import's review, and nothing is on the trip until they're saved there. An email
- * that couldn't be read says why and can be dismissed.
+ * that couldn't be read says why and can be dismissed. One from an address nobody on the trip has is
+ * held unread (C36, Mike's call 11/21) until an Owner taps Read it, or That's me to trust the address.
  */
 export function InboxBanner({
   items,
   travelers,
   onReview,
   onDismiss,
+  onReadHeld,
 }: {
   items: InboxItem[];
   travelers: Traveler[];
   onReview: (item: InboxItem) => void;
   onDismiss: (item: InboxItem) => Promise<void>;
+  onReadHeld: (item: InboxItem, mine: boolean) => Promise<void>;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   if (items.length === 0) return null;
-  const waiting = items.filter((i) => i.status === "new").length;
+  const waiting = items.filter((i) => i.status === "new" || i.status === "held").length;
+  const act = async (id: string, fn: () => Promise<void>) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await fn();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <section aria-labelledby="inbox-title" data-testid="inbox" className="glass-card-solid mb-4 rounded-2xl px-4 py-3 text-sm">
       <h3 id="inbox-title" className="flex items-center gap-2 font-display font-semibold text-foreground">
@@ -39,33 +54,42 @@ export function InboxBanner({
       </h3>
       <ul className="mt-2 divide-y divide-foreground/10">
         {items.map((it) => {
-          const who = travelers.find((t) => t.id === it.from_traveler)?.name ?? "Someone on the trip";
+          const who = travelers.find((t) => t.id === it.from_traveler)?.name ?? it.from_address ?? "Someone on the trip";
           const count = it.plans.length;
+          const isHeld = it.status === "held";
           return (
-            <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2" data-testid="inbox-item">
+            <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2" data-testid="inbox-item" data-status={it.status}>
               <div className="min-w-0 flex-1 basis-48">
                 <p className="break-words font-medium text-foreground">{it.subject ?? "An email"}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="break-words text-xs text-muted-foreground">
                   From {who}, {whenIn(it.received_at)}.{" "}
-                  {it.status === "failed" ? (it.note ?? "Nothing in it could be read.") : `${count} ${count === 1 ? "plan" : "plans"} to review.`}
+                  {isHeld
+                    ? "That address isn't on this trip, so it hasn't been read. Read it if it's a booking for the trip."
+                    : it.status === "failed"
+                      ? (it.note ?? "Nothing in it could be read.")
+                      : `${count} ${count === 1 ? "plan" : "plans"} to review.`}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy === it.id}
-                  onClick={async () => {
-                    setBusy(it.id);
-                    try {
-                      await onDismiss(it);
-                    } finally {
-                      setBusy(null);
-                    }
-                  }}
-                >
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button size="sm" variant="ghost" disabled={busy === it.id} onClick={() => act(it.id, () => onDismiss(it))}>
                   Dismiss
                 </Button>
+                {isHeld && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="glass"
+                      disabled={busy === it.id}
+                      title={`Count ${it.from_address ?? "this address"} as yours, and read this email`}
+                      onClick={() => act(it.id, () => onReadHeld(it, true))}
+                    >
+                      That's me
+                    </Button>
+                    <Button size="sm" disabled={busy === it.id} onClick={() => act(it.id, () => onReadHeld(it, false))}>
+                      {busy === it.id ? "Reading..." : "Read it"}
+                    </Button>
+                  </>
+                )}
                 {it.status === "new" && (
                   <Button size="sm" onClick={() => onReview(it)}>
                     Review
@@ -76,6 +100,11 @@ export function InboxBanner({
           );
         })}
       </ul>
+      {error && (
+        <p role="alert" className="mt-2 rounded-xl bg-destructive/10 px-3 py-2 text-destructive">
+          {error}
+        </p>
+      )}
     </section>
   );
 }
@@ -122,8 +151,8 @@ export function ForwardAddress({
         <Mail className="size-4 shrink-0" /> Or forward it to this trip
       </p>
       <p className="mt-1 text-xs text-white/70">
-        Send booking emails here from the email you use for TripTab, or one you've added under Also forward from on My trips. They
-        show up on the trip for an Owner to review, and nothing is saved until then.
+        Send booking emails here. From the email you use for TripTab (or one under Also forward from on My trips) they're read right
+        away; from any other address, they wait for an Owner to read them. Nothing is saved until an Owner reviews it.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <code className="min-w-0 break-all rounded-lg bg-black/25 px-2 py-1 text-[13px] text-white" data-testid="forward-address-text">

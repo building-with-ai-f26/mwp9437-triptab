@@ -116,6 +116,7 @@ export type EventName =
   | "inbox review opened"
   | "inbox reviewed"
   | "inbox dismissed"
+  | "inbox held read"
   | "trip described"
   | "described plans reviewed"
   | "described questions parked"

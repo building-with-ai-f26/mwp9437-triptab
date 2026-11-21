@@ -54,6 +54,7 @@ import {
   setPayFor,
   inboxReady,
   markInbox,
+  readHeldEmail,
   resetTripInbox,
   tripInboxAddress,
   type PaymentDraft,
@@ -733,6 +734,11 @@ export default function TripPage() {
                   onDismiss={async (item) => {
                     await markInbox(item.id, "dismissed");
                     track("inbox dismissed", { status: item.status });
+                    await reload();
+                  }}
+                  onReadHeld={async (item, mine) => {
+                    await readHeldEmail(item.id, mine);
+                    track("inbox held read", { mine });
                     await reload();
                   }}
                 />
