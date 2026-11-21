@@ -30,6 +30,8 @@ import {
   type Trip,
 } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
+import { foreignLabel, toUsdCents } from "../../lib/rates";
+import { CurrencySelect, useUsdRate } from "./Currency";
 import type { ItemInput } from "../../lib/api";
 import { whenText } from "../../lib/timeline";
 import { PlaceInput } from "../PlaceInput";
@@ -50,7 +52,13 @@ const KINDS: ItemKind[] = ["activity", "meal", "transport", "flight", "stay"];
  * evenly among who's in), or your own line on an "everyone pays their own" plan.
  */
 export type PaidNow =
-  | { mode: "split"; totalCents: number; paidBy: string }
+  | {
+      mode: "split";
+      totalCents: number;
+      paidBy: string;
+      /** Typed in another currency (C33): the amount as written; totalCents is dollars at the day's rate. */
+      foreign?: { currency: string; cents: number } | null;
+    }
   | { mode: "own"; cents: number; withPoints: boolean }
   // Paid, the amount not to hand: Confirmed now, and adding it goes on your To do list (C27).
   | { mode: "later" };
@@ -186,6 +194,12 @@ function ItemForm({
   const [payPicked, setPayPicked] = useState(false);
   const [paid, setPaid] = useState(false);
   const [paidAmount, setPaidAmount] = useState("");
+  // A cost typed in another currency (C33, Mike's call 11/21): new plans only; an existing plan's
+  // real cost goes in through Confirm, which has its own.
+  const [paidCurrency, setPaidCurrency] = useState("USD");
+  const [estCurrency, setEstCurrency] = useState("USD");
+  const paidRate = useUsdRate(paidCurrency);
+  const estRate = useUsdRate(estCurrency);
   const [paidBy, setPaidBy] = useState(meId ?? travelers[0]?.id ?? "");
   const [points, setPoints] = useState(false);
   // Cost starts folded, so a plan with no cost (skiing on a season pass) doesn't face five
@@ -206,7 +220,10 @@ function ItemForm({
   const dayLabel = (d: string) => (d < trip.start_date || d > trip.end_date ? `${longDay(d)} (adds it to the trip)` : longDay(d));
   const checkoutDays = tripDays(addDays(day, 1), addDays(tripNow.end_date, 1));
   const typed = estimate.trim() === "" ? null : parseDollars(estimate);
-  const estCents = typed == null || Number.isNaN(typed) ? null : toCents(typed);
+  const typedEst = typed == null || Number.isNaN(typed) ? null : toCents(typed);
+  // An estimate in another currency is kept in dollars at today's rate, the amount as written in its notes.
+  const estForeign = !it && estCurrency !== "USD" && typedEst != null ? { currency: estCurrency, cents: typedEst } : null;
+  const estCents = estForeign ? (estRate ? toUsdCents(estForeign.cents, estRate.rate) : null) : typedEst;
   const isStay = kind === "stay";
   const travel = kind === "flight" || kind === "transport";
   const flight = kind === "flight";
@@ -220,13 +237,16 @@ function ItemForm({
   const amountLater = paidNow && paidAmount.trim() === "" && !(payMode === "own" && points);
   const paidTyped = paidAmount.trim() === "" ? 0 : parseDollars(paidAmount);
   const paidBad = !amountLater && (Number.isNaN(paidTyped) || paidTyped < 0);
-  const paidInput: PaidNow | undefined = !paidNow || paidBad
+  const paidForeign = paidNow && !amountLater && !paidBad && payMode === "split" && paidCurrency !== "USD" ? { currency: paidCurrency, cents: toCents(paidTyped) } : null;
+  const paidInput: PaidNow | undefined = !paidNow || paidBad || (paidForeign && !paidRate)
     ? undefined
     : amountLater
       ? { mode: "later" }
       : payMode === "own"
         ? { mode: "own", cents: toCents(paidTyped), withPoints: points }
-        : { mode: "split", totalCents: toCents(paidTyped), paidBy };
+        : paidForeign && paidRate
+          ? { mode: "split", totalCents: toUsdCents(paidForeign.cents, paidRate.rate), paidBy, foreign: paidForeign }
+          : { mode: "split", totalCents: toCents(paidTyped), paidBy };
 
   const linked = cleanLink(link);
   const input: ItemInput = {
@@ -240,7 +260,15 @@ function ItemForm({
     end_time: !isStay && endTime ? endTime : null,
     location: location.trim() || null,
     link: linked.value,
-    notes: notes.trim() || null,
+    notes:
+      [
+        notes.trim(),
+        estForeign && estRate && estCents != null && !paidNow
+          ? `Priced ${foreignLabel(estForeign.currency, estForeign.cents)}: about ${dollars(estCents)} at ${estRate.rate} (European Central Bank, ${estRate.date}).`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n") || null,
     status: paidNow ? (amountLater ? "confirmed" : "planned") : status,
     est_cents: paidNow ? null : estCents,
     cost_type: isStay ? "total" : costType,
@@ -249,6 +277,10 @@ function ItemForm({
   const costProblems = [
     ...(!paidNow && typed != null && Number.isNaN(typed) ? ["Type the estimate as a number, like 45 or $45."] : []),
     ...(paidNow && paidBad ? ["Enter what it cost, like 120 or $120."] : []),
+    ...(paidForeign && paidRate === null ? [`Couldn't get today's rate for ${paidCurrency}. Type what it cost in USD for now.`] : []),
+    ...(paidForeign && paidRate === undefined ? ["Looking up today's rate..."] : []),
+    ...(!paidNow && estForeign && estRate === null ? [`Couldn't get today's rate for ${estCurrency}. Type the estimate in USD for now.`] : []),
+    ...(!paidNow && estForeign && estRate === undefined ? ["Looking up today's rate..."] : []),
     ...(paidNow && !amountLater && payMode === "split" && !paidBy ? ["Pick who paid."] : []),
   ];
   const problems = [...validateItem(input, tripNow), ...(linked.problem ? [linked.problem] : []), ...costProblems];
@@ -810,13 +842,22 @@ function ItemForm({
           {paidNow && (
             <div className="mb-3 rounded-2xl bg-white/5 p-3">
               <DarkField label={payMode === "own" ? (points ? "Cash value or fees (optional)" : "What you paid") : isStay ? "What it cost in total" : "What it cost"}>
-                <input
-                  className="field-dark"
-                  inputMode="decimal"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  placeholder="$"
-                />
+                <span className="flex gap-2">
+                  <input
+                    className="field-dark min-w-0 flex-1"
+                    inputMode="decimal"
+                    value={paidAmount}
+                    onChange={(e) => setPaidAmount(e.target.value)}
+                    placeholder={payMode === "split" && paidCurrency !== "USD" ? paidCurrency : "$"}
+                  />
+                  {payMode === "split" && <CurrencySelect value={paidCurrency} onChange={setPaidCurrency} />}
+                </span>
+                {paidForeign && paidRate && paidInput?.mode === "split" && (
+                  <span className="mt-1 block text-xs text-white/70" data-testid="fx-about">
+                    {foreignLabel(paidForeign.currency, paidForeign.cents)} is about {dollars(paidInput.totalCents)} at today's rate ({paidRate.rate} from
+                    the European Central Bank). It's split in dollars as an estimate until whoever paid enters what their card charged.
+                  </span>
+                )}
                 {amountLater && (
                   <span className="mt-1 block text-xs text-white/60" data-testid="amount-later">
                     Don't have it to hand? Leave it empty: it saves as Confirmed, and adding what you paid goes on your To do list.
@@ -856,13 +897,21 @@ function ItemForm({
           )}
           <div className={`grid grid-cols-[1fr_auto] items-end gap-2 ${paidNow ? "hidden" : ""}`}>
             <DarkField label={isStay ? "Estimated total" : "Estimated cost"}>
-              <input
-                className="field-dark"
-                inputMode="decimal"
-                value={estimate}
-                onChange={(e) => setEstimate(e.target.value)}
-                placeholder="$"
-              />
+              <span className="flex gap-2">
+                <input
+                  className="field-dark min-w-0 flex-1"
+                  inputMode="decimal"
+                  value={estimate}
+                  onChange={(e) => setEstimate(e.target.value)}
+                  placeholder={estCurrency !== "USD" ? estCurrency : "$"}
+                />
+                {!it && <CurrencySelect value={estCurrency} onChange={setEstCurrency} label="Estimate currency" />}
+              </span>
+              {estForeign && estRate && estCents != null && (
+                <span className="mt-1 block text-xs text-white/70" data-testid="fx-est-about">
+                  About {dollars(estCents)} at today's rate; the {estForeign.currency} amount goes in the notes.
+                </span>
+              )}
             </DarkField>
             {!isStay && (
               <div className="mb-3">

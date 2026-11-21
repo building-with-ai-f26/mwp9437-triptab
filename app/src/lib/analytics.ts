@@ -110,6 +110,8 @@ export type EventName =
   | "plan merged"
   | "forward address code sent"
   | "forward address confirmed"
+  | "foreign cost"
+  | "fx settled"
   | "cost to come"
   | "inbox review opened"
   | "inbox reviewed"

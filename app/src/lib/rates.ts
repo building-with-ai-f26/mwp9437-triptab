@@ -40,5 +40,11 @@ export const toUsdCents = (cents: number, rate: number): number => Math.round(ce
 export const foreignLabel = (currency: string, cents: number): string =>
   `${currency} ${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/**
+ * The currencies offered next to a cost typed by hand (C33): the ones a group trip from the US most
+ * often meets. Each is one the European Central Bank (and so Frankfurter) publishes a rate for.
+ */
+export const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "CAD", "MXN", "JPY", "AUD", "SEK", "NOK", "DKK"] as const;
+
 /** Forgets every rate (for tests). */
 export const clearRates = () => cache.clear();
