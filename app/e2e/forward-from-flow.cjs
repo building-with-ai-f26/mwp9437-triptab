@@ -23,12 +23,17 @@ async function run(browser, label, opts, result) {
   r.sentNote = (await box.getByTestId('forward-note').innerText()).trim();
 
   // A wrong code is refused and says so; the right one works.
+  const seen = h.errors.length;
   await box.getByLabel(`Code for ${extra}`).fill(String((Number(code) + 1) % 1000000).padStart(6, '0'));
   await box.getByRole('button', { name: 'Confirm' }).click();
   r.wrong = (await box.getByRole('alert').innerText()).trim();
+  // The wrong code is refused with a 400 on purpose, which the browser logs; set aside only that.
+  const extraErrors = h.errors.splice(seen);
+  r.unexpected = extraErrors.filter((e) => !/status of 400 \(Bad Request\)/.test(e));
+  h.errors.push(...r.unexpected);
   await box.getByLabel(`Code for ${extra}`).fill(code);
   await box.getByRole('button', { name: 'Confirm' }).click();
-  await box.getByText('Works').waitFor();
+  await box.getByText('Works', { exact: true }).waitFor();
   r.works = (await box.getByTestId('forward-item').innerText()).replace(/\s+/g, ' ').trim();
   r.overflow = await h.overflowX(p);
   await h.shot(p, `forward-from-${label}`);
