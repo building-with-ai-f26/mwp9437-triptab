@@ -7,8 +7,8 @@ and nothing here is estimated or made up.
 **In one paragraph.** A second account is refused everything on someone else's trip, in the app and
 straight at the database, on the live site. No secret key is in the site's code, the repository or
 its history. `npm audit` is at 0. The audit ran 16 attacks and two code reviews; they found 13
-things worth fixing, four of them serious, and all 13 are fixed. Eight smaller things are left,
-each listed at the end with why.
+things worth fixing, four of them serious. Twelve are fixed and one is fixed in part (finding G).
+Eight things are left, each listed at the end with why.
 
 ## 1. What kind of app this is
 
