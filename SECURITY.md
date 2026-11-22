@@ -7,8 +7,8 @@ and nothing here is estimated or made up.
 **In one paragraph.** A second account is refused everything on someone else's trip, in the app and
 straight at the database, on the live site. No secret key is in the site's code, the repository or
 its history. `npm audit` is at 0. The audit ran 16 attacks and two code reviews; they found 13
-things worth fixing, four of them serious. Twelve are fixed and one is fixed in part (finding G).
-Eight things are left, each listed at the end with why.
+things worth fixing, four of them serious, and all 13 are fixed and live. Seven things are left,
+each listed at the end with why.
 
 ## 1. What kind of app this is
 
@@ -34,19 +34,21 @@ Eight things are left, each listed at the end with why.
 
 The test for an app with sign-in: Account B signs up on the live site and tries Account A's trip.
 
-- **Run:** `app/e2e/rls-proof.cjs`, on https://triptab.org against production, 11/19. Two labeled
-  test accounts on Resend's test inboxes, deleted right after (the one exception to "no test
-  accounts on production").
-- **Result: 47 of 47 checks as they should be.** B opening A's trip in the app sees "This trip isn't
+- **Run:** `app/e2e/rls-proof.cjs`, on https://triptab.org against production, on 11/22, after this
+  audit's fixes went live (and before them on 11/19, 47 of 47). Two labeled test accounts on
+  Resend's test inboxes, deleted right after (the one exception to "no test accounts on
+  production").
+- **Result: 57 of 57 checks as they should be.** B opening A's trip in the app sees "This trip isn't
   here", at 1280 and 390 wide. Straight at the database's API with B's own sign-in: every read of
-  the trip comes back empty, every write is refused, all 12 functions that run with raised rights
-  turn B away, and A's trip is unchanged afterwards. Signed out, with only the public key: refused.
+  the trip comes back empty, all 18 tables listed whole show nothing of anyone else's, every write
+  is refused, all 18 functions tried turn B away (the two holes this audit found among them), and
+  A's trip is unchanged afterwards. Signed out, with only the public key: refused.
 - **Screenshots:** [`docs/screenshots/rls-refused-api.png`](./docs/screenshots/rls-refused-api.png)
   (every request and its answer), [`rls-refused-app-desktop.jpg`](./docs/screenshots/rls-refused-app-desktop.jpg)
-  and [`rls-refused-app-phone.jpg`](./docs/screenshots/rls-refused-app-phone.jpg).
-- **Since then:** the test grew to cover the four tables and six functions added after 11/19 and
-  the two holes this audit found (57 checks). The same attacks also run on every pull request as
-  194 live database tests against TripTab dev (`npm run test:rls`).
+  and [`rls-refused-app-phone.jpg`](./docs/screenshots/rls-refused-app-phone.jpg). Full output:
+  [`journal/security/2026-11-22-rls-proof-production.json`](./journal/security/2026-11-22-rls-proof-production.json).
+- **Every pull request too:** the same attacks run as 194 live database tests against TripTab dev
+  (`npm run test:rls`).
 
 ## 3. What was checked
 
@@ -77,10 +79,10 @@ accounts in the state finding D needs.
 | **A** | **A Viewer could rewrite the split of an expense on a trip where they may only look.** `save_expense` checked the caller was an Owner of the trip named in the call, but not that the expense belonged to that trip. Calling it from a trip of your own, with another trip's expense id, wiped that expense's shares and wrote yours. Shown on TripTab dev. | High | 11/22. The expense is checked against the trip before anything is written (migration `20261122080000`). A live test fails before the fix and passes after (`app/src/audit.live.test.ts`). |
 | **B** | **The AI spending caps stopped counting after 1,000 calls in a day.** The functions fetched the day's cost log and added it up themselves, and the database's API returns 1,000 rows at most. A refused call is logged too, so one account sending refused calls could fill the day, after which nobody's calls or dollars were counted until midnight. The monthly limit at the AI provider would still have held. | High | 11/22. The sum happens in the database (`ai_spend_today`, callable only by the server). |
 | **C** | **A to-do with no one assigned could be ticked off by anyone signed in**, on any trip, given its id (a NULL comparison that skipped the refusal). | Medium | 11/19 (migration `20261119154505`), with a live test. |
-| **D** | **An account could be made with someone else's email, and kept.** Sign-up lets a new account in at once, so it marked the email confirmed for Supabase before anyone proved the address. Supabase links a Google sign-in to an account with the same email and drops that account's password only when the email is unconfirmed. So someone could sign up with another person's Gmail address and their own password, wait for that person to tap Continue with Google, and still get in. Found by reading the code against Supabase's documented rule; it takes a real Google account to run end to end. | High | 11/22. When a sign-in provider that vouches for the same address is linked to an account TripTab is still waiting to confirm, the password, other sign-in methods and earlier sessions go (migration `20261122080100`). |
+| **D** | **An account could be made with someone else's email, and kept.** Sign-up lets a new account in at once, so it marked the email confirmed for Supabase before anyone proved the address. Supabase links a Google sign-in to an account with the same email and drops that account's password only when the email is unconfirmed. So someone could sign up with another person's Gmail address and their own password, wait for that person to tap Continue with Google, and still get in. Found by reading the code against Supabase's documented rule; it takes a real Google account to run end to end. | High | 11/22. When a sign-in provider that vouches for the same address is linked to an account TripTab is still waiting to confirm, the password, other sign-in methods and earlier sessions go (migration `20261122080100`). Checked on TripTab dev by writing a Google-shaped sign-in to three test accounts: only the one it should touch changed. |
 | **E** | **Group link tokens were going to PostHog** in page addresses and replays. A group link is a key to its trip. | High | 11/19. Addresses carry `/join/[link]`; the link's elements are left out of replays; every link was replaced (migration `20261119162226`), so the 66 tokens PostHog held stopped working. |
 | **F** | **PostHog was getting more than the privacy page said:** one-time sign-in codes in page addresses (8 events), Venmo links with a payee's name and amount (3 click events), and any email or phone number shown on a screen that a replay recorded. | Medium | 11/22. One-time codes and typed names are taken out of addresses; the feature-flag request, which carried the first address a visitor landed on, asks for no flags and carries none; clicks record an element's text and tag, never its attributes; emails and phone numbers are removed from replays and click text. Checked by catching what the app sends in a browser. The privacy page says so. |
-| **G** | **Sign-ins from before the move sit in storage shared with other sites.** Until 11/18 the app ran on GitHub Pages, where every project page on the same GitHub account shares one browser storage. Four sign-ins by three people made there are still valid. | Medium | 11/22, in part. The old address now clears those tokens before it forwards to triptab.org. Ending the four sign-ins on the server is listed in section 8. |
+| **G** | **Sign-ins from before the move sit in storage shared with other sites.** Until 11/18 the app ran on GitHub Pages, where every project page on the same GitHub account shares one browser storage. Four sign-ins by three people made there are still valid. | Medium | 11/22. The old address clears those tokens before it forwards to triptab.org, and the four sign-ins were ended on the server (migration `20261122100000`); those three people sign in again once. |
 | **H** | **On TripTab dev, an email's button could be pointed at someone else's site.** Dev links back to the Preview that asked, and the rule matched a Preview-style name on any Cloudflare account, not only TripTab's. Production always links to triptab.org and was never affected. | Medium | 11/22. Only TripTab's own account is accepted. |
 | **I** | **triptab.org sent no security headers**, so any site could show it in a frame, and nothing told browsers to stay on HTTPS. | Low | 11/22. `app/public/_headers`: no framing (PostHog's heatmap viewer excepted), HTTPS for a year, no page address in the Referer, files read as their declared type, no camera, microphone or location. |
 | **J** | **Who suggested a plan could be forged.** An Owner could add a plan or to-do marked as created by another account. | Low | 11/22. A signed-in insert always carries the caller. |
@@ -174,30 +176,28 @@ Every AI call is logged with its tokens and list-price cost. The text sent is ne
 
 Known and not fixed, most important first.
 
-1. **Ending the four old sign-ins (finding G).** The old address now clears its tokens when someone
-   returns to it, but a token in a browser that never returns stays valid until that person signs
-   out. Ending them on the server signs three people out once; it deletes rows, so it waits for
-   Mike's OK.
-2. **No manual backup of production yet.** Supabase's free plan keeps none. A full dump needs the
+1. **No manual backup of production yet.** Supabase's free plan keeps none. A full dump needs the
    database password, and the file holds people's emails, so it belongs on Mike's laptop and not in
    this public repository. It is a step on the runbook.
-3. **Finding D's fix has not been run with a real Google account.** The database check is simulated
-   (an insert shaped like Google's); the real check is three taps on a Preview and is on the runbook.
-4. **Limits are checked, then counted, in two steps.** Requests sent at the same instant can each
+2. **Finding D's fix has not been run with a real Google account.** The database side is checked
+   (a Google-shaped sign-in written to test accounts on TripTab dev). The end-to-end check is a few
+   taps on a Preview with a Gmail address, and is on the runbook. The fix can't block a sign-in
+   either way: on any error it logs a warning and lets the sign-in through.
+3. **Limits are checked, then counted, in two steps.** Requests sent at the same instant can each
    pass a limit before any of them is counted, so a burst can overshoot the AI caps or the email
    limits by the size of the burst. The monthly AI limit and the email provider's daily limit are
    the hard stops. The fix is to reserve before calling, in one database step.
-5. **Signed-in people can write as fast as the database lets them.** A trip, a plan and a to-do each
+4. **Signed-in people can write as fast as the database lets them.** A trip, a plan and a to-do each
    have size limits, but nothing limits how many of them one account makes (1,100 to-dos went in
    with one request during this audit). On the free plan the worst case is a full database, not a
    bill.
-6. **Supabase's own sign-up, magic-link and password-reset endpoints send email outside TripTab's
+5. **Supabase's own sign-up, magic-link and password-reset endpoints send email outside TripTab's
    limits** (attack 12). They can't make a usable account, but they can use up the day's 100 emails.
    Supabase's email rate limit is a dashboard setting to lower.
-7. **Anyone holding a group link joins as an Owner by default** (Mike's 11/16 call: friends plan
+6. **Anyone holding a group link joins as an Owner by default** (Mike's 11/16 call: friends plan
    together). An Owner can delete the trip and set the pay details of someone who hasn't saved their
    own. An Owner can switch the link's role to Viewer, replace the link, or turn it off.
-8. **Smaller ones.** Sign-up says whether an email already has an account. A password-reset link
+7. **Smaller ones.** Sign-up says whether an email already has an account. A password-reset link
    signs the browser in as the link's account without asking first. The site's
    Content-Security-Policy doesn't yet list which scripts and hosts are allowed. The email check
    trusts Cloudflare's verdict header as the first of its kind, and a message with two From lines

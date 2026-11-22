@@ -65,6 +65,9 @@ Raw output for 7 to 16: `2026-11-22-attacks.txt`.
   account's own address and TripTab's check is still pending; then the password, other sign-in
   methods, earlier sessions and forwarding addresses go, which is what Supabase does itself for an
   unconfirmed email. It never blocks a sign-in: on any error it logs a warning and lets it through.
+  Checked on TripTab dev (11/22) with a statement that undid itself: a Google-shaped sign-in written
+  to three test accounts took the password, the session and a forwarding address from the one
+  account it should, and left a different Google address and an already confirmed account alone.
 
 - **Forged `created_by` (attack 10).** Fix: a trigger on `items` and `action_items` sets it to the
   caller on every signed-in insert. Same migration; live test in `audit.live.test.ts`.
@@ -82,7 +85,8 @@ Raw output for 7 to 16: `2026-11-22-attacks.txt`.
 
 - **The old address and the headers (attack 16).** `docs/app/index.html` removes Supabase's sign-in
   tokens from that address's storage before forwarding. `app/public/_headers` adds the headers.
-  Ending the old sign-ins on the server waits for Mike's OK.
+  The four old sign-ins were ended on the server with Mike's C39 OK (11/22): migration
+  `20261122100000_end_old_address_sessions.sql`.
 
 - **From the two code reviews, 11/22.** Email links on TripTab dev accepted a Preview-style name on
   any Cloudflare account (`pickAppUrl`, both copies): now this account only. Guesses at a forwarding
@@ -143,3 +147,16 @@ Raw output for 7 to 16: `2026-11-22-attacks.txt`.
     Owners can change nothing but the status, to saved or dismissed (tested).
   - The dev-only test path (a signed-in Owner posts a made-up email) checks the project it runs on
     and is closed on production.
+
+## After the fixes went live (11/22)
+
+Pull request 67 merged with Mike's C38 OK and deployed at 16:14 UTC. On production, read only:
+both migrations applied, `ai_spend_today` in place and closed to signed-in callers, the trigger on
+`auth.identities` in place, 0 tables a signed-in person may empty. triptab.org serves the new build
+with the five headers.
+
+The second-account test then ran on triptab.org against production: **57 of 57**
+(`2026-11-22-rls-proof-production.json`, `docs/screenshots/rls-refused-api.png`). Its two labeled
+accounts, `delivered+triptab-rls-dq0pk-a@resend.dev` and `delivered+triptab-rls-dq0pk-b@resend.dev`,
+are for Mike to delete in the Supabase dashboard (production is read-only for the agent).
+
