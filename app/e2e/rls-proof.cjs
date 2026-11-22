@@ -123,7 +123,7 @@ function probe(page, req) {
     check(`B reads ${name}`, r.status === 200 && Array.isArray(r.body) && r.body.length === 0, said(r));
   }
   // Every table, unfiltered: B, on no trip, sees none of anyone else's rows.
-  const tables = ['trips', 'stops', 'travelers', 'items', 'item_people', 'trip_links', 'expenses', 'expense_shares', 'payments', 'action_items', 'ai_calls', 'invite_emails', 'account_events', 'email_checks'];
+  const tables = ['trips', 'stops', 'travelers', 'items', 'item_people', 'trip_links', 'expenses', 'expense_shares', 'payments', 'action_items', 'ai_calls', 'invite_emails', 'account_events', 'email_checks', 'inbox_items', 'forward_addresses', 'trip_inboxes', 'inbox_held'];
   for (const table of tables) {
     const r = await probe(b, { path: `/rest/v1/${table}?select=*&limit=50`, token: t });
     const rows = Array.isArray(r.body) ? r.body : [];
@@ -153,15 +153,23 @@ function probe(page, req) {
   const plan = (await asA({ method: 'POST', path: '/rest/v1/items', body: { trip_id: trip, title: 'Ski school', day: '2027-02-06', part: 'morning', status: 'planned', est_cents: 8000 } })).body?.[0];
   const todo = (await asA({ method: 'POST', path: '/rest/v1/action_items', body: { trip_id: trip, title: 'Book the ski passes' } })).body?.[0];
   const spot = (await asA({ path: `/rest/v1/travelers?select=id,user_id&trip_id=eq.${trip}&user_id=eq.${A.user}` })).body?.[0];
+  // A general expense of A's (11/22): B tries to rewrite its split from a trip of B's own, below.
+  const bill = spot?.id && (await asA({ method: 'POST', path: '/rest/v1/rpc/save_expense', body: { p_trip: trip, p_expense: null, p_description: 'Groceries', p_day: '2027-02-06', p_total_cents: 9000, p_paid_by: spot.id, p_split_mode: 'even', p_shares: [{ traveler_id: spot.id, amount_cents: 9000 }] } })).body;
   const state = async () => ({
     trip: (await asA({ path: `/rest/v1/trips?id=eq.${trip}&select=name,start_date,end_date` })).body?.[0],
     link: (await asA({ path: `/rest/v1/trip_links?trip_id=eq.${trip}&select=token,enabled` })).body?.[0],
     people: (await asA({ path: `/rest/v1/travelers?select=id,user_id&trip_id=eq.${trip}` })).body,
     expenses: (await asA({ path: `/rest/v1/expenses?trip_id=eq.${trip}&select=id` })).body?.length,
+    split: (await asA({ path: `/rest/v1/expense_shares?expense_id=eq.${bill}&select=traveler_id,amount_cents` })).body,
+    money: (await asA({ path: `/rest/v1/expenses?id=eq.${bill}&select=total_cents,currency,fx_pending` })).body?.[0],
     plan: (await asA({ path: `/rest/v1/items?id=eq.${plan?.id}&select=status` })).body?.[0]?.status,
     todo: (await asA({ path: `/rest/v1/action_items?id=eq.${todo?.id}&select=done` })).body?.[0]?.done,
   });
-  if (!plan?.id || !todo?.id || !spot?.id) throw new Error(`A's setup failed: ${JSON.stringify({ plan, todo, spot })}`);
+  if (!plan?.id || !todo?.id || !spot?.id || typeof bill !== 'string') throw new Error(`A's setup failed: ${JSON.stringify({ plan, todo, spot, bill })}`);
+  // B's own trip, where B is the Owner (deleted again below).
+  const bTrip = (await probe(b, { method: 'POST', path: '/rest/v1/rpc/create_trip', token: t, body: { p_name: `${TRIP_NAME} (B's own)`, p_stops: [{ name: 'Lisbon', start_date: '2027-03-01', end_date: '2027-03-02' }], p_my_name: 'RLS test B' } })).body;
+  const bSpot = (await probe(b, { path: `/rest/v1/travelers?select=id&trip_id=eq.${bTrip}`, token: t })).body?.[0];
+  if (typeof bTrip !== 'string' || !bSpot?.id) throw new Error(`B's own trip failed: ${JSON.stringify({ bTrip, bSpot })}`);
   const before = await state();
   const attacks = [
     ['update_trip', 'renames the trip and its stops', { p_trip: trip, p_name: 'Renamed by B', p_stops: [{ name: 'Nowhere', start_date: '2027-02-05', end_date: '2027-02-06' }] }],
@@ -176,6 +184,13 @@ function probe(page, req) {
     ['join_preview', 'previews a made-up group link', { p_token: 'not-the-link' }],
     ['join_trip', 'joins with a made-up group link', { p_token: 'not-the-link', p_traveler_id: null, p_new_name: 'RLS test B' }],
     ['join_trip', "takes A's spot, with the real link", { p_token: before.link?.token, p_traveler_id: spot.id, p_new_name: null }],
+    // Added 11/22: the functions that came with email-in and foreign costs, and the audit's two holes.
+    ['inbox_address', "reads the trip's own email address", { p_trip: trip }],
+    ['reset_inbox', "replaces the trip's own email address", { p_trip: trip }],
+    ['set_expense_fx', "marks A's expense as euros", { p_expense: bill, p_currency: 'EUR', p_foreign_cents: 100 }],
+    ['settle_fx', "changes what A's expense cost", { p_expense: bill, p_total_cents: 1 }],
+    ['save_expense', "rewrites the split of A's expense from a trip of B's own", { p_trip: bTrip, p_expense: bill, p_description: 'x', p_day: '2027-03-01', p_total_cents: 9000, p_paid_by: bSpot.id, p_split_mode: 'even', p_shares: [{ traveler_id: bSpot.id, amount_cents: 9000 }] }],
+    ['ai_spend_today', "reads the app's AI spending", { p_since: '2026-01-01T00:00:00Z', p_user: A.user }],
   ];
   for (const [fn, what, args] of attacks) {
     const r = await probe(b, { method: 'POST', path: `/rest/v1/rpc/${fn}`, token: t, body: args });
@@ -184,7 +199,9 @@ function probe(page, req) {
   }
   const after = await state();
   const moved = Object.keys(before).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
-  check('...and none of it stuck', moved.length === 0, moved.length ? moved.map((k) => `${k}: ${JSON.stringify(before[k])} -> ${JSON.stringify(after[k])}`).join('; ') : 'name, dates, link, people, expenses, plan status, to-do: all as before');
+  check('...and none of it stuck', moved.length === 0, moved.length ? moved.map((k) => `${k}: ${JSON.stringify(before[k])} -> ${JSON.stringify(after[k])}`).join('; ') : 'name, dates, link, people, expenses and their split, plan status, to-do: all as before');
+  const bGone = await probe(b, { method: 'DELETE', path: `/rest/v1/trips?id=eq.${bTrip}`, token: t });
+  out.bTripDeleted = bGone.status < 300;
   // Controls: the same calls work for A, an Owner, so B's were turned away for who B is.
   const reset = await asA({ method: 'POST', path: '/rest/v1/rpc/reset_group_link', body: { p_trip: trip } });
   const done = await asA({ method: 'POST', path: '/rest/v1/rpc/set_action_done', body: { p_id: todo.id, p_done: true } });

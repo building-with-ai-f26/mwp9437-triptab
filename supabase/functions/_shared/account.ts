@@ -126,8 +126,12 @@ export function isReservedEmail(email: string): boolean {
 // ---------- Where a link in an email may point ----------
 export const DEFAULT_APP_URL = "https://triptab.org";
 const ALLOWED_ON_DEV = new Set(["http://localhost:5173"]);
-/** This repo's pull request Previews on Cloudflare: <name>-triptab.<account>.workers.dev. */
-const PREVIEW = /^https:\/\/[a-z0-9-]+-triptab\.[a-z0-9-]+\.workers\.dev$/;
+/**
+ * This repo's pull request Previews on Cloudflare: <name>-triptab.mwp9437.workers.dev. The account is
+ * spelled out (security audit, 11/22): with any account allowed, anyone could name a Worker of
+ * their own x-triptab and have TripTab dev email a link to it.
+ */
+const PREVIEW = /^https:\/\/[a-z0-9-]+-triptab\.mwp9437\.workers\.dev$/;
 
 /**
  * The site a link in an email opens. Production always links to triptab.org (11/18: a test email

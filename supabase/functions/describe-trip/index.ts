@@ -28,8 +28,6 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const fail = (status: number, code: string, error: string) => json({ code, error }, status);
 
-/** Calls that reached the Claude API (they count toward a person's daily AI calls). */
-const REAL = ["ok", "no_plans", "refused", "invalid_output", "timeout", "error"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 Deno.serve(async (req) => {
@@ -79,10 +77,13 @@ Deno.serve(async (req) => {
     }).select("id").single();
 
   // Runaway protection: today's spend across the whole app, and this person's AI calls today.
-  const { data: todayRows, error: capError } = await admin.from("ai_calls").select("cost_usd, user_id, result").gte("created_at", nyDayStart());
-  if (capError) return fail(500, "error", "Couldn't check today's AI budget, so nothing was sent. Try again.");
-  const spent = (todayRows ?? []).reduce((s, r) => s + Number(r.cost_usd), 0);
-  const mine = (todayRows ?? []).filter((r) => r.user_id === user.id && REAL.includes(r.result)).length;
+  // Added up in the database (security audit, 11/22): fetched as rows, the API hands back 1,000 at
+  // most, so a day with more rows than that stopped counting. ai_spend_today also holds the list of
+  // results that count as a call that reached the Claude API.
+  const { data: todayRows, error: capError } = await admin.rpc("ai_spend_today", { p_since: nyDayStart(), p_user: user.id }).single<{ spent: number; mine: number }>();
+  if (capError || !todayRows) return fail(500, "error", "Couldn't check today's AI budget, so nothing was sent. Try again.");
+  const spent = Number(todayRows.spent);
+  const mine = Number(todayRows.mine);
   const blocked = capDecision(cap, spent, mine);
   if (blocked) {
     await log(blocked.code, null, null, null);

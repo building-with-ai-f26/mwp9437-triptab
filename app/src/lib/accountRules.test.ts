@@ -57,6 +57,9 @@ describe("confirmation emails", () => {
     expect(pickAppUrl("http://localhost:5173")).toBe(DEFAULT_APP_URL);
     expect(pickAppUrl("http://localhost:5173", true)).toBe("http://localhost:5173");
     expect(pickAppUrl("https://evil.example", true)).toBe(DEFAULT_APP_URL);
+    // A Preview is this account's workers.dev only (security audit, 11/22).
+    expect(pickAppUrl("https://pr-70-triptab.mwp9437.workers.dev", true)).toBe("https://pr-70-triptab.mwp9437.workers.dev");
+    expect(pickAppUrl("https://x-triptab.attacker.workers.dev", true)).toBe(DEFAULT_APP_URL);
     expect(pickAppUrl(null, true)).toBe(DEFAULT_APP_URL);
   });
 

@@ -1,0 +1,19 @@
+# Headers Cloudflare sends with every page and file of triptab.org (security audit, 11/22: the site
+# sent none of these). Workers static assets read this file from the build's output folder.
+#
+# - Nobody can show TripTab inside a frame on their own page (clickjacking). PostHog's heatmap
+#   viewer is the one exception, since it shows the page in a frame.
+# - Browsers keep to HTTPS for a year once they've visited.
+# - A link clicked from TripTab tells the next site only "triptab.org", never the page, so a group
+#   link's address can't travel in a Referer header, on any browser.
+# - Files are read as the type they're served as, and the page asks for no camera, microphone or
+#   location.
+# - Content-Security-Policy holds the parts that can't break a screen: no framing, no plugins, and
+#   forms and <base> only to TripTab itself. A full script and connect list is a next step
+#   (SECURITY.md, What's left).
+/*
+  Content-Security-Policy: frame-ancestors 'self' https://us.posthog.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  Strict-Transport-Security: max-age=31536000
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()

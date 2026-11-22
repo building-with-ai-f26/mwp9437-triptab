@@ -49,6 +49,9 @@ describe("add to calendar (.ics)", () => {
 
   it("escapes commas, semicolons and newlines, and folds long lines at 75 bytes", () => {
     expect(icsText("a,b;c\nd")).toBe("a\\,b\\;c\\nd");
+    // Security audit, 11/22: no other line break or control character can start a line of its own.
+    expect(icsText("Dinner\rATTENDEE:mailto:x@example.com")).toBe("Dinner\\nATTENDEE:mailto:x@example.com");
+    expect(icsText("a\u2028b\u2029c\u0085d\u0000e\u001bf")).toBe("a\\nb\\nc\\ndef");
     const ics = icsForItems({ name: "Trip" }, [{ ...base, notes: "x".repeat(200) }], stamp);
     expect(ics.split("\r\n").every((l) => new TextEncoder().encode(l).length <= 75)).toBe(true);
   });

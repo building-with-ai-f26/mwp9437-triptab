@@ -28,6 +28,8 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const fail = (status: number, code: string, error: string) => json({ code, error }, status);
+/** A name as it goes into an email: one line, 60 characters at most. Sign-up checks the length, but an account can change its own name later (security audit, 11/22). */
+const mailName = (raw: unknown) => String(raw ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -64,7 +66,7 @@ Deno.serve(async (req) => {
     const user = who?.user;
     if (!user?.email) return fail(401, "signed_out", "Sign in first.");
     if (user.app_metadata?.email_check !== "pending") return json({ ok: true, already: true });
-    const result = await sendConfirm(admin, { id: user.id, email: user.email, name: String(user.user_metadata?.name ?? "") }, req.headers.get("Origin"));
+    const result = await sendConfirm(admin, { id: user.id, email: user.email, name: mailName(user.user_metadata?.name) }, req.headers.get("Origin"));
     if (result.sent) return json({ ok: true, sent: true });
     if (result.reason === "reserved") return json({ ok: true, sent: false, code: "reserved" });
     if (result.message) return fail(429, result.reason, result.message);
@@ -85,12 +87,17 @@ Deno.serve(async (req) => {
       const { data: row } = await admin
         .from("forward_addresses").select("id, code_hash, code_sent_at, tries, confirmed_at").eq("id", id).eq("user_id", user.id).maybeSingle();
       if (!row) return fail(404, "not_found", "That address isn't on your account. Add it again.");
-      const refused = forwardCodeDecision(row, await codeHash(row.id, code));
-      if (refused) {
-        if (refused.code === "wrong_code") await admin.from("forward_addresses").update({ tries: row.tries + 1 }).eq("id", row.id);
-        return fail(400, refused.code, refused.message);
-      }
+      // What needs no guess to tell: the code ran out, or its five tries are used.
+      const early = forwardCodeDecision(row, row.code_hash ?? "");
+      if (early) return fail(400, early.code, early.message);
       if (!row.confirmed_at) {
+        // Every guess takes a try before it is compared, and only if nobody took that try since the
+        // row was read (security audit, 11/22): guesses sent at the same moment used to read the
+        // same count, so any number of them cost one try.
+        const { data: took } = await admin.from("forward_addresses").update({ tries: row.tries + 1 }).eq("id", row.id).eq("tries", row.tries).select("id");
+        if (!took?.length) return fail(429, "too_fast", "One try at a time. Type the code again.");
+        const refused = forwardCodeDecision(row, await codeHash(row.id, code));
+        if (refused) return fail(400, refused.code, refused.message);
         await admin.from("forward_addresses").update({ confirmed_at: new Date().toISOString(), code_hash: null }).eq("id", row.id);
       }
       return json({ ok: true, confirmed: true });
@@ -127,7 +134,7 @@ Deno.serve(async (req) => {
 
     if (testOnly) return json({ ok: true, id: row.id, sent: false, dev_code: code });
     const mail = buildForwardCodeEmail({
-      name: String(user.user_metadata?.name ?? "") || "there",
+      name: mailName(user.user_metadata?.name) || "there",
       code,
       address: email,
       url: `${pickAppUrl(req.headers.get("Origin"), dev)}/trips`,
