@@ -9,13 +9,16 @@ import type { Proposal } from "./importPlans";
 export const INBOX_DOMAIN = "triptab.org";
 export const inboxAddressFor = (code: string) => `trip+${code}@${INBOX_DOMAIN}`;
 
-export type InboxStatus = "new" | "saved" | "dismissed" | "failed";
+/** held: from an address nobody on the trip has, waiting unread for an Owner (C36, Mike's call 11/21). */
+export type InboxStatus = "new" | "saved" | "dismissed" | "failed" | "held";
 
 /** One email that came in: who sent it on the trip, its subject, and the plans import found. */
 export interface InboxItem {
   id: string;
   trip_id: string;
   from_traveler: string | null;
+  /** Who a held email came from (C36): an address nobody on the trip has. */
+  from_address?: string | null;
   subject: string | null;
   received_at: string;
   status: InboxStatus;

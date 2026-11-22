@@ -41,10 +41,11 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Emails you forward to a trip:</b> each trip can have its own address. An email someone on the trip
-          forwards there, from the email they use for TripTab or an address they've added, is read once by AI import; TripTab keeps who on the trip sent it, its subject and the plans
-          it found, for the trip's Owners to review. The email itself is never stored. An email from an address that
-          isn't on the trip is turned away, and the email service's logs keep why, with only the sender's first letter
-          and domain.
+          forwards there, from the email they use for TripTab or an address they've added, is read once by AI import;
+          TripTab keeps who on the trip sent it, its subject and the plans it found, for the trip's Owners to review. The
+          email itself is never stored. An email from an address nobody on the trip has isn't read: it waits for an
+          Owner, who sees the address it came from and its subject. Until an Owner reads or dismisses it, or for 7 days
+          at most, TripTab keeps what AI import would read (its text and its first PDF or photo), then deletes it.
         </li>
         <li>
           <b>Logs:</b> a record of each AI request (who asked, on which trip, when, how long the input was and what it

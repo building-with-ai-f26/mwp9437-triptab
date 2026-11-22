@@ -12,6 +12,13 @@ export const INBOX_DOMAIN = "triptab.org";
 export const inboxAddress = (token: string) => `trip+${token}@${INBOX_DOMAIN}`;
 /** Emails a trip takes in a day (New York time), whatever they hold. Import's own caps also apply. */
 export const MAX_EMAILS_PER_TRIP_DAY = 20;
+/**
+ * Emails a trip holds in a day from addresses nobody on it has (C36, Mike's call 11/21): they wait
+ * unread for an Owner, and past this they're turned away.
+ */
+export const MAX_HELD_PER_TRIP_DAY = 5;
+/** Days a held email waits to be read before it's cleared. */
+export const HELD_DAYS = 7;
 /** Bigger than this is turned away before anything reads it (the Worker checks it too). */
 export const MAX_EMAIL_BYTES = 8_000_000;
 

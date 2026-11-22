@@ -51,7 +51,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const ok =
-        /Bookings forwarded to a trip count from demo-.*@example\.com/.test(r.intro) && /We sent a 6-digit code to fwd-/.test(r.sentNote) &&
+        /Bookings you forward to a trip from demo-.*@example\.com are read right away/.test(r.intro) && /We sent a 6-digit code to fwd-/.test(r.sentNote) &&
         /doesn't match/.test(r.wrong) && /personal@example\.com Works/.test(r.works) && r.removed && r.overflow <= 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }

@@ -60,8 +60,9 @@ export function ForwardFrom() {
         <Mail className="size-4 shrink-0" /> Also forward from
       </h2>
       <p className="mt-1 text-muted-foreground">
-        Bookings forwarded to a trip count from <span className="break-all font-medium text-foreground">{user.email}</span>. Add another
-        address you forward from, like a personal Gmail; we'll email it a code to check it's yours.
+        Bookings you forward to a trip from <span className="break-all font-medium text-foreground">{user.email}</span> are read right
+        away; from another address, they wait for an Owner to read them. Add an address you forward from, like a personal Gmail, and
+        its forwards are read right away too. We'll email it a code to check it's yours.
       </p>
       {list.length > 0 && (
         <ul className="mt-2 divide-y divide-foreground/10" data-testid="forward-list">

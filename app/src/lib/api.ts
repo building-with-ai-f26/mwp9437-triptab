@@ -208,7 +208,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("travelers").select("id, venmo").eq("trip_id", id),
     supabase.from("travelers").select("id, zelle, pay_locked").eq("trip_id", id),
     // Asked apart too, so a database without email-in still loads the trip.
-    supabase.from("inbox_items").select("*").eq("trip_id", id).in("status", ["new", "failed"]).order("received_at", { ascending: false }),
+    supabase.from("inbox_items").select("*").eq("trip_id", id).in("status", ["new", "failed", "held"]).order("received_at", { ascending: false }),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -262,6 +262,20 @@ export async function resetTripInbox(tripId: string): Promise<string> {
 }
 
 /** An Owner marks an email's plans saved (kept on the trip) or dismisses it. */
+/**
+ * An Owner reads a held email (C36): the AI reads it now, billed to them. With mine, its address
+ * counts as theirs from then on (Also forward from), so their next forward from it isn't held.
+ */
+export async function readHeldEmail(itemId: string, mine: boolean): Promise<void> {
+  const { error } = await supabase.functions.invoke("inbox-email", { body: { action: "read_held", item_id: itemId, mine } });
+  if (!error) return;
+  const res = (error as { context?: unknown }).context;
+  const code = res instanceof Response ? ((await res.json().catch(() => ({}))) as { code?: string }).code : undefined;
+  if (code === "not_held") throw new Error("Someone already read or dismissed that email.");
+  if (code === "not_owner") throw new Error("Only the trip's Owners can read it.");
+  throw new Error("Couldn't read that email just now. Try again.");
+}
+
 export async function markInbox(id: string, status: "saved" | "dismissed"): Promise<void> {
   const { data, error } = await supabase.from("inbox_items").update({ status }).eq("id", id).select("id");
   must(data, error);
