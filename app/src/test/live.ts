@@ -19,7 +19,23 @@ export async function signedIn(who: string, name: string): Promise<SupabaseClien
   });
   expect(res.status, `sign-up for ${who}`).toBe(200);
   const c = client();
-  const { error } = await c.auth.signInWithPassword({ email, password });
-  expect(error).toBeNull();
+  expect(await signIn(c, email)).toBeNull();
   return c;
+}
+
+/**
+ * Signs in, waiting out TripTab dev's sign-in limit per address when it's reached (HTTP 429). On
+ * 11/22 two production builds stopped here: Cloudflare's builds run from one address, so a pull
+ * request's Preview and the merge's own build, minutes apart, made about 95 sign-ins in five
+ * minutes, and dev refused three (GitHub's runner, on other addresses, never was). Each wait gives
+ * the limit time to refill; every test still runs. Anything other than the limit fails at once.
+ */
+async function signIn(c: SupabaseClient, email: string) {
+  for (let attempt = 1; ; attempt++) {
+    const { error } = await c.auth.signInWithPassword({ email, password });
+    if (!error) return null;
+    const limited = error.status === 429 || /rate limit/i.test(error.message);
+    if (!limited || attempt === 4) return error;
+    await new Promise((r) => setTimeout(r, 8_000 * attempt));
+  }
 }
