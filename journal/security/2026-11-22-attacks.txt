@@ -270,3 +270,27 @@ sign-in code, signs up, starts a trip, opens My trips (which shows the account's
 (Before the last fix this run caught the one-time code in one place: the request that fetches
 feature flags carries the address a visitor first landed on, past both scrubbing hooks. TripTab uses
 no feature flags, so that request now asks for none and carries no address.)
+
+==== After Mike's OKs (C38, C39, C40), 11/22 ====
+
+== Finding D's fix, simulated on TripTab dev: a Google sign-in linked to three test accounts ==
+One statement that undid itself (it ends by raising its result, which rolls everything back). Each
+account got a sign-in shaped like the one Supabase Auth writes when Google links.
+BEFORE
+  1 pending, Google same address:   password=yes sessions=1 sign-ins=email        forwarding=1
+  2 pending, Google other address:  password=yes sessions=1 sign-ins=email        forwarding=0
+  3 confirmed, Google same address: password=yes sessions=1 sign-ins=email        forwarding=0
+AFTER
+  1 pending, Google same address:   password=no  sessions=0 sign-ins=google       forwarding=0
+  2 pending, Google other address:  password=yes sessions=1 sign-ins=email+google forwarding=0
+  3 confirmed, Google same address: password=yes sessions=1 sign-ins=email+google forwarding=0
+So the password, the earlier session and the forwarding address go only where Google vouches for
+the very address TripTab was still waiting on (1); a different Google address (2) and an account
+that had already confirmed its email (3) are left as they were.
+Limit of this check: the rows were written by the database's own admin role, since it may not act
+as Supabase Auth's role ("permission denied to set role supabase_auth_admin"). A real Google
+sign-in on a Preview is still the end-to-end check.
+
+== Sign-ins made before the old address began forwarding (production, read only, before C39) ==
+sessions: 7; made before 2026-11-18 23:00 UTC: 4, by 3 people, holding 59 refresh tokens, which the
+database removes with their sessions.
