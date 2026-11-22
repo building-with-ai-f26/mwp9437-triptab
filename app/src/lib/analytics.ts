@@ -95,6 +95,10 @@ export function startAnalytics(): void {
       // In replays, typed text is hidden, and emails and phone numbers are taken out of everything
       // shown on screen (hidePersonal, above); the rest of the screen stays readable.
       session_recording: { maskAllInputs: true, maskTextSelector: "*", maskTextFn: hidePersonal },
+      // TripTab uses no feature flags, and the request that fetches them carries the address a
+      // visitor first landed on as it was, past both hooks below (security audit, 11/22: a one-time
+      // code went out that way). The request still loads PostHog's settings; it just asks for no flags.
+      advanced_disable_feature_flags: true,
       get_current_url: scrubLinks,
       before_send: scrubEvent,
     });

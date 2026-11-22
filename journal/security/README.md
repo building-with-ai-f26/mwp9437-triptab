@@ -74,7 +74,11 @@ Raw output for 7 to 16: `2026-11-22-attacks.txt`.
   as its value (heatmap data is filed under the page address); `mask_all_element_attributes` drops
   attributes from click events; replays run all on-screen text through `hidePersonal`, which turns
   emails into `[email]` and runs of 10 or more digits into `[number]`. Unit tests in
-  `analytics.test.ts`. The privacy page's PostHog line was updated in the same pull request.
+  `analytics.test.ts`. A browser run that catches every request to PostHog then found one more
+  path: the feature-flag request carries the visitor's first address raw, past `before_send` and
+  `get_current_url`. `advanced_disable_feature_flags` stops that (TripTab uses no flags); the
+  rerun caught 7 page views, 4 clicks, 2 replay chunks and 3 custom events with no code, token,
+  name, email or element attribute in any of them. The privacy page's PostHog line was updated in the same pull request.
 
 - **The old address and the headers (attack 16).** `docs/app/index.html` removes Supabase's sign-in
   tokens from that address's storage before forwarding. `app/public/_headers` adds the headers.

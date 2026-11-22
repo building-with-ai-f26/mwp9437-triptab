@@ -1,0 +1,315 @@
+{
+  "base": "https://claude-exciting-wozniak-x8ggdm-triptab.mwp9437.workers.dev",
+  "run": "238h1",
+  "accounts": {
+    "a": {
+      "email": "delivered+triptab-rls-238h1-a@resend.dev",
+      "user": "0cbf08fb-bc7a-4e5e-8f70-406825ac529f"
+    },
+    "b": {
+      "email": "delivered+triptab-rls-238h1-b@resend.dev",
+      "user": "9dccb965-756c-47b5-a111-7d0e5824ab9e"
+    }
+  },
+  "checks": [
+    {
+      "name": "B opens the trip in the app",
+      "ok": true,
+      "got": "This trip isn't here It may have been deleted, or you're not on it. Ask someone on the trip for the group link."
+    },
+    {
+      "name": "B reads trips",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads stops",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads travelers",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads items",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads trip_links (the group link)",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads expenses",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads payments",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads action_items",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B reads item_people",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B lists all of trips",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of stops",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of travelers",
+      "ok": true,
+      "got": "403 refused: permission denied for table travelers"
+    },
+    {
+      "name": "B lists all of items",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of item_people",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of trip_links",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of expenses",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of expense_shares",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of payments",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of action_items",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of ai_calls",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of invite_emails",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of account_events",
+      "ok": true,
+      "got": "403 refused: permission denied for table account_events"
+    },
+    {
+      "name": "B lists all of email_checks",
+      "ok": true,
+      "got": "403 refused: permission denied for table email_checks"
+    },
+    {
+      "name": "B lists all of inbox_items",
+      "ok": true,
+      "got": "200, 0 rows, 0 not B's"
+    },
+    {
+      "name": "B lists all of forward_addresses",
+      "ok": true,
+      "got": "403 refused: permission denied for table forward_addresses"
+    },
+    {
+      "name": "B lists all of trip_inboxes",
+      "ok": true,
+      "got": "403 refused: permission denied for table trip_inboxes"
+    },
+    {
+      "name": "B lists all of inbox_held",
+      "ok": true,
+      "got": "403 refused: permission denied for table inbox_held"
+    },
+    {
+      "name": "B calls trip_contacts for the trip",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B calls own_marks for the trip",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B renames the trip",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B joins the trip as an Owner",
+      "ok": true,
+      "got": "403 refused: permission denied for table travelers"
+    },
+    {
+      "name": "B adds a plan to the trip",
+      "ok": true,
+      "got": "403 refused: new row violates row-level security policy for table \"items\""
+    },
+    {
+      "name": "B deletes the trip",
+      "ok": true,
+      "got": "200 []"
+    },
+    {
+      "name": "B renames the trip and its stops (update_trip)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B stretches the trip (extend_trip)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B resets the group link (to learn the new one) (reset_group_link)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B adds an expense (save_expense)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B confirms the plan as paid (confirm_item)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B undoes a confirmation (unconfirm_item)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B logs a cost on A's line (log_own_line)",
+      "ok": true,
+      "got": "500 refused: That plan is gone"
+    },
+    {
+      "name": "B clears A's line (clear_own_line)",
+      "ok": true,
+      "got": "500 refused: That plan is gone"
+    },
+    {
+      "name": "B ticks off A's to-do (set_action_done)",
+      "ok": true,
+      "got": "500 refused: That item is gone"
+    },
+    {
+      "name": "B previews a made-up group link (join_preview)",
+      "ok": true,
+      "got": "200 refused: null"
+    },
+    {
+      "name": "B joins with a made-up group link (join_trip)",
+      "ok": true,
+      "got": "500 refused: This link isn't active"
+    },
+    {
+      "name": "B takes A's spot, with the real link (join_trip)",
+      "ok": true,
+      "got": "409 refused: That name was already claimed"
+    },
+    {
+      "name": "B reads the trip's own email address (inbox_address)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B replaces the trip's own email address (reset_inbox)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B marks A's expense as euros (set_expense_fx)",
+      "ok": true,
+      "got": "403 refused: Only owners can do that"
+    },
+    {
+      "name": "B changes what A's expense cost (settle_fx)",
+      "ok": true,
+      "got": "403 refused: Only whoever paid, or an owner, can do that"
+    },
+    {
+      "name": "B rewrites the split of A's expense from a trip of B's own (save_expense)",
+      "ok": true,
+      "got": "500 refused: That expense is gone"
+    },
+    {
+      "name": "B reads the app's AI spending (ai_spend_today)",
+      "ok": true,
+      "got": "403 refused: permission denied for function ai_spend_today"
+    },
+    {
+      "name": "...and none of it stuck",
+      "ok": true,
+      "got": "name, dates, link, people, expenses and their split, plan status, to-do: all as before"
+    },
+    {
+      "name": "Control: A, an Owner, resets the link and ticks the to-do",
+      "ok": true,
+      "got": "200, 204: new link true, to-do done true"
+    },
+    {
+      "name": "Signed out, reads trips",
+      "ok": true,
+      "got": "401 refused: permission denied for table trips"
+    },
+    {
+      "name": "Signed out, reads trip_links",
+      "ok": true,
+      "got": "401 refused: permission denied for table trip_links"
+    },
+    {
+      "name": "A's trip is untouched",
+      "ok": true,
+      "got": "[{\"name\":\"RLS test trip 238h1\"}] []"
+    }
+  ],
+  "trip": "e3889b84-1342-47af-b9d8-63e1995c60d0",
+  "phoneOverflow": 0,
+  "bTripDeleted": true,
+  "tripDeleted": true,
+  "errors": [
+    "B: 500 from https://iivseqkvixmvcpldarqy.supabase.co/rest/v1/rpc/log_own_line",
+    "B: 500 from https://iivseqkvixmvcpldarqy.supabase.co/rest/v1/rpc/clear_own_line",
+    "B: 500 from https://iivseqkvixmvcpldarqy.supabase.co/rest/v1/rpc/set_action_done",
+    "B: 500 from https://iivseqkvixmvcpldarqy.supabase.co/rest/v1/rpc/join_trip",
+    "B: 500 from https://iivseqkvixmvcpldarqy.supabase.co/rest/v1/rpc/save_expense"
+  ],
+  "pass": true
+}
+
+Now delete the two test accounts: delivered+triptab-rls-238h1-a@resend.dev and delivered+triptab-rls-238h1-b@resend.dev

@@ -201,3 +201,72 @@ No storage bucket exists.
 
 ==== npm audit, 11/22 ====
 found 0 vulnerabilities (all dependencies); found 0 vulnerabilities (--omit=dev)
+
+==== After the fixes, on the pull request's Preview and TripTab dev, 11/22 ====
+
+== The second-account test, extended (app/e2e/rls-proof.cjs), on the Preview against dev ==
+57 of 57 checks as they should be; A's trip deleted, B's own trip deleted, no sideways scroll at 390.
+Full output: 2026-11-22-rls-proof-preview.json. The ten checks added since 11/19:
+OK   B lists all of inbox_items => 200, 0 rows, 0 not B's
+OK   B lists all of forward_addresses => 403 refused: permission denied for table forward_addresses
+OK   B lists all of trip_inboxes => 403 refused: permission denied for table trip_inboxes
+OK   B lists all of inbox_held => 403 refused: permission denied for table inbox_held
+OK   B reads the trip's own email address (inbox_address) => 403 refused: Only owners can do that
+OK   B replaces the trip's own email address (reset_inbox) => 403 refused: Only owners can do that
+OK   B marks A's expense as euros (set_expense_fx) => 403 refused: Only owners can do that
+OK   B changes what A's expense cost (settle_fx) => 403 refused: Only whoever paid, or an owner, can do that
+OK   B rewrites the split of A's expense from a trip of B's own (save_expense) => 500 refused: That expense is gone
+OK   B reads the app's AI spending (ai_spend_today) => 403 refused: permission denied for function ai_spend_today
+
+== The live database tests in the pull request's check (GitHub Actions, job Tests) ==
+Test Files  17 passed (17)
+     Tests  193 passed | 1 skipped (194)
+
+== One real call through each AI function on dev, through the new cap count ==
+import-bookings: 200   plans=1 cost=0.00065
+describe-trip: 200   plans=1 cost=0.000762
+plan-with-ai: 200   plans=1 cost=0.011953
+inbox-email (dev test path): 200 {"code":"ok"}
+cost log for the trip: [{"feature":"import","result":"ok","cost_usd":0.00065,"test_run":true},{"feature":"plan","result":"ok","cost_usd":0.011953,"test_run":true},{"feature":"import_email","result":"ok","cost_usd":0.000892,"test_run":true}]
+(Four calls, $0.0143 at list price in all, logged as test runs on dev. The audit's only AI spend.)
+
+== What the Preview sends with a page ==
+strict-transport-security: max-age=31536000
+content-security-policy: frame-ancestors 'self' https://us.posthog.com; object-src 'none'; base-uri 'self'; form-action 'self'
+permissions-policy: camera=(), microphone=(), geolocation=(), payment=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+(The same on an app path such as /join/abc, and nosniff on script files.)
+
+== What the app hands PostHog, caught in a local browser run with a dummy key (nothing sent on) ==
+The visitor lands on a made-up group link with a typed name, then an address carrying a one-time
+sign-in code, signs up, starts a trip, opens My trips (which shows the account's email) and clicks.
+{
+ "requests_caught": 11,
+ "events": {
+  "pageviews": 7,
+  "autocapture": 4,
+  "snapshots": 2,
+  "custom": [
+   "signed in",
+   "signed up",
+   "trip created"
+  ]
+ },
+ "email_shown_on_a_screen": true,
+ "leaks": {
+  "one_time_code": false,
+  "group_link_token": false,
+  "typed_name_in_address": false,
+  "account_email": false,
+  "element_attributes": false
+ },
+ "seen_instead": {
+  "code_hidden": true,
+  "link_hidden": true,
+  "name_hidden": true
+ }
+}
+(Before the last fix this run caught the one-time code in one place: the request that fetches
+feature flags carries the address a visitor first landed on, past both scrubbing hooks. TripTab uses
+no feature flags, so that request now asks for none and carries no address.)
