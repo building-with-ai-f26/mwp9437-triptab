@@ -1,0 +1,203 @@
+TripTab security audit, second pass, 2026-11-22. Raw output of the attack scripts and checks.
+Everything that makes accounts or trips ran against TripTab dev (iivseqkvixmvcpldarqy), with
+throwaway rls-...@example.com accounts and trips deleted at the end of each script. Production
+(pptzbogslzicfyjooqra, triptab.org) was only read: its public pages and files, signed-out requests,
+and counts through the read-only connector. Addresses and ids below are test values; PostHog values
+are masked.
+
+==== Attack 7: a Viewer rewrites another trip's expense split (dev, before the fix) ====
+viewer joins as Vic (viewer): OK "2cccd992-bfb5-4a15-a027-e0d41d6a787d"
+owner adds a $90 general expense, split three ways: OK "7ae8d2d1-28df-4f87-bd59-7f91327a442b"
+shares before: [{"traveler_id":"09a60982-ace3-440c-a1dc-0d95937a0f57","amount_cents":3000},{"traveler_id":"7931bc40-651f-4963-a30d-9c5fba511d18","amount_cents":3000},{"traveler_id":"91023621-5217-4c2f-8dff-6dad8eee4b04","amount_cents":3000}]
+viewer edits it directly on trip Y: REFUSED 42501 Only owners can do that
+viewer calls save_expense on their own trip, naming trip Y's expense: OK "7ae8d2d1-28df-4f87-bd59-7f91327a442b"
+shares after:  [{"traveler_id":"4ff2fba4-32e2-4e09-b4e6-45ac2d8c58bd","amount_cents":9000}]
+RESULT: VULNERABLE, trip Y's split was rewritten from another trip
+cleanup Y: OK null
+cleanup X: OK null
+
+Production, read only, same day: expenses with shares from another trip: 0. Plans whose
+created_by is someone not on the trip: 0.
+
+==== Attack 8: the row ceiling under the AI caps (dev) ====
+insert 1100 to-dos: ok
+asked for all of them: got 1000 rows back; the table holds 1100
+cleanup: OK null
+(The four AI functions fetched today's ai_calls rows with no limit and added them up in code, and
+a refused call writes a row. The 1,000 refusals it would take were not sent.)
+
+==== Attack 9: sign up with someone else's email, then they use Google (dev, the precondition) ====
+Three accounts made through the sign-up function, as Supabase stores them:
+email                              supabase_says_confirmed  email_check
+rls-zw6g9b-a3-plain@example.com    true                     pending
+rls-zw6g9b-a3-spoof1@example.com   true                     pending
+rls-zw6g9b-a3-spoof2@example.com   true                     pending
+Both projects' public sign-in settings: google on, email on, mailer_autoconfirm false.
+Supabase's Identity Linking guide: "when a new identity can be linked to an existing user, Supabase
+Auth will remove any other unconfirmed identities linked to an existing user." A confirmed one stays.
+Not run end to end: it takes a real Google account.
+Production, read only: 5 accounts; 0 with the pending flag; 0 with a password, a Google sign-in and
+the pending flag together.
+
+==== Attack 10: a Viewer, a stranger and nobody signed in, against what was added since 11/19 (dev) ====
+== Viewer tries to become an Owner or read what Owners keep ==
+V reads email/phone columns of travelers: REFUSED 42501 permission denied for table travelers
+V calls trip_contacts: OK []
+V makes themself owner: REFUSED 42501 permission denied for table travelers
+V reads the group link: OK []
+V resets the group link: REFUSED 42501 Only owners can do that
+V reads the trip's email address: REFUSED 42501 Only owners can do that
+V replaces the trip's email address: REFUSED 42501 Only owners can do that
+V reads inbox_items: OK []
+V reads ai_calls: OK []
+V reads invite_emails: OK []
+V sets Priya's Venmo to their own: REFUSED 42501 permission denied for table travelers
+V adds a plan: REFUSED 42501 new row violates row-level security policy for table "items"
+V edits the plan's link: OK []
+V deletes the expense: OK []
+V deletes expense shares: OK []
+V marks the expense as euros: REFUSED 42501 Only owners can do that
+V rejoins through the link as a new name (to pick up the link's role): OK "ac8e17aa-d680-47e8-8d66-79f3b831ac1a"
+V records a payment between two other people: REFUSED 42501 new row violates row-level security policy for table "payments"
+V deletes the trip: OK []
+("OK []" is an empty answer: no row read, changed or deleted. The rejoin returns the trip's id
+because the Viewer is already on it; no second spot is made and their role stays Viewer.)
+
+== Owner tries a plan link that isn't a web address, and forging who suggested a plan ==
+O saves link javascript:alert(1): REFUSED 23514 new row for relation "items" violates check constraint "items_link_format"
+O saves link data:text/html: REFUSED 23514 new row for relation "items" violates check constraint "items_link_format"
+O adds a plan with created_by set to someone else: OK [{"id":"3408eec7-fbfe-4bc6-919f-988c3dccb159","created_by":"38aa550e-83bc-451a-bb06-fe06820e15ea"}]
+(The last one is a finding: fixed in the 11/22 migration.)
+
+== Stranger (signed in, on no trip of ours) ==
+S lists inbox_items: OK []
+S lists forward_addresses: REFUSED 42501 permission denied for table forward_addresses
+S lists trip_inboxes: REFUSED 42501 permission denied for table trip_inboxes
+S lists inbox_held: REFUSED 42501 permission denied for table inbox_held
+S lists email_checks: REFUSED 42501 permission denied for table email_checks
+S lists account_events: REFUSED 42501 permission denied for table account_events
+S lists ai_calls: OK []
+S lists invite_emails: OK []
+S lists payments: OK []
+S lists expenses: OK []
+S lists expense_shares: OK []
+S lists travelers: REFUSED 42501 permission denied for table travelers
+S lists trip_links: OK []
+S inbox_address: REFUSED 42501 Only owners can do that
+S reset_inbox: REFUSED 42501 Only owners can do that
+S set_expense_fx: REFUSED 42501 Only owners can do that
+S settle_fx: REFUSED 42501 Only whoever paid, or an owner, can do that
+S own_marks: OK []
+S inserts a forwarding address for themself, already confirmed: REFUSED 42501 permission denied for table forward_addresses
+S joins through a link that was reset (old token): REFUSED P0002 This link isn't active
+S claims Vic's taken spot with the real link: REFUSED 23505 That name was already claimed
+
+== Nobody signed in, only the public key ==
+anon lists trips: REFUSED 42501 permission denied for table trips
+anon lists travelers: REFUSED 42501 permission denied for table travelers
+anon lists trip_links: REFUSED 42501 permission denied for table trip_links
+anon lists inbox_items: REFUSED 42501 permission denied for table inbox_items
+anon lists forward_addresses: REFUSED 42501 permission denied for table forward_addresses
+anon lists trip_inboxes: REFUSED 42501 permission denied for table trip_inboxes
+anon lists account_events: REFUSED 42501 permission denied for table account_events
+anon calls ai-status: 401 {"error":"Sign in first."}
+anon calls import-bookings: 401 {"code":"signed_out","error":"Sign in to import bookings."}
+anon calls plan-with-ai: 401 {"code":"signed_out","error":"Sign in to plan with AI."}
+anon calls describe-trip: 401 {"code":"signed_out","error":"Sign in to set up a trip."}
+anon calls send-invite: 401 {"code":"signed_out","error":"Sign in to send invites."}
+anon posts a forged email to inbox-email with no secret: 401 {"code":"not_allowed"}
+...and with a guessed secret: 401 {"code":"not_allowed"}
+stranger calls import-bookings on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can import bookings."}
+stranger calls plan-with-ai on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can plan with AI."}
+stranger calls send-invite on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can send invites."}
+viewer calls import-bookings on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can import bookings."}
+viewer calls plan-with-ai on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can plan with AI."}
+viewer calls send-invite on the trip: 403 {"code":"not_owner","error":"Only the trip's owners can send invites."}
+
+== Live updates: what a Viewer and a stranger are pushed when an Owner edits a traveler ==
+viewer was pushed 2 change(s)
+  travelers UPDATE: columns id,name,role,venmo,zelle,trip_id,user_id,added_by,claimed_at,created_at,pay_locked | has email: false | old: {"id":"0f554830-5d36-45e9-b7ff-d78979223122"}
+  items UPDATE: columns id,day,kind,link,part,notes,title,status,end_day,trip_id,end_part,end_time,location,pay_mode,cost_type,est_cents,created_at,created_by,start_time,updated_at | has email: false | old: {"id":"eb4b09ec-f670-4b98-b7a5-ba480980764d"}
+stranger was pushed 0 change(s)
+cleanup: OK null
+
+==== Attack 11: dodge the per-address sign-up limit with a made-up X-Forwarded-For header (dev) ====
+Three sign-ups from one machine: no header, X-Forwarded-For: 203.0.113.7, X-Forwarded-For: 203.0.113.8.
+The address hash TripTab stored for each (account_events.ip_hash):
+rls-zw6g9b-a3-plain@example.com    a833b7c58aab5831a378b69d419c5064
+rls-zw6g9b-a3-spoof1@example.com   a833b7c58aab5831a378b69d419c5064
+rls-zw6g9b-a3-spoof2@example.com   a833b7c58aab5831a378b69d419c5064
+All three are the hash of the caller's real address (the cf-connecting-ip in Supabase's own log of
+the request), so the made-up header changed nothing.
+
+==== Attack 12: skip TripTab's sign-up and its limits, at Supabase's own endpoints (dev) ====
+== direct sign-up at Supabase's own endpoint
+{'id': 'e3a3eac5-4f05-4690-9c45-90d16671752c', 'email': 'delivered+triptab-audit-14456@resend.dev', 'confirmation_sent_at': '2026-11-22T07:48:30.831643987Z'} | has access_token: False
+HTTP 200
+== then sign in with it
+{"code":400,"error_code":"email_not_confirmed","msg":"Email not confirmed"}
+HTTP 400
+== magic link / one-time code to a new address
+{}
+HTTP 200
+== anonymous sign-in
+{"code":422,"error_code":"anonymous_provider_disabled","msg":"Anonymous sign-ins are disabled"}
+HTTP 422
+(An account made this way can't sign in until its emailed link is opened, so it proves the address.
+What is left: each such request sends one email, outside TripTab's own limits.)
+
+==== Attack 13: look for secret keys in what triptab.org serves ====
+20 files (19 JavaScript, 1 CSS), 1.3 MB, found by following every file name each file mentions.
+[sb_secret_] none   [service_role] none   [sk-or-] none   [sk-ant-] none   [sk-proj-] none
+[sk_live_] none     [AIza (Google)] none  [whsec_] none   [PRIVATE KEY] none  [long JWT] none
+[sbp_ (Supabase access token)] none      [GOCSPX- (Google client secret)] none
+[INBOX_SECRET / ANTHROPIC_API_KEY / RESEND_API_KEY / SUPABASE_ACCESS_TOKEN by name] none
+[re_ (Resend)] 3 hits, all PostHog's own words (re_extension_e..., re_external_de..., re_unhandled_r...)
+[sb_publishable_] 1: production's publishable key, public by design
+[phc_] 1: PostHog's project key, public by design
+Supabase hosts named: pptzbogslzicfyjooqra.supabase.co only (production).
+Other services the code calls: us.i.posthog.com, photon.komoot.io, geocoding-api.open-meteo.com,
+api.frankfurter.dev, images.unsplash.com, venmo.com (a link). None with a key.
+The repository and its whole history (152 commits) were searched for the same shapes: only the two
+publishable keys, the PostHog key, and the course template's placeholder "sk-or-v1-replace-with-your-key".
+
+==== Attack 14: what PostHog holds (TripTab project, read through its query API) ====
+events since the 11/19 fix that carry a group link token: 1
+  2026-11-22 01:23 $pageview on building-with-ai-f26.github.io, in $set_once.$initial_current_url,
+  from a browser tab still running the build from before the move. The token was one of those
+  replaced on 11/19: join_preview on production answers null for it.
+events that carry a trip's own email address: 0
+events that carry a confirm-your-email token: 0
+events that carry a sign-in code or token in a page address: 8 (11/19 to 11/21)
+  $current_url: https://triptab.org/sign-in?code=2de133...[masked]&next=%2Ftrips%2F...
+  $current_url: https://triptab.org/join/[link]?as=...&code=2cbeb1...[masked]
+  $current_url: https://triptab.org/trips?code=db9097...[masked]&linked=google#
+  (Each is a one-time code Google sign-in sends back. It works once, within minutes, and only
+  together with a second value kept in the browser that asked for it.)
+click events on triptab.org since 11/18: 434; with an email address in the clicked element: 0;
+with a venmo.com link (a payee's Venmo name, the amount and the trip's name): 3
+people profiles holding an email: 0
+project settings: session replay on, heatmaps on, autocapture on.
+
+==== Attack 15: what triptab.org sends with a page ====
+HTTP/2 200, content-type: text/html, cache-control: public, max-age=0, must-revalidate
+No Content-Security-Policy, X-Frame-Options, Strict-Transport-Security, Referrer-Policy,
+X-Content-Type-Options or Permissions-Policy header.
+
+==== Attack 16: sign-ins left at the old GitHub Pages address (production, read only) ====
+sessions: 7; made before the move to triptab.org (11/18): 4, by 3 people; of those, still being
+refreshed: 1, last used 2026-11-22 06:10 UTC.
+(The old address shares its browser storage with every other project page on the same GitHub
+account. The same browser tab as in attack 14.)
+
+==== Supabase's security advisor, production, 11/22 ====
+INFO  4 tables with row-level security on and no policies: account_events, email_checks,
+      inbox_held, trip_inboxes (by design: only the server touches them)
+WARN  join_preview can be called signed out (by design: it shows a group link's trip before sign-in)
+WARN  20 functions run with raised rights for signed-in callers (each checks who is asking)
+WARN  leaked-password protection is off (a paid-plan setting)
+All 18 tables have row-level security on. The public key alone holds no right on any table.
+No storage bucket exists.
+
+==== npm audit, 11/22 ====
+found 0 vulnerabilities (all dependencies); found 0 vulnerabilities (--omit=dev)

@@ -14,6 +14,19 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
 | 5 | 11/19 | Look for secret keys in the live site's code: all 15 JavaScript files triptab.org serves, for Supabase secret and service-role keys, Anthropic, Resend and Google keys, webhook secrets and private keys | triptab.org | None. Only the two keys meant to be public: Supabase's publishable key and PostHog's project key |
 | 6 | 11/19 | Read group links out of the analytics: a group link works like an Owner's key (whoever joins through one gets the link's role, Owner by default), so look for tokens in what PostHog receives | PostHog (TripTab project), and a local run with PostHog caught in the browser | **Found: every visit to a group link sent its token to PostHog in the page address, and replays recorded the link shown in People.** PostHog holds 1,329 such events from 11/15 to 11/18 (66 tokens; 10 from the live sites). Fixed (below); after the fix, 17 captured requests at 1280 and 390, with the link opened, copied and texted, held no token, and on triptab.org PostHog stored a visit to a made-up link as `/join/[link]` with the token nowhere in the event |
 
+| 7 | 11/22 | A Viewer makes a trip of their own (where they are the Owner) and calls `save_expense` there, naming an expense on the trip where they may only look | TripTab dev | **Worked: the $90 expense's three shares were replaced by one, the Viewer's own.** Fixed (below); after the fix, "That expense is gone" and the split is unchanged (`app/src/audit.live.test.ts`) |
+| 8 | 11/22 | Outrun the AI caps: the functions add up today's `ai_calls` rows after fetching them, so is there a ceiling on rows? | TripTab dev | **Yes: asked for 1,100 rows, got 1,000.** A refused call writes a row too, so 1,000 refusals would freeze the count for everyone until midnight. The 1,000 calls were not sent. Fixed (below) |
+| 9 | 11/22 | Sign up with someone else's email and a password of your own, then have them use Google | TripTab dev (the precondition), Supabase's Identity Linking guide | **Precondition confirmed:** accounts from the sign-up function are stored confirmed, with TripTab's own check still pending, and Supabase drops a password on linking only when the email is unconfirmed. Not run end to end (it takes a real Google account). Fixed (below) |
+| 10 | 11/22 | A Viewer, a stranger and a signed-out visitor against what was added since 11/19: contacts, pay details, the group link, the trip's email address, held mail, forwarding addresses, foreign costs, the AI functions; and what live updates push | TripTab dev | Refused throughout, 64 requests: no row read or changed; a Viewer's pushed update of a traveler never carries email or phone; a stranger is pushed nothing. One finding on the way: an Owner could set `created_by` on a plan to someone else. Fixed (below) |
+| 11 | 11/22 | Dodge the per-address sign-up limit with a made-up `X-Forwarded-For` header | TripTab dev | Refused: the stored address hash was the caller's real address all three times (Supabase's log shows the header arriving, and `cf-connecting-ip` beside it) |
+| 12 | 11/22 | Skip TripTab's sign-up function and its limits: Supabase's own sign-up, magic-link and anonymous endpoints, with the public key | TripTab dev | Partly. Sign-up makes an account that can't sign in until its emailed link is opened ("Email not confirmed"); anonymous sign-in is off. But sign-up and magic link each send an email, outside TripTab's limits (SECURITY.md, What's left) |
+| 13 | 11/22 | Post a forged booking email straight to `inbox-email`, with no secret and with a guessed one | TripTab dev | Refused: 401 both times |
+| 14 | 11/22 | Save a plan link that runs script (`javascript:`, `data:`) | TripTab dev | Refused by the database's check on `items.link` |
+| 15 | 11/22 | Search what PostHog holds for tokens, one-time codes, emails and pay details | PostHog (TripTab project) | **Found:** 8 events with Google's one-time sign-in code in the page address; 3 click events with a Venmo link (payee, amount, trip name); replays record on-screen emails. One group link token since 11/19, from a browser tab still running the build from before the move; the token was already dead. Fixed (below) |
+| 16 | 11/22 | Look for sign-ins left at the old GitHub Pages address, and read what triptab.org sends with a page | production (counts only), triptab.org | **Found:** 4 sign-ins by 3 people from before the move are still valid, one in use that morning; and the site sent no security headers. Fixed in part (below) |
+
+Raw output for 7 to 16: `2026-11-22-attacks.txt`.
+
 ## Found and fixed
 
 - **`set_action_done` and the NULL trap (attack 4).** Its check was "an owner, or the person it's
@@ -33,6 +46,47 @@ after the feature freeze. Every entry is a real run; the raw output sits beside 
   `group link texted` event keeps the signal that click capture used to give. Unit tests in
   `app/src/lib/analytics.test.ts`. The tokens PostHog already holds stop working once every link is
   rotated: migration `20261119162226_rotate_group_links.sql` (C17, Mike's 11/19 call).
+
+- **An expense on another trip (attack 7).** `private.write_expense` checked the caller was an Owner
+  of the trip passed in, then updated the expense "where id and trip match". With another trip's
+  expense id the update matched nothing, and the next two lines still deleted that expense's shares
+  and inserted new ones. `save_expense` passes the caller's trip and expense straight through, so a
+  Viewer (who can read a trip's expense ids) only needed a trip of their own. Fix: migration
+  `20261122080000_audit_expense_caps_privileges.sql` checks the expense belongs to the trip first.
+  `confirm_item` was never affected: it looks the expense up from the plan.
+
+- **The AI caps and the 1,000-row ceiling (attack 8).** `import-bookings`, `plan-with-ai`,
+  `describe-trip` and `inbox-email` each selected today's rows and summed them in code. Fix: the
+  same migration adds `ai_spend_today(p_since, p_user)`, which sums in SQL and is granted to the
+  service role only; the four functions call it. Found by the Edge Function review.
+
+- **A password nobody proved (attack 9).** Fix: migration `20261122080100_unproven_password.sql`, a
+  trigger on `auth.identities`. It acts only when the new sign-in's provider vouches for the
+  account's own address and TripTab's check is still pending; then the password, other sign-in
+  methods, earlier sessions and forwarding addresses go, which is what Supabase does itself for an
+  unconfirmed email. It never blocks a sign-in: on any error it logs a warning and lets it through.
+
+- **Forged `created_by` (attack 10).** Fix: a trigger on `items` and `action_items` sets it to the
+  caller on every signed-in insert. Same migration; live test in `audit.live.test.ts`.
+
+- **PostHog (attack 15).** `app/src/lib/analytics.ts`: `?code=`, `?t=`, `?token_hash=` and `?name=`
+  values become `[hidden]` in every address, plain or encoded; a property's name is scrubbed as well
+  as its value (heatmap data is filed under the page address); `mask_all_element_attributes` drops
+  attributes from click events; replays run all on-screen text through `hidePersonal`, which turns
+  emails into `[email]` and runs of 10 or more digits into `[number]`. Unit tests in
+  `analytics.test.ts`. The privacy page's PostHog line was updated in the same pull request.
+
+- **The old address and the headers (attack 16).** `docs/app/index.html` removes Supabase's sign-in
+  tokens from that address's storage before forwarding. `app/public/_headers` adds the headers.
+  Ending the old sign-ins on the server waits for Mike's OK.
+
+- **From the two code reviews, 11/22.** Email links on TripTab dev accepted a Preview-style name on
+  any Cloudflare account (`pickAppUrl`, both copies): now this account only. Guesses at a forwarding
+  address's code sent at the same moment shared one try: now every guess takes a try first. An
+  account's name went into emails at any length: now 60 characters, one line. An email with
+  `&#99999999;` in it threw, and the Worker took the 500 as "taken": now a space. Calendar text let
+  a lone carriage return or a Unicode line separator through: now escaped or dropped. Truncate,
+  references and trigger rights on nine tables were still granted to signed-in people: revoked.
 
 ## Checked, nothing to fix
 
