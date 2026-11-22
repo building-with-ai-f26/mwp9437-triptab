@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { arrivedFromOAuth, isConfigured, supabase, supabaseKey, supabaseUrl } from "./supabase";
 import { identify, track } from "./analytics";
+import { emailStillUnproven, wrongPasswordMessage } from "./signIn";
 
 interface AuthState {
   user: User | null;
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) return error.message === "Invalid login credentials" ? "That email and password don't match." : error.message;
+    if (error) return error.message === "Invalid login credentials" ? wrongPasswordMessage(googleEnabled) : error.message;
     track("signed in");
     return null;
   };
@@ -191,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         linkGoogle,
         sendPasswordReset,
         setNewPassword,
-        emailPending: session?.user?.app_metadata?.email_check === "pending",
+        emailPending: emailStillUnproven(session?.user),
         resendConfirm,
         refreshUser,
         signOut,

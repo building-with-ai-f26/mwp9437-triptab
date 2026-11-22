@@ -158,5 +158,20 @@ with the five headers.
 The second-account test then ran on triptab.org against production: **57 of 57**
 (`2026-11-22-rls-proof-production.json`, `docs/screenshots/rls-refused-api.png`). Its two labeled
 accounts, `delivered+triptab-rls-dq0pk-a@resend.dev` and `delivered+triptab-rls-dq0pk-b@resend.dev`,
-are for Mike to delete in the Supabase dashboard (production is read-only for the agent).
+were deleted the same day at Mike's ask, by migration `20261122170000_delete_security_test_accounts.sql`
+(production is read-only for the agent, so it goes through a merge).
+
+**Finding D's fix with a real Google account (Mike, 11/22, on pull request 67's Preview, TripTab
+dev).** He made an account with a Gmail address and a password, signed out, tapped Continue with
+Google with that address, signed out, and tried the password: refused ("That email and password
+don't match"). TripTab dev's own records for that account afterwards: no password, Google its only
+sign-in, the address Google vouched for the same as the account's. So the trigger fires when
+Supabase Auth itself writes the sign-in, which the simulated check couldn't show.
+
+Two things came out of that run, both fixed the same day: the refusal didn't say what to do, so the
+sign-in form now adds "If you've signed in with Google using this email, tap Continue with Google
+instead" (the same words for every email, so it tells nobody whether an account exists); and the
+account's own "confirm your email" flag stayed pending, so the reminder would have kept asking
+someone Google had already vouched for. The reminder now stops once a sign-in provider has vouched
+for the same address (`app/src/lib/signIn.ts`, unit tests beside it).
 
