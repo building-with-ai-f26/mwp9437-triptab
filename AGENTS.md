@@ -85,7 +85,7 @@ How a change reaches people, in order. Nothing skips a step.
 3. **A Preview per pull request:** Cloudflare's Workers Builds builds the branch against TripTab dev, deploys it as a Preview on workers.dev and posts the link on the pull request. Previews never touch real users.
 4. **Click-through.** A Playwright click-through at 1280 and 390 wide, against the Preview or a local run, before merging.
 5. **Merge to `main` deploys production:** Workers Builds runs the same script; only if every check passes does it build with production's values, run `wrangler deploy`, and then `app/scripts/smoke.sh`, which checks triptab.org serves the new build and that app links like `/join/...` still open the app.
-6. **Roll back if needed:** in Cloudflare, the `triptab` Worker, **Deployments**, **Rollback**; the next merge deploys forward again.
+6. **Roll back if needed:** in Cloudflare, the `triptab` Worker, **Deployments**, **Rollback**; the next merge deploys forward again. Tried 11/22: the site switched builds within seconds, and back (SECURITY.md, section 6). It never touches the database.
 7. **Database changes go separately.** A migration is applied to TripTab dev first and tested there; it reaches production only after Mike's OK. Edge Functions follow the same order: dev, then production, comparing each deployed copy with the repo (rule 7).
 
 ## 5. Ask me first
