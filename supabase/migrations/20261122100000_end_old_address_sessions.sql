@@ -1,0 +1,13 @@
+-- Security audit, 11/22, finding G (Mike's C39 OK, 11/22): end the sign-ins made at the old GitHub
+-- Pages address.
+--
+-- Until 11/18 the app ran at building-with-ai-f26.github.io, where every project page on the same
+-- GitHub account shares one browser storage, so a sign-in token kept there can be read by any of
+-- those pages. The old address has cleared its tokens before forwarding since the audit, but a
+-- token in a browser that never comes back stays valid until its session ends. This ends them.
+--
+-- The old address began forwarding to triptab.org at 22:31 UTC on 11/18 (pull request 29), and
+-- GitHub Pages can serve the page it had for ten minutes more, so every session made before 23:00
+-- UTC that day goes. Their refresh tokens go with them (the database removes those itself). Nobody
+-- loses an account, a trip or anything else: each person signs in again once, at triptab.org.
+delete from auth.sessions where created_at < timestamptz '2026-11-18 23:00:00+00';
