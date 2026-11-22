@@ -34,7 +34,7 @@ describe("invite rate limits", () => {
 
 describe("where an invite link points", () => {
   it("on production, always triptab.org, even when asked from a local run", () => {
-    for (const o of ["https://triptab.org", "http://localhost:5173", "https://pr-21-triptab.mikep.workers.dev", null]) {
+    for (const o of ["https://triptab.org", "http://localhost:5173", "https://pr-21-triptab.mwp9437.workers.dev", null]) {
       expect(pickAppUrl(o, false)).toBe("https://triptab.org");
     }
     expect(pickAppUrl("http://localhost:5173")).toBe("https://triptab.org");
@@ -42,11 +42,12 @@ describe("where an invite link points", () => {
 
   it("on TripTab dev, back to a local run or a Preview", () => {
     expect(pickAppUrl("http://localhost:5173", true)).toBe("http://localhost:5173");
-    expect(pickAppUrl("https://pr-21-triptab.mikep.workers.dev", true)).toBe("https://pr-21-triptab.mikep.workers.dev");
+    expect(pickAppUrl("https://pr-21-triptab.mwp9437.workers.dev", true)).toBe("https://pr-21-triptab.mwp9437.workers.dev");
   });
 
   it("never points at anyone else's site", () => {
-    for (const o of ["https://evil.example", "https://triptab.org.evil.example", "https://evil-triptab.org", "http://triptab.org", "https://x-triptab.evil.example.dev", null, undefined, ""]) {
+    // The last two: a Worker named like a Preview on someone else's Cloudflare account (security audit, 11/22).
+    for (const o of ["https://evil.example", "https://triptab.org.evil.example", "https://evil-triptab.org", "http://triptab.org", "https://x-triptab.evil.example.dev", null, undefined, "", "https://x-triptab.attacker.workers.dev", "https://pr-21-triptab.mwp9437.workers.dev.evil.example"]) {
       expect(pickAppUrl(o, true)).toBe(DEFAULT_APP_URL);
       expect(pickAppUrl(o, false)).toBe(DEFAULT_APP_URL);
     }

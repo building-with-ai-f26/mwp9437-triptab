@@ -33,7 +33,6 @@ import {
 } from "./rules.ts";
 
 const DEV_PROJECT = "iivseqkvixmvcpldarqy";
-const REAL = ["ok", "no_plans", "refused", "invalid_output", "timeout", "error"];
 // The app asks from the browser whether email-in is ready, so the probe answers across origins.
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -262,10 +261,13 @@ async function readEmail(
       searches: usage?.searches ?? 0, cost_usd: usage ? costUsd(usage) : 0, latency_ms: ms, result, plans_proposed: plans, test_run: testRun,
     }).select("id").single();
 
-  const { data: today, error: capError } = await admin.from("ai_calls").select("cost_usd, user_id, result").gte("created_at", nyDayStart());
-  if (capError) return { status: 500, code: "error" };
-  const spent = (today ?? []).reduce((s, r) => s + Number(r.cost_usd), 0);
-  const mine = (today ?? []).filter((r) => r.user_id === billedTo && REAL.includes(r.result)).length;
+  // Added up in the database (security audit, 11/22): fetched as rows, the API hands back 1,000 at
+  // most, so a day with more rows than that stopped counting. ai_spend_today also holds the list of
+  // results that count as a call that reached the Claude API.
+  const { data: today, error: capError } = await admin.rpc("ai_spend_today", { p_since: nyDayStart(), p_user: billedTo }).single<{ spent: number; mine: number }>();
+  if (capError || !today) return { status: 500, code: "error" };
+  const spent = Number(today.spent);
+  const mine = Number(today.mine);
   const blocked = capDecision(cap, spent, mine);
   if (blocked) {
     await log(blocked.code, null, null, null);

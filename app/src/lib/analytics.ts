@@ -10,25 +10,62 @@ const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || "https
  * plain or URL-encoded (a text-message link, a clicked element's address, a replay's page). In
  * replays, the link's own elements are also left out whole (`ph-no-capture` in People), since
  * PostHog compresses page snapshots before they reach this hook.
+ *
+ * Since the 11/22 audit the same goes for the one-time values an address can carry for a moment:
+ * the sign-in code Google sends back (?code=), the confirm-your-email token (?t=) and the
+ * password-reset token (?token_hash=). Each works once and is spent on arrival, but PostHog's first
+ * page view can fire before the page takes it out of the address, and eight sign-in codes had
+ * reached PostHog that way. Names typed on the join page (?name=) are left out too. And a property's
+ * name is scrubbed as well as its value: heatmap data is filed under the page's address.
  */
 const LINK = /(\/|%2F)join(\/|%2F)[A-Za-z0-9_-]{8,}/gi;
-const HAS_LINK = new RegExp(LINK.source, "i");
-export const scrubLinks = (s: string): string => s.replace(LINK, (_m, a: string, b: string) => `${a}join${b}[link]`);
+const KEYS = "code|t|token_hash|token|name";
+const ONE_TIME = new RegExp(`([?&#])(${KEYS})(=)[^&#\\s"']+`, "gi");
+/** The same inside a URL-encoded address (a link within a link): the value runs to the next encoded & or #. */
+const ONE_TIME_ENCODED = new RegExp(`(%3F|%26)(${KEYS})(%3D)(?:(?!%26|%23)[^&#\\s"'])+`, "gi");
+const HAS_SECRET = new RegExp(`${LINK.source}|${ONE_TIME.source}|${ONE_TIME_ENCODED.source}`, "i");
+const hide = (_m: string, sep: string, key: string, eq: string) => `${sep}${key}${eq}[hidden]`;
+export const scrubLinks = (s: string): string =>
+  s.replace(LINK, (_m, a: string, b: string) => `${a}join${b}[link]`).replace(ONE_TIME, hide).replace(ONE_TIME_ENCODED, hide);
 
-function scrubDeep(v: unknown): unknown {
-  if (typeof v === "string") return HAS_LINK.test(v) ? scrubLinks(v) : v;
+/**
+ * Emails and phone numbers stay out of PostHog too (security audit, 11/22; the privacy page says
+ * "never your email"). The app shows them on screen in places: the address you're signed in as, a
+ * person's contact for an Owner, a Zelle number, a trip's own address. Replays run every piece of
+ * on-screen text through hidePersonal, so the rest of the screen stays readable; clicked elements'
+ * text goes through it as well, and an email is taken out of anything else an event carries.
+ */
+const EMAIL = /[A-Za-z0-9._%+-]+(@|%40)[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+/g;
+const PHONE = /[+(]?\d[\d\s().-]{7,}\d/g;
+export const hideEmails = (s: string): string => (s.includes("@") || /%40/i.test(s) ? s.replace(EMAIL, "[email]") : s);
+/** A run of digits is a phone number at 10 digits or more, which leaves dates, times and prices alone. */
+export const hidePersonal = (s: string): string =>
+  hideEmails(s).replace(PHONE, (m) => (m.replace(/\D/g, "").length >= 10 ? "[number]" : m));
+const TEXT_KEYS = new Set(["$el_text", "text"]);
+
+function scrubDeep(v: unknown, key = ""): unknown {
+  if (typeof v === "string") {
+    const s = HAS_SECRET.test(v) ? scrubLinks(v) : v;
+    return TEXT_KEYS.has(key) ? hidePersonal(s) : hideEmails(s);
+  }
   if (Array.isArray(v)) {
-    for (let i = 0; i < v.length; i++) v[i] = scrubDeep(v[i]);
+    for (let i = 0; i < v.length; i++) v[i] = scrubDeep(v[i], key);
     return v;
   }
   if (v && typeof v === "object" && !(v instanceof Date)) {
     const o = v as Record<string, unknown>;
-    for (const k of Object.keys(o)) o[k] = scrubDeep(o[k]);
+    for (const k of Object.keys(o)) {
+      const value = scrubDeep(o[k], k);
+      if (HAS_SECRET.test(k)) {
+        delete o[k];
+        o[scrubLinks(k)] = value;
+      } else o[k] = value;
+    }
   }
   return v;
 }
 
-/** PostHog's before_send: the same event with every group link token taken out. */
+/** PostHog's before_send: the same event with every group link token and one-time code taken out. */
 export function scrubEvent(event: CaptureResult | null): CaptureResult | null {
   if (!event) return event;
   scrubDeep(event.properties);
@@ -52,7 +89,12 @@ export function startAnalytics(): void {
       capture_pageview: "history_change",
       capture_pageleave: true,
       person_profiles: "identified_only",
-      session_recording: { maskAllInputs: true },
+      // Clicks are recorded by the element's text and tag, never its attributes (security audit,
+      // 11/22): a label or an address on a button can hold an email, a Zelle number or a Venmo link.
+      mask_all_element_attributes: true,
+      // In replays, typed text is hidden, and emails and phone numbers are taken out of everything
+      // shown on screen (hidePersonal, above); the rest of the screen stays readable.
+      session_recording: { maskAllInputs: true, maskTextSelector: "*", maskTextFn: hidePersonal },
       get_current_url: scrubLinks,
       before_send: scrubEvent,
     });

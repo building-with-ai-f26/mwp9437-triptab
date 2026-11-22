@@ -10,7 +10,15 @@
       // TripTab moved here from GitHub Pages on 11/18 (Build 3). Links shared before then put the
       // screen after a # (.../app/#/join/abc); triptab.org uses plain paths (/join/abc). Keep the
       // rest of the link, so a group link or a trip link opens the same screen on the new address.
+      //
+      // Sign-ins made here before the move left their tokens in this address's storage, which every
+      // other project page on this GitHub account can read (security audit, 11/22). They go first.
       (function () {
+        try {
+          Object.keys(localStorage).forEach(function (k) {
+            if (/^sb-.*-auth-token/.test(k)) localStorage.removeItem(k);
+          });
+        } catch (e) {}
         var rest = location.hash.replace(/^#/, "");
         if (rest.charAt(0) !== "/") rest = "/";
         location.replace("https://triptab.org" + rest);

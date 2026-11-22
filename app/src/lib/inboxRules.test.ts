@@ -134,3 +134,9 @@ describe("the addresses an account signs in with (C19)", () => {
     expect(accountEmails({ email: null })).toEqual([]);
   });
 });
+
+describe("an email can't stop its own reading (security audit, 11/22)", () => {
+  it("a numbered character no text can hold becomes a space instead of an error", () => {
+    expect(htmlToText("<p>Flight AA100 &#99999999; Feb 6 &#233;</p>")).toBe("Flight AA100 Feb 6 é");
+  });
+});

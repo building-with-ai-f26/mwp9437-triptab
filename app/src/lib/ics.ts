@@ -14,9 +14,18 @@ const PART_TIMES: Record<DayPart, [string, string]> = {
 
 const ymd = (iso: string) => iso.replace(/-/g, "");
 
-/** Escapes text for an .ics field: backslash, semicolon, comma and newlines. */
+/**
+ * Escapes text for an .ics field: backslash, semicolon, comma and line breaks. Every kind of line
+ * break counts (a lone carriage return, and Unicode's next-line and line and paragraph separators),
+ * and other control characters are dropped (security audit, 11/22): some calendar apps start a new
+ * line at any of them, and a plan's title could have added lines of its own to the calendar file.
+ */
 export function icsText(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  return s
+    .replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,")
+    .replace(/\r\n|[\r\n\u0085\u2028\u2029]/g, "\\n")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
 }
 
 /** Folds lines longer than 75 octets, as the format requires. */

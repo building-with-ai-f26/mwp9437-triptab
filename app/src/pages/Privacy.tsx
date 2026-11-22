@@ -7,7 +7,7 @@ import { LANDING_PHOTO } from "../lib/photos";
  * TripTab's privacy page (Build 3), linked from the landing page, sign-in and Google's consent
  * screen. Every line describes what the code does today: change it with the code it describes.
  */
-const UPDATED = "November 21, 2026";
+const UPDATED = "November 22, 2026";
 const CONTACT = "privacy@triptab.org";
 
 const SECTIONS: { title: string; body: ReactNode }[] = [
@@ -106,7 +106,7 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         <li>
           <b>PostHog</b> records how the app is used (the pages you open, taps, and events such as "trip created")
           and session replays of the screen, tied to an account number, never your email. Whatever you type into a
-          field is hidden in replays.
+          field is hidden in replays, and so are the email addresses and phone numbers shown on a screen.
         </li>
         <li>
           <b>Open-Meteo</b> suggests places as you type a trip's stops. It gets only what you've typed in that box,
