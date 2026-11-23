@@ -27,6 +27,7 @@ async function run(browser, label, opts, result) {
   r.nothingAdded = (await p.locator('.item-card').count()) === 0;
 
   // A stay with its Airbnb link, typed without https://.
+  await h.showDay(p, '2027-02-05');
   await p.locator('#day-2027-02-05').getByRole('button', { name: 'Add to day' }).click();
   const d = h.dlg(p);
   await d.getByLabel('What').fill('Chamonix Airbnb');

@@ -18,6 +18,7 @@ async function run(browser, label, opts, result) {
   await h.startSkiTrip(p, `dialog-${label}`);
 
   // 1. Select all that apply, on a throwaway plan.
+  await h.showDay(p, '2027-02-07');
   await p.locator('#day-2027-02-07').getByRole('button', { name: 'Add to morning' }).click();
   const d = h.dlg(p);
   r.start = await pressed(d);
@@ -38,6 +39,7 @@ async function run(browser, label, opts, result) {
   await d.waitFor({ state: 'detached' });
 
   // 2 and 4. Ski school, 9 to 4, three days, about $60 a person.
+  await h.showDay(p, '2027-02-06');
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   await d.getByLabel('What').fill('Ski school');
   await h.openTimes(d);
@@ -83,11 +85,13 @@ async function run(browser, label, opts, result) {
   await d.waitFor({ state: 'detached' });
 
   // A new plan closed with the X is kept; one discarded isn't.
+  await h.showDay(p, '2027-02-09');
   await p.locator('#day-2027-02-09').getByRole('button', { name: 'Add to evening' }).click();
   await d.getByLabel('What').fill('Fondue night');
   await d.getByRole('button', { name: 'Close' }).click();
   await p.locator('#day-2027-02-09 .item-card').filter({ hasText: 'Fondue night' }).waitFor();
   r.keptOnClose = true;
+  await h.showDay(p, '2027-02-10');
   await p.locator('#day-2027-02-10').getByRole('button', { name: 'Add to evening' }).click();
   await d.getByLabel('What').fill('Not this one');
   await d.getByRole('button', { name: 'Discard' }).click();
