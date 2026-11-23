@@ -87,7 +87,14 @@ async function openFold(d, name) {
 const openCost = (d) => openFold(d, /^Cost/);
 const openTimes = (d) => openFold(d, /^Times/);
 
+/** On a phone a day with nothing on it is folded to one row (11/23): unfold it to reach its slots. */
+async function showDay(page, day) {
+  const fold = page.locator(`#day-${day}[data-folded]`).getByRole('button', { name: /^Show / });
+  if (await fold.count()) await fold.click();
+}
+
 async function addPlan(page, day, slot, f) {
+  await showDay(page, day);
   await page.locator(`#day-${day}`).getByRole('button', { name: slot }).click();
   const d = dlg(page);
   await d.getByLabel('What').fill(f.title);
@@ -131,4 +138,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { showDay, openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

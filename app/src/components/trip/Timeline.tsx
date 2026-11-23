@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, ThumbsUp, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { BedDouble, Bus, Check, ChevronDown, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, ThumbsUp, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
   clock,
   dayChip,
@@ -14,7 +14,7 @@ import {
   type ItemKind,
 } from "../../lib/model";
 import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
-import { canDrag, chipId, justDropped, slotId, quietPress } from "../../lib/move";
+import { canDrag, chipId, foldId, justDropped, slotId, quietPress } from "../../lib/move";
 import type { GoingBadge } from "../../lib/initials";
 
 export const KIND_ICON: Record<ItemKind, LucideIcon> = {
@@ -344,9 +344,76 @@ function Slot({ day, part, children }: { day: string; part: DayPart; children: R
   );
 }
 
-export function DayBlock({ day, last, actions }: { day: TimelineDay; last: boolean; actions: TimelineActions }) {
+/** An empty day on a phone: one row. Tap it to see its slots; a plan dragged onto it moves to that day. */
+function FoldedDay({ day, actions, onOpen }: { day: TimelineDay; actions: TimelineActions; onOpen: () => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: foldId(day.date) });
+    return (
+      <section
+        ref={setNodeRef}
+        id={`day-${day.date}`}
+        data-date={day.date}
+        data-folded
+        data-over={isOver || undefined}
+        className={`scroll-mt-32 rounded-2xl py-2 transition-colors sm:scroll-mt-36 ${isOver ? "bg-primary/15 outline-2 outline-dashed outline-primary" : ""}`} aria-label={longDay(day.date)}>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-expanded={false}
+            aria-label={`Show ${longDay(day.date)}: nothing planned yet`}
+            onClick={onOpen}
+            className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl text-left"
+          >
+            <span className="glass grid size-11 shrink-0 place-items-center rounded-2xl !bg-white/85">
+              <span className="font-display text-base font-bold text-gold-dark">{dayChip(day.date).date.split("/")[1]}</span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display text-base font-semibold">{day.title || "Free day"}</span>
+              <span className="label-luxury block text-foreground">
+                {longDay(day.date)} · <span className="normal-case tracking-normal">nothing planned yet</span>
+              </span>
+            </span>
+            <ChevronDown className="size-5 shrink-0 text-foreground/70" />
+          </button>
+          {actions.canEdit && (
+            <button
+              type="button"
+              onClick={() => actions.onAdd(day.date, "day")}
+              className="glass grid size-11 shrink-0 place-items-center rounded-full border-white/30 text-muted-foreground transition-all hover:bg-primary/15 hover:text-primary"
+              aria-label={`Add a plan on ${longDay(day.date)}`}
+            >
+              <Plus className="size-4" />
+            </button>
+          )}
+        </div>
+      </section>
+    );
+}
+
+export function DayBlock({
+  day,
+  last,
+  actions,
+  foldEmpty = false,
+  startOpen = false,
+}: {
+  day: TimelineDay;
+  last: boolean;
+  actions: TimelineActions;
+  /**
+   * A phone: a day with nothing on it folds to one row (11/23 review, item 9: 12 empty days were
+   * about 4,900 px of scrolling). A day with any plan or stay always shows whole, so a gap like
+   * Thursday night still stands out. Laptops keep every slot in view.
+   */
+  foldEmpty?: boolean;
+  /** Start this day unfolded even though it's empty (the first day of a trip with no plans yet). */
+  startOpen?: boolean;
+}) {
   const nights = day.stays.filter((s) => !s.checkout);
   const covered = nightCovered(day.overnight, actions);
+  const [open, setOpen] = useState(startOpen);
+  const empty = PARTS.every((p) => day.parts[p].length === 0) && day.stays.length === 0 && day.overnight.length === 0;
+  const folded = foldEmpty && empty && !open;
+  if (folded) return <FoldedDay day={day} actions={actions} onOpen={() => setOpen(true)} />;
   return (
     <section id={`day-${day.date}`} data-date={day.date} className="scroll-mt-32 py-4 sm:scroll-mt-36" aria-label={longDay(day.date)}>
       <header className="mb-3 flex items-center gap-3">

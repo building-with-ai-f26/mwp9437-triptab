@@ -140,7 +140,7 @@ export function MovePlans({ children, onMove }: { children: ReactNode; onMove: (
     const over = e.over ? String(e.over.id) : null;
     release();
     if (!item || !over) return;
-    if (over.startsWith("chip:")) return onMove(item, over.slice(5), item.part);
+    if (over.startsWith("chip:") || over.startsWith("fold:")) return onMove(item, over.slice(5), item.part);
     const slot = parseSlot(over);
     if (slot) onMove(item, slot.day, slot.part);
   };
@@ -172,7 +172,7 @@ export function MovePlans({ children, onMove }: { children: ReactNode; onMove: (
 }
 
 function describe(id: string): string {
-  if (id.startsWith("chip:")) return id.slice(5);
+  if (id.startsWith("chip:") || id.startsWith("fold:")) return id.slice(5);
   const slot = parseSlot(id);
   return slot ? `${slot.day}, ${slot.part}` : "a slot";
 }

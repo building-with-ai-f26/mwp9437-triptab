@@ -8,6 +8,7 @@ import { tastesSummary } from "../../lib/tastes";
 import { venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "../../lib/pay";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
+import { inviteText, useCopy } from "../../lib/invite";
 
 const ROLE_OPTIONS = [
   { value: "owner" as Role, label: "Owner" },
@@ -18,23 +19,6 @@ const ROLE_HELP: Record<Role, string> = {
   owner: "Owners add plans, costs and people, and can change roles.",
   viewer: "Viewers see the trip and opt in or out of plans.",
 };
-
-function inviteText(trip: Trip, url: string, name?: string) {
-  return `${name ? `${name}, you're` : "You're"} on the ${trip.name} trip in TripTab. Tap to see the plan: ${url}`;
-}
-
-/** Copies text and briefly shows "Copied". */
-function useCopy(): [string | null, (key: string, text: string) => void] {
-  const [copied, setCopied] = useState<string | null>(null);
-  return [
-    copied,
-    (key, text) => {
-      navigator.clipboard?.writeText(text).catch(() => window.prompt("Copy this link:", text));
-      setCopied(key);
-      window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1800);
-    },
-  ];
-}
 
 function initials(name: string) {
   return name
