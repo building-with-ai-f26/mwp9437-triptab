@@ -11,7 +11,7 @@ const h = require('./helpers.cjs');
   result.tripUrl = await h.startSkiTrip(o);
   await h.addPlan(o, '2027-02-15', 'Add to day', { title: 'Last ski day in Andorra', status: 'Planned' });
 
-  await o.getByRole('button', { name: 'Trip settings' }).click();
+  await o.getByRole('button', { name: 'Stops and dates' }).click();
   const d = h.dlg(o);
   await d.getByLabel('Trip name').fill('Euro ski trip 2027');
   // Ending Andorra on 2/14 would strand the 2/15 plan: refused.
@@ -31,14 +31,14 @@ const h = require('./helpers.cjs');
   // Phone view of the dialog.
   const p = h.watch(await (await h.context(browser, { ...h.PHONE, storageState: await ctx.storageState() })).newPage(), 'phone');
   await p.goto(result.tripUrl);
-  await p.getByRole('button', { name: 'Trip settings' }).click();
+  await p.getByRole('button', { name: 'Stops and dates' }).click();
   await h.dlg(p).getByLabel('Trip name').waitFor();
   result.phoneOverflow = await h.overflowX(p);
   await h.shot(p, 'trip-settings-phone');
 
   // Delete the trip.
   o.once('dialog', (dlg) => dlg.accept());
-  await o.getByRole('button', { name: 'Trip settings' }).click();
+  await o.getByRole('button', { name: 'Stops and dates' }).click();
   await h.dlg(o).getByRole('button', { name: 'Delete trip' }).click();
   await o.waitForURL(/\/trips$/);
   await o.getByText('No trips yet').waitFor();

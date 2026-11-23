@@ -51,15 +51,20 @@ async function run(browser, label, opts, result) {
   // One tap out of the hike; the paid dinner shows her share, no switch.
   await strip.click();
   const d = h.dlg(j);
-  await d.getByText("Tap to say you're in or out").waitFor();
+  await d.getByText("Each plan says whether you're in").waitFor();
   r.rows = await d.locator('li').count();
   r.dinner = (await d.locator('li', { hasText: 'Dinner at Le Cap' }).innerText()).replace(/\s+/g, ' ').trim();
-  r.dinnerHasSwitch = await d.locator('li', { hasText: 'Dinner at Le Cap' }).getByRole('switch').count();
-  r.flightStartsOut = (await d.getByRole('switch', { name: /Flight JFK to Geneva/ }).getAttribute('aria-checked')) === 'false';
-  const hike = d.getByRole('switch', { name: /Glacier hike/ });
+  r.dinnerHasSwitch = await d.locator('li', { hasText: 'Dinner at Le Cap' }).getByRole('button', { name: /^(Join|Drop) / }).count();
+  // A status and an action, never one label for both (Mike's call 11/23).
+  const row = (title) => d.locator('li', { hasText: title });
+  r.flightStartsOut = (await row('Flight JFK to Geneva').locator('[data-status]').innerText()).trim() === "You're out" &&
+    (await row('Flight JFK to Geneva').getByRole('button', { name: 'Join Flight JFK to Geneva' }).count()) === 1;
+  r.hikeStartsIn = (await row('Glacier hike').locator('[data-status]').innerText()).trim() === "You're in";
+  const hike = d.getByRole('button', { name: 'Drop Glacier hike' });
   r.tapTarget = Math.round((await hike.boundingBox()).height);
   await hike.click();
-  await d.getByRole('switch', { name: "Glacier hike: you're out" }).waitFor();
+  await d.getByRole('button', { name: 'Join Glacier hike' }).waitFor();
+  r.hikeNowOut = (await row('Glacier hike').locator('[data-status]').innerText()).trim() === "You're out";
   await h.shot(j, `your-plans-list-${label}`);
   await d.getByRole('button', { name: 'Done' }).click();
   await j.getByText("You're in 2 of 4 plans").waitFor();
@@ -78,7 +83,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const ok = r.aloneHasIt === 0 && r.noPlansHasIt === 0 && /You're in 3 of 4 plans Your share so far \$190 · you owe \$190/.test(r.strip) && r.aboveItinerary &&
-        r.overflow <= 0 && r.rows === 4 && /In · your share \$190/.test(r.dinner) && r.dinnerHasSwitch === 0 && r.flightStartsOut && r.tapTarget >= 44 &&
+        r.overflow <= 0 && r.rows === 4 && /You're in · your share \$190/.test(r.dinner) && r.dinnerHasSwitch === 0 && r.flightStartsOut && r.hikeStartsIn && r.hikeNowOut && r.tapTarget >= 44 &&
         /You're in 2 of 4 plans/.test(r.afterOut) && r.ownerSees === 'You are in';
       if (!ok) result.failure = `${label}: a check failed`;
     }

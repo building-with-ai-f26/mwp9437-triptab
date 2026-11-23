@@ -61,7 +61,7 @@ async function run(browser, label, opts, result) {
   r.afterImport = await subtitle();
 
   // 3. Shrinking the dates back is refused, naming the plans in the way.
-  await p.getByRole('button', { name: 'Trip settings' }).click();
+  await p.getByRole('button', { name: 'Stops and dates' }).click();
   await h.dlg(p).getByLabel('Stop 1 from').fill('2027-02-05');
   await h.dlg(p).getByRole('button', { name: 'Save' }).click();
   const alert = h.dlg(p).getByRole('alert');

@@ -151,7 +151,7 @@ export function ForwardAddress({
         <Mail className="size-4 shrink-0" /> Or forward it to this trip
       </p>
       <p className="mt-1 text-xs text-white/70">
-        Send booking emails here. From the email you use for TripTab (or one under Also forward from on My trips) they're read right
+        Send booking emails here. From the email you use for TripTab (or one under Also forward from on your profile) they're read right
         away; from any other address, they wait for an Owner to read them. Nothing is saved until an Owner reviews it.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">

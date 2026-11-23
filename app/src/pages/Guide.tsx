@@ -50,7 +50,8 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Tap a plan</b> to see its details. Say <b>I'm in</b> or <b>I'm out</b>, so the plan and its bill only count
-          the people going. On a Suggested plan, tap <b>I want this</b> so the group can see which ideas are popular.
+          the people going. The strip at the top of a trip lists every plan with where you stand, <b>You're in</b> or{" "}
+          <b>You're out</b>, and a <b>Join</b> or <b>Drop</b> button to change it. On a Suggested plan, tap <b>I want this</b> so the group can see which ideas are popular.
         </li>
         <li>
           <b>Add a plan</b> with Add a plan, or tap any empty part of a day. Owners can drag a plan to another day or
@@ -63,10 +64,15 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Forward bookings by email:</b> each trip has its own address (under AI help). Forward a confirmation to it
-          and the plans wait for an Owner to review.
+          and the plans wait for an Owner to review. To forward from another address of yours, add it under Also
+          forward from on your profile.
         </li>
         <li>
           <b>Calendar and PDF:</b> add your plans to your own calendar, or print the trip.
+        </li>
+        <li>
+          <b>Stops and dates:</b> an Owner changes the trip's name, stops and dates from Stops and dates, in Travel and
+          lodging.
         </li>
       </ul>
     ),
@@ -123,12 +129,16 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
   {
     id: "phone",
-    title: "On a phone",
+    title: "On a phone or a computer",
     body: (
       <ul>
         <li>
           The bar along the bottom switches between Itinerary, Money, To do and People. Each one keeps its place when
           you come back to it.
+        </li>
+        <li>
+          On a computer the same sections are tabs across the top, after <b>Overview</b>, which shows the itinerary with
+          Money, To do and People beside it.
         </li>
       </ul>
     ),
