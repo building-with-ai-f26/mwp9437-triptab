@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { MailCheck, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
-
-const DISMISSED = "triptab.confirm_banner_hidden";
+import { CONFIRM_BANNER_HIDDEN as DISMISSED } from "../lib/firstVisit";
 
 /**
  * The reminder until an email-and-password account opens its "Confirm your email" link (C6,

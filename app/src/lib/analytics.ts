@@ -140,6 +140,8 @@ export type EventName =
   | "calendar downloaded"
   | "group link copied"
   | "group link texted"
+  | "group link shared"
+  | "invite opened"
   | "invite emailed"
   | "group link opened"
   | "name claimed"
