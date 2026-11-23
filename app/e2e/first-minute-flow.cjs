@@ -154,7 +154,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const ok = r.nameFilledIn === 'Julia' && r.screens.length === 3 && r.oldStep === null && r.tourStarted === 0 && r.emailBanner === 0 &&
-        r.showMeAround === 1 && r.overflow <= 0 && r.quietAfterReload && r.askedOnce && r.offered === 'Join as Julia?' && r.noForm &&
+        r.showMeAround >= 1 && r.overflow <= 0 && r.quietAfterReload && r.askedOnce && r.offered === 'Join as Julia?' && r.noForm &&
         r.venmoCameAlong && r.addedInOneTap;
       if (!ok) result.failure = `${label}: a check failed`;
     }

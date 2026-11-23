@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Check, Eye, EyeOff, Lock, LockOpen } from "lucide-react";
 import { TopBar } from "../components/TopBar";
+import { HelpButton, HelpFooter, useHelp } from "../components/Help";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
 import { myProfile, saveMyPrefs, saveMyProfile, type Profile } from "../lib/api";
 import { ACTIVITIES, CUISINES, tasteLabel } from "../lib/tastes";
@@ -20,6 +21,7 @@ const PHOTO = photoFor("resort lisbon");
  */
 export default function You() {
   const { user, refreshUser } = useAuth();
+  const help = useHelp();
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [name, setName] = useState(nameOf(user));
   const [venmo, setVenmo] = useState("");
@@ -84,7 +86,9 @@ export default function You() {
     <div className="relative min-h-dvh">
       <PhotoFrame src={PHOTO} />
       <div className="relative z-10">
-        <TopBar back={{ to: "/trips", label: "My trips" }} title={<span className="italic">You</span>} subtitle="Your profile, on every trip you join" />
+        <TopBar back={{ to: "/trips", label: "My trips" }} title={<span className="italic">You</span>} subtitle="Your profile, on every trip you join">
+          <HelpButton help={help} />
+        </TopBar>
         <main className="mx-auto max-w-xl px-4 py-6 sm:px-6 sm:py-8">
           {profile === undefined && <Spinner label="Loading your profile" />}
           {profile === null && <ErrorNote>Your profile couldn't be loaded. Try again in a moment.</ErrorNote>}
@@ -196,6 +200,7 @@ export default function You() {
             </form>
           )}
         </main>
+        <HelpFooter help={help} />
       </div>
     </div>
   );

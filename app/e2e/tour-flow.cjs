@@ -5,7 +5,7 @@
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const h = require('./helpers.cjs');
 
-const TITLES = ['Your itinerary', 'Add plans', 'Tap a plan', 'To do', 'Money', 'People'];
+const TITLES = ['Your itinerary', 'Add plans', 'Tap a plan', 'To do', 'Money', 'People', 'Help, any time'];
 
 async function context(browser, opts) {
   const ctx = await browser.newContext(opts);
@@ -65,7 +65,7 @@ async function run(browser, label, opts, result) {
   r.notAgain = (await tour.count()) === 0;
 
   // The link replays it; Back works; Escape stops it.
-  await p.getByRole('button', { name: 'Show me around' }).click();
+  await p.getByRole('button', { name: 'Show me around' }).first().click();
   await tour.getByRole('heading', { name: 'Your itinerary' }).waitFor();
   await tour.getByRole('button', { name: 'Next' }).click();
   await tour.getByRole('heading', { name: 'Add plans' }).waitFor();
@@ -85,7 +85,7 @@ async function run(browser, label, opts, result) {
     for (const [label, r] of Object.entries(result)) {
       const ok =
         r.autoStarted && r.titles.join('|') === TITLES.join('|') && r.ringed.every(Boolean) &&
-        (label !== 'phone' || r.tabs.map((t) => t.trim().split(/\s/)[0]).join('|') === 'Itinerary|Itinerary|Itinerary|To|Money|People') &&
+        (label !== 'phone' || r.tabs.map((t) => t.trim().split(/\s/)[0]).join('|') === 'Itinerary|Itinerary|Itinerary|To|Money|People|Itinerary') &&
         r.backOnItinerary && r.notAgain && r.back && r.escaped && r.overflow <= 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }
