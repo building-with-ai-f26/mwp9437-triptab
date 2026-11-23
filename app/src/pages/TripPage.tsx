@@ -132,6 +132,9 @@ export default function TripPage() {
   // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
   const trackedEdit = useRef<string | null>(null);
   const [addingPerson, setAddingPerson] = useState(false);
+  // An AI review shut with nothing saved waits here until it's reviewed or discarded (11/23 review, item 9).
+  const [parked, setParked] = useState({ ideas: 0, bookings: 0 });
+  const [parkNonce, setParkNonce] = useState(0);
   const [inviting, setInviting] = useState(false);
   // How people pay you (your own), and an Owner adding someone's Venmo, from People.
   const [editingPay, setEditingPay] = useState(false);
@@ -774,6 +777,33 @@ export default function TripPage() {
                 }}
               />
             )}
+            {editable && (parked.ideas > 0 || parked.bookings > 0) && (
+              <div role="status" data-testid="parked-review" className="glass-card-solid mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl p-4 sm:mt-6">
+                <Sparkles className="size-5 shrink-0 text-primary" />
+                <p className="min-w-0 flex-1 text-sm text-foreground">
+                  <span className="font-semibold">
+                    {parked.ideas > 0
+                      ? `${parked.ideas} ${parked.ideas === 1 ? "idea" : "ideas"} from AI help ${parked.ideas === 1 ? "is" : "are"} waiting.`
+                      : `${parked.bookings} ${parked.bookings === 1 ? "plan" : "plans"} from your bookings ${parked.bookings === 1 ? "is" : "are"} waiting.`}
+                  </span>{" "}
+                  Nothing is on the trip until you add it.
+                </p>
+                <Button size="sm" onClick={() => (parked.ideas > 0 ? setPlanning(true) : setImporting(true))}>
+                  Review
+                </Button>
+                <Button
+                  size="sm"
+                  variant="glass"
+                  onClick={() => {
+                    // A fresh dialog: the shut one's review goes with it.
+                    setParked({ ideas: 0, bookings: 0 });
+                    setParkNonce((n) => n + 1);
+                  }}
+                >
+                  Discard
+                </Button>
+              </div>
+            )}
             <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
               <div data-tour="itinerary">
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
@@ -1185,10 +1215,12 @@ export default function TripPage() {
       )}
       {editable && (
         <ImportDialog
+          key={`import-${parkNonce}`}
           open={importing}
           trip={trip}
           items={items}
           onClose={() => setImporting(false)}
+          onPark={(n) => setParked((p) => ({ ...p, bookings: n }))}
           onExtend={async (day) => {
             await extendTrip(trip.id, day);
             track("trip extended", { via: "import", side: day < trip.start_date ? "before" : "after" });
@@ -1238,9 +1270,11 @@ export default function TripPage() {
       )}
       {editable && (
         <PlanWithAiDialog
+          key={`plan-${parkNonce}`}
           open={planning}
           trip={trip}
           onClose={() => setPlanning(false)}
+          onPark={(n) => setParked((p) => ({ ...p, ideas: n }))}
           onSave={async (kept) => {
             // Ideas come in as Suggested, with why and where they were found in the notes.
             for (const idea of kept) {
