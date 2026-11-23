@@ -15,6 +15,7 @@ async function run(browser, label, opts, result) {
   await h.startSkiTrip(p, `span-${label}`);
 
   // 1. Skiing, morning to day, Sat 2/6 through Thu 2/11: one plan, twelve slots.
+  await h.showDay(p, '2027-02-06');
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   await h.dlg(p).getByLabel('What').fill('Skiing');
   await h.dlg(p).getByRole('radio', { name: 'Planned' }).click();
@@ -36,6 +37,7 @@ async function run(browser, label, opts, result) {
   r.skiDayAfter = await inDay(p, '2027-02-12', 'Skiing').count();
 
   // 2. A red-eye: departs Fri 2/5 at 5:05 PM, lands Sat 2/6 at 7:10 AM.
+  await h.showDay(p, '2027-02-05');
   await p.locator('#day-2027-02-05').getByRole('button', { name: 'Add to evening' }).click();
   await h.dlg(p).getByLabel('What').fill('UA 57 Newark to Geneva');
   await h.dlg(p).getByRole('radio', { name: 'Flight' }).click();

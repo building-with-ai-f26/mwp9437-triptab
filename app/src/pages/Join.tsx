@@ -4,8 +4,8 @@ import { Check, UserPlus } from "lucide-react";
 import { Brand } from "../components/Brand";
 import { AuthForm } from "../components/AuthForm";
 import { Button, PhotoFrame, Spinner } from "../components/ui";
-import { joinPreview, joinTrip, myPayOn, setMyPay, type JoinPreview } from "../lib/api";
-import { PayInfoForm } from "../components/trip/PayInfo";
+import { joinPreview, joinTrip, type JoinPreview } from "../lib/api";
+import { quietFirstVisit } from "../lib/firstVisit";
 import { nameOf, useAuth } from "../lib/auth";
 import { dateRange, ROLE_LABEL } from "../lib/model";
 import { LANDING_PHOTO, photoFor } from "../lib/photos";
@@ -20,6 +20,12 @@ const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().t
  * The group link. You see the trip and the names already added, pick yours ("Don't see your
  * name?" adds you), make an account or sign in, and you're on the trip. The role comes from
  * the server (join_trip), never from the link.
+ *
+ * From the link to the trip in as few steps as it takes (C45, Mike's call 11/23): picking your name
+ * is the answer to "who are you", so there's no second "Join as ...?" after it. Signed out, you
+ * pick, make an account, and land on the trip. Signed in already, one tap joins: on your name, or
+ * on "Join as Julia" when your account's name is on the list. How people pay you is asked at the
+ * first Settle up, not here, and the first visit opens with no guide and no email reminder.
  *
  * A name that has already joined is someone's spot. Signed out, tapping it asks you to sign in
  * (the 11/17 pod test: a podmate who joined on her phone found her spot "taken" on her laptop),
@@ -37,8 +43,8 @@ export default function Join() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signInAs, setSignInAs] = useState<string | null>(null);
-  // Just joined: how people pay you, once (Mike's 11/18 notes). Skipped when you set it on another trip.
-  const [payStep, setPayStep] = useState<{ tripId: string; venmo: string | null; zelle: string | null } | null>(null);
+  // The pick was this person's own tap (now, or before leaving for Google): join without asking again.
+  const [goNow, setGoNow] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -52,6 +58,12 @@ export default function Join() {
           // Back from Google with a new name typed before leaving.
           const typed = params.get("name")?.trim();
           if (!as && typed && !p.people.some((x) => sameName(x.name, typed))) setPick({ newName: typed.slice(0, 60) });
+          // Back from Google after picking a name here: that tap was the answer. An invite's own
+          // link (?as= with no go) still asks once, since whoever opens it may not be that person.
+          if (params.get("go") === "1") setGoNow(true);
+          // Signed in already, and your account's name is on the list: offer it, one tap to join.
+          const mine = !as && !typed && user && !p.my_traveler_id ? p.people.find((x) => !x.claimed && sameName(x.name, nameOf(user))) : undefined;
+          if (mine) setPick((cur) => cur ?? { travelerId: mine.id, name: mine.name });
         }
       })
       .catch(() => setPreview(null));
@@ -62,6 +74,32 @@ export default function Join() {
   useEffect(() => {
     if (signInAs && user && preview?.my_traveler_id) navigate(`/trips/${preview.trip_id}`, { replace: true });
   }, [signInAs, user, preview, navigate]);
+
+  async function join(p: Pick) {
+    if (!preview) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const tripId = await joinTrip(token, "travelerId" in p ? { travelerId: p.travelerId } : { newName: p.newName });
+      track("name claimed", { method: "travelerId" in p ? "picked" : "added" });
+      if (!("travelerId" in p)) track("person added", { method: "group link", role: preview.default_role });
+      quietFirstVisit();
+      navigate(`/trips/${tripId}`, { replace: true });
+    } catch (e) {
+      // Back to the names, with what went wrong (someone took that name a moment ago, say).
+      setError((e as Error).message);
+      setGoNow(false);
+      setPick(null);
+      setBusy(false);
+      joinPreview(token).then((fresh) => fresh && setPreview(fresh));
+    }
+  }
+
+  // Picked and signed in: join. No second question.
+  useEffect(() => {
+    if (goNow && user && pick && preview && !preview.my_traveler_id && !busy) join(pick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goNow, user?.id, pick, preview?.trip_id]);
 
   if (!ready || preview === undefined) return <Spinner label="Opening the invite" />;
 
@@ -82,63 +120,7 @@ export default function Join() {
   const photo = photoFor(`${preview.stops.join(" ")} ${preview.name}`);
   const pickedName = pick ? ("name" in pick ? pick.name : pick.newName) : "";
 
-  const join = async () => {
-    if (!pick) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const tripId = await joinTrip(token, "travelerId" in pick ? { travelerId: pick.travelerId } : { newName: pick.newName });
-      track("name claimed", { method: "travelerId" in pick ? "picked" : "added" });
-      if (!("travelerId" in pick)) track("person added", { method: "group link", role: preview.default_role });
-      // Null on a database without Zelle yet, or if it can't be read: straight to the trip.
-      const pay = user ? await myPayOn(tripId, user.id) : null;
-      if (pay && !pay.pay_locked) {
-        setPayStep({ tripId, venmo: pay.venmo, zelle: pay.zelle });
-        setBusy(false);
-        return;
-      }
-      navigate(`/trips/${tripId}`, { replace: true });
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-      joinPreview(token).then((p) => p && setPreview(p));
-    }
-  };
-
-  if (payStep) {
-    const open = () => navigate(`/trips/${payStep.tripId}`, { replace: true });
-    return (
-      <Frame photo={photo}>
-        <TripHeading preview={preview} />
-        <h2 className="mb-1 font-display text-xl font-bold text-white">How should people pay you back?</h2>
-        <p className="mb-4 text-sm text-white/80">
-          So the group can pay you in a tap from Settle up. You can change it any time in People.
-        </p>
-        <PayInfoForm
-          venmo={payStep.venmo}
-          zelle={payStep.zelle}
-          zelleReady
-          saveLabel="Save and open the trip"
-          onSave={async (v, z) => {
-            await setMyPay(v, z);
-            track("pay info saved", { where: "join", has_venmo: Boolean(v.trim()), has_zelle: Boolean(z.trim()) });
-            open();
-          }}
-        >
-          <Button
-            type="button"
-            variant="light"
-            onClick={() => {
-              track("pay info skipped", { where: "join" });
-              open();
-            }}
-          >
-            Skip for now
-          </Button>
-        </PayInfoForm>
-      </Frame>
-    );
-  }
+  if (busy && goNow) return <Spinner label="Opening the trip" />;
 
   if (preview.my_traveler_id) {
     const mine = preview.people.find((p) => p.id === preview.my_traveler_id);
@@ -187,12 +169,17 @@ export default function Join() {
                     <button
                       disabled={p.claimed && Boolean(user)}
                       aria-label={p.claimed && !user ? `${p.name}, joined. That's you? Sign in` : undefined}
-                      onClick={() => (p.claimed ? setSignInAs(p.name) : setPick({ travelerId: p.id, name: p.name }))}
-                      className="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 text-left text-sm text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-45 disabled:hover:bg-white/5"
+                      onClick={() => {
+                        if (p.claimed) return setSignInAs(p.name);
+                        setPick({ travelerId: p.id, name: p.name });
+                        setGoNow(true);
+                      }}
+                      className="flex min-h-12 w-full flex-col items-start justify-center gap-0.5 rounded-2xl border border-white/15 bg-white/5 px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-45 disabled:hover:bg-white/5"
                     >
-                      <span className="truncate">{p.name}</span>
+                      {/* The tag sits under the name, so a name is never cut to "Mi..." on a phone (11/23 review). */}
+                      <span className="max-w-full truncate">{p.name}</span>
                       {p.claimed && (
-                        <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-white/80">
+                        <span className="flex items-center gap-0.5 text-[11px] text-white/80">
                           <Check className="size-3" /> {user ? "Joined" : "Joined · Sign in"}
                         </span>
                       )}
@@ -200,6 +187,17 @@ export default function Join() {
                   </li>
                 ))}
               </ul>
+              {user && !adding && nameOf(user).trim() && !preview.people.some((x) => sameName(x.name, nameOf(user))) && (
+                <Button
+                  className="mb-3 w-full"
+                  onClick={() => {
+                    setPick({ newName: nameOf(user).trim().slice(0, 60) });
+                    setGoNow(true);
+                  }}
+                >
+                  Join as {nameOf(user).trim()}
+                </Button>
+              )}
               {adding ? (
                 <form
                   className="flex gap-2"
@@ -213,6 +211,7 @@ export default function Join() {
                     else if (known?.claimed) setError(`${known.name} has already joined. Pick another name.`);
                     else if (known) setPick({ travelerId: known.id, name: known.name });
                     else setPick({ newName: typed });
+                    if (!known?.claimed) setGoNow(true);
                   }}
                 >
                   <input
@@ -253,7 +252,13 @@ export default function Join() {
             <>
               <p className="mb-4 rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/85">
                 Joining as <strong>{pickedName}</strong>.{" "}
-                <button className="underline underline-offset-4" onClick={() => setPick(null)}>
+                <button
+                  className="underline underline-offset-4"
+                  onClick={() => {
+                    setPick(null);
+                    setGoNow(false);
+                  }}
+                >
                   Not you?
                 </button>
               </p>
@@ -261,12 +266,14 @@ export default function Join() {
                 defaultName={pickedName}
                 googleReturn={
                   "travelerId" in pick
-                    ? `/join/${token}?as=${pick.travelerId}`
-                    : `/join/${token}?name=${encodeURIComponent(pick.newName)}`
+                    ? `/join/${token}?as=${pick.travelerId}&go=1`
+                    : `/join/${token}?name=${encodeURIComponent(pick.newName)}&go=1`
                 }
                 intro="So your spot stays yours on any device. You can start right away."
                 onDone={() => {
-                  /* the effect above reloads the preview once the session lands; then Join shows */
+                  // Making the account was the last step: join as soon as the session lands, even
+                  // when the name came from an invite's own link.
+                  setGoNow(true);
                 }}
               />
             </>
@@ -285,9 +292,9 @@ export default function Join() {
           )}
           <div className="flex gap-2">
             <Button variant="light" onClick={() => setPick(null)} disabled={busy}>
-              Back
+              Not me
             </Button>
-            <Button className="flex-1" onClick={join} disabled={busy}>
+            <Button className="flex-1" onClick={() => join(pick)} disabled={busy}>
               {busy ? "Joining..." : "Join the trip"}
             </Button>
           </div>

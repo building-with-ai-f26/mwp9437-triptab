@@ -6,7 +6,7 @@ import type { Traveler } from "../../lib/model";
 
 /**
  * How people pay you (Mike's notes, 11/18): your Venmo and your Zelle phone or email, one form,
- * reached from your row in People, from Settle up, and when you join a trip. Once you save your
+ * reached from your row in People and from Settle up, which asks the first time (C45, 11/23). Once you save your
  * own, it's locked to you: an Owner can no longer change it.
  */
 export function PayInfoForm({

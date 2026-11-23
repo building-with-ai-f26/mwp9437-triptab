@@ -25,6 +25,8 @@ async function context(browser, opts) {
     try { localStorage.setItem('triptab.test_run', '1'); } catch {}
     // The flows check other things; tour-flow checks Show me around itself.
     try { localStorage.setItem('triptab.tour_seen', '1'); } catch {}
+    // Settle up asks how people pay you once (C45); first-minute-flow and pay-info-flow check that themselves.
+    try { localStorage.setItem('triptab.pay_asked', '1'); } catch {}
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', { get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }) });
   });
@@ -85,7 +87,14 @@ async function openFold(d, name) {
 const openCost = (d) => openFold(d, /^Cost/);
 const openTimes = (d) => openFold(d, /^Times/);
 
+/** On a phone a day with nothing on it is folded to one row (11/23): unfold it to reach its slots. */
+async function showDay(page, day) {
+  const fold = page.locator(`#day-${day}[data-folded]`).getByRole('button', { name: /^Show / });
+  if (await fold.count()) await fold.click();
+}
+
 async function addPlan(page, day, slot, f) {
+  await showDay(page, day);
   await page.locator(`#day-${day}`).getByRole('button', { name: slot }).click();
   const d = dlg(page);
   await d.getByLabel('What').fill(f.title);
@@ -102,17 +111,17 @@ async function addPlan(page, day, slot, f) {
 
 /** Signs in to an account an earlier signUp(page, name, who) made, through the Sign in tab. */
 /**
- * Taps Join the trip. Right after joining, TripTab asks how people pay you (Mike's 11/18 notes);
- * flows about other things skip it. Returns true if that step showed.
+ * Lands on the trip after picking a name and signing up. Since C45 (11/23) that joins on its own;
+ * someone already signed in whose name was offered ("Join as Julia?") taps Join the trip once.
+ * There's no pay step here any more: Settle up asks. Always returns false (no pay step showed).
  */
 async function joinTrip(page) {
-  await page.getByRole('button', { name: 'Join the trip' }).click();
-  const step = page.getByRole('heading', { name: 'How should people pay you back?' });
-  await Promise.race([step.waitFor(), page.waitForURL(/\/trips\/[0-9a-f-]{36}$/)]);
-  if (!(await step.isVisible())) return false;
-  await page.getByRole('button', { name: 'Skip for now' }).click();
-  await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
-  return true;
+  const button = page.getByRole('button', { name: 'Join the trip' });
+  const landed = /\/trips\/[0-9a-f-]{36}$/;
+  await Promise.race([button.waitFor(), page.waitForURL(landed)]);
+  if (!landed.test(page.url()) && (await button.isVisible())) await button.click();
+  await page.waitForURL(landed);
+  return false;
 }
 
 /** The trip's one AI button (Mike's 11/18 call), then a choice: 'I have bookings' or 'Give me ideas'. */
@@ -129,4 +138,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { showDay, openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

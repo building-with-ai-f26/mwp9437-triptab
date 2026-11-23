@@ -20,6 +20,7 @@ const moved = async (p, text) => {
 };
 
 async function addTimedPlan(p, day, slotLabel, title, kind, time) {
+  await h.showDay(p, day);
   await p.locator(`#day-${day}`).getByRole('button', { name: slotLabel }).click();
   const d = h.dlg(p);
   await d.getByLabel('What').fill(title);
@@ -187,10 +188,17 @@ async function phone(browser, result) {
   await p.waitForTimeout(400);
   const mid = await p.evaluate(() => {
     for (let y = Math.round(window.innerHeight * 0.4); y < window.innerHeight * 0.75; y += 15) {
-      const s = document.elementFromPoint(260, y)?.closest('[data-slot]');
+      const under = document.elementFromPoint(260, y);
+      const s = under?.closest('[data-slot]');
       if (s) {
         const r = s.getBoundingClientRect();
         return { id: s.getAttribute('data-slot'), x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 22) };
+      }
+      // An empty day is one folded row on a phone (11/23): dropped there, the plan keeps its part.
+      const f = under?.closest('[data-folded]');
+      if (f) {
+        const r = f.getBoundingClientRect();
+        return { id: `${f.getAttribute('data-date')}|morning`, x: r.left + r.width / 2, y: r.top + r.height / 2 };
       }
     }
     return null;
