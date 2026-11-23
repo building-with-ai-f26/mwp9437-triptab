@@ -144,7 +144,7 @@ export default function You() {
                 <fieldset className="rounded-2xl border border-foreground/10 bg-white/40 p-3" data-testid="tastes">
                   <legend className="label-luxury px-1 text-foreground/80">What you like (optional)</legend>
                   <p className="mb-3 text-xs text-foreground/80">
-                    Tick what fits, so AI help suggests plans the group will like. It counts how many of the group picked each thing, never who.
+                    Tick what fits, so AI help suggests plans the group will like. It counts how many of the group picked each thing, never who, and only once 3 people on a trip have answered.
                   </p>
                   <Picks label="Food" options={CUISINES} picked={cuisines} onChange={(v) => (setCuisines(v), edit())} />
                   <Picks label="Things to do" options={ACTIVITIES} picked={activities} onChange={(v) => (setActivities(v), edit())} />

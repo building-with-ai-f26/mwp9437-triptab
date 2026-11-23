@@ -86,8 +86,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         <li>
           What you like, from your profile's survey, is shown to nobody unless you set it to Shared with the group;
           then the people on your trips see it beside your name. Private or shared, Plan with AI is told how many
-          people on the trip picked each thing ("3 of 4 like Italian"), never who, so its ideas fit the group. On a
-          trip of two, that can hint at the other person's picks.
+          people on the trip picked each thing ("3 of 4 like Italian"), never who, so its ideas fit the group, and
+          only once at least 3 people on the trip have answered, so a count can't point at one person.
         </li>
         <li>Your votes on suggested plans are shown, with your name, to the people on that trip.</li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>

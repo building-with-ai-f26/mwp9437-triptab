@@ -74,14 +74,26 @@ it(`Plan with AI eval: ${cases.length} cases`, async () => {
   const { error: seedError } = await owner.from("items").insert(PLANS.map((p) => ({ trip_id: tripId, status: "planned", ...p })));
   if (seedError) throw new Error(`Couldn't set up the fixture trip: ${seedError.message}`);
 
+  // Tastes reach the prompt only once 3 people on the trip have answered (C53), so two more people
+  // join the fixture trip and tick the same things as the Owner in each tastes case.
+  const { data: link } = await owner.from("trip_links").select("token").eq("trip_id", tripId).single();
+  const others = await Promise.all(["b", "c"].map((x) => signedIn(`plan-${label}`.slice(0, 18) + `-${x}`, `Eval ${x.toUpperCase()}`)));
+  for (const o of others) {
+    const joined = await o.rpc("join_trip", { p_token: link!.token, p_traveler_id: null, p_new_name: `Eval ${others.indexOf(o) + 2}` });
+    if (joined.error) throw new Error(`Couldn't add a second person to the fixture trip: ${joined.error.message}`);
+  }
+  const group = [owner, ...others];
+
   const rows: { c: PlanEvalCase; status: number; error: string | null; reply: Reply | null; score: PlanCaseScore }[] = [];
   let cost = 0;
   try {
     for (const c of cases) {
       // The group's tastes come from profiles (C51): this case's are ticked first, privately, and
       // cleared again for the next case. A database without profiles yet fails the case plainly.
-      const picks = await owner.rpc("save_my_prefs", { p_cuisines: c.tastes?.cuisines ?? [], p_activities: c.tastes?.activities ?? [], p_shared: false });
-      if (c.tastes && picks.error) throw new Error(`Couldn't set the tastes for ${c.id}: ${picks.error.message}`);
+      for (const person of group) {
+        const picks = await person.rpc("save_my_prefs", { p_cuisines: c.tastes?.cuisines ?? [], p_activities: c.tastes?.activities ?? [], p_shared: false });
+        if (c.tastes && picks.error) throw new Error(`Couldn't set the tastes for ${c.id}: ${picks.error.message}`);
+      }
       const r = await call({ trip_id: tripId, request: c.request, test_run: true });
       const reply = r.status === 200 ? (r.body as unknown as Reply) : null;
       // "No ideas" (422 no_plans) is a valid answer for a case that expects none.
