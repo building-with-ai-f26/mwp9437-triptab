@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookedLabel, goingList, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, venmoLink } from "./ledger";
+import { bookedLabel, goingList, peopleMatchingBills, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, venmoLink } from "./ledger";
 import type { ExpenseRow, ItemPerson, Payment } from "./api";
 import type { Traveler } from "./model";
 
@@ -217,5 +217,33 @@ describe("everyone pays their own", () => {
     const p = ownProgress(flight, people, [{ item_id: "f", traveler_id: "mike", going: true }], [{ item_id: "f", traveler_id: "mike" }]);
     expect(bookedLabel(p)).toBe("Each pays their own · 1 of 1 booked");
     expect(p.complete).toBe(true);
+  });
+});
+
+describe("who's in matches the bill (C47)", () => {
+  const four = [{ id: "mike" }, { id: "julia" }, { id: "vic" }, { id: "sam" }];
+  const bill = (itemId: string | null, ids: string[], own = false) =>
+    ({ id: `e-${itemId}`, item_id: itemId, own, expense_shares: ids.map((id) => ({ traveler_id: id, amount_cents: 100, weight: null })) }) as unknown as Parameters<typeof peopleMatchingBills>[1][number];
+  const dinner = { id: "dinner", kind: "meal" as const };
+
+  it("a dinner split 3 ways with Sam left out shows Sam as out, though no row said so", () => {
+    const rows = peopleMatchingBills([], [bill("dinner", ["mike", "julia", "vic"])], four);
+    expect(goingList(dinner, four as never, rows).map((p) => p.id)).toEqual(["mike", "julia", "vic"]);
+    expect(isGoing(dinner, "sam", rows)).toBe(false);
+  });
+
+  it("the bill wins over an older in or out row, both ways", () => {
+    const before = [
+      { item_id: "dinner", traveler_id: "sam", going: true },
+      { item_id: "dinner", traveler_id: "vic", going: false },
+    ];
+    const rows = peopleMatchingBills(before, [bill("dinner", ["mike", "vic"])], four);
+    expect(goingList(dinner, four as never, rows).map((p) => p.id)).toEqual(["mike", "vic"]);
+  });
+
+  it("leaves plans with no bill, own lines and general expenses alone", () => {
+    const before = [{ item_id: "hike", traveler_id: "sam", going: false }];
+    const rows = peopleMatchingBills(before, [bill(null, ["mike"]), bill("flight", ["mike"], true)], four);
+    expect(rows).toEqual(before);
   });
 });
