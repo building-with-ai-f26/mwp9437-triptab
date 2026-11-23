@@ -17,14 +17,17 @@ export function feedbackPage(pathname: string): string {
     .slice(0, 200);
 }
 
-/** Sends it. The server keeps at most 10 a person a day and says so in words a person can read. */
+/** Sends it. The server keeps at most 10 a person a day and says so in words a person can read, and emails it to the person who builds TripTab. */
 export async function sendFeedback(kind: FeedbackKind, message: string, pathname: string): Promise<void> {
   const text = message.trim();
   if (!text) throw new Error("Write a few words first.");
   if (text.length > FEEDBACK_MAX) throw new Error("That's over 2,000 characters. Shorten it a little.");
-  const { error } = await supabase.rpc("send_feedback", { p_kind: kind, p_message: text, p_page: feedbackPage(pathname) });
+  // Through the send-feedback function (11/23): it saves the note as you, then emails it on.
+  const { error } = await supabase.functions.invoke("send-feedback", { body: { kind, message: text, page: feedbackPage(pathname) } });
   if (!error) return;
   // The function's own messages are written for people; anything else gets a plain one.
-  if (error.code === "54000" || error.code === "22023") throw new Error(error.message);
-  throw new Error("Couldn't send that. Try again in a moment.");
+  const response = (error as { context?: unknown }).context;
+  const body = response instanceof Response ? ((await response.json().catch(() => null)) as { code?: string; error?: string } | null) : null;
+  const readable = body?.error && ["limit", "bad_request", "signed_out"].includes(body.code ?? "");
+  throw new Error(readable ? body!.error! : "Couldn't send that. Try again in a moment.");
 }

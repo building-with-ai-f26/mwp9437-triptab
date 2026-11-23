@@ -10,7 +10,7 @@ verify_jwt = false
 [functions.confirm-email]
 verify_jwt = false
 
-# Every other function (ai-status, describe-trip, import-bookings, plan-with-ai, send-invite) keeps
+# Every other function (ai-status, describe-trip, import-bookings, plan-with-ai, send-invite, send-feedback) keeps
 # the default: a signed-in caller only.
 
 # Email-in (11/20): the triptab Worker calls it with a shared secret (INBOX_SECRET), not a sign-in.
