@@ -163,7 +163,10 @@ export default function Landing() {
         </div>
       </section>
       <footer className="relative z-10 bg-background px-4 pb-6 text-center text-xs text-foreground/80">
-        <Link to="/privacy" className="font-medium underline underline-offset-4">
+        <Link to="/guide" className="mr-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4">
+          How TripTab works
+        </Link>
+        <Link to="/privacy" className="inline-flex min-h-11 items-center font-medium underline underline-offset-4">
           Privacy
         </Link>
       </footer>

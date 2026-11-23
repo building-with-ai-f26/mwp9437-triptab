@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
@@ -21,6 +21,7 @@ import { MoneyList } from "../components/trip/MoneyList";
 import { moneyLines } from "../lib/moneyLines";
 import { useWide } from "../lib/useWide";
 import { Tour, type TourStep } from "../components/trip/Tour";
+import { HelpButton, HelpFooter, useHelp } from "../components/Help";
 import { markTourSeen, tourSeen } from "../lib/tour";
 import { goingBadge } from "../lib/initials";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
@@ -123,12 +124,21 @@ export default function TripPage() {
   // The bottom bar (phones): each section keeps its own place, as tab bars do; tapping the section
   // you're on goes back to its top.
   const scrollOf = useRef<Partial<Record<Tab, number>>>({});
+  // Where a pane was left is put back once that pane is on the page and laid out. (Doing it a
+  // frame after the tap sometimes ran before the taller pane was there, and the place was lost.)
+  const restore = useRef<Tab | null>(null);
   const pickTab = (next: Tab) => {
     if (next === tab) return window.scrollTo({ top: 0, behavior: "smooth" });
     scrollOf.current[tab] = window.scrollY;
+    restore.current = next;
     setTab(next);
-    requestAnimationFrame(() => window.scrollTo({ top: scrollOf.current[next] ?? 0 }));
   };
+  useLayoutEffect(() => {
+    if (restore.current !== tab) return;
+    restore.current = null;
+    window.scrollTo({ top: scrollOf.current[tab] ?? 0 });
+  }, [tab]);
+  const help = useHelp();
   // Show me around (the 11/17 pod notes): once per device, the first time a trip opens.
   const [touring, setTouring] = useState(false);
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
@@ -581,6 +591,11 @@ export default function TripPage() {
     />
   );
   const firstPlan = () => document.querySelector('main .item-card:not([data-continued="true"])');
+  const startTour = () => {
+    setMoneyOpen(false);
+    setTouring(true);
+    track("tour started", { auto: false });
+  };
   const tourSteps: TourStep<Tab>[] = [
     {
       id: "itinerary",
@@ -595,7 +610,7 @@ export default function TripPage() {
             id: "add",
             tab: "itinerary" as Tab,
             title: "Add plans",
-            body: "Add a plan here, or tap any empty part of a day. AI help turns a pasted booking into plans, or finds ideas for the empty spots.",
+            body: "Add a plan here, or tap any empty part of a day. AI help turns a pasted booking into plans, or finds ideas for the empty spots. It also has this trip's own email address: forward a booking there.",
             target: () => document.querySelector('[data-tour="add"]'),
           },
         ]
@@ -606,7 +621,7 @@ export default function TripPage() {
             id: "plan",
             tab: "itinerary" as Tab,
             title: "Tap a plan",
-            body: `See who's going and opt in or out; its cost and who pays are inside.${editable ? (wide ? " Drag a plan to move it to another day or part of the day." : " Press and hold a plan to drag it to another day or part of the day.") : ""}`,
+            body: `See who's going and say I'm in or I'm out; its cost and who pays are inside. On a Suggested plan, I want this tells the group you'd like it.${editable ? (wide ? " Drag a plan to move it to another day or part of the day." : " Press and hold a plan to drag it to another day or part of the day.") : ""}`,
             target: firstPlan,
           },
         ]
@@ -622,7 +637,7 @@ export default function TripPage() {
       id: "money",
       tab: "money",
       title: "Money",
-      body: "Your balance and everyone's. Settle up shows the fewest payments to even out, with Pay with Venmo, and every cost and payment is a tap away. TripTab never moves money itself.",
+      body: `Your balance and everyone's. ${editable ? "When a plan is booked, open it and tap Confirm and log the cost. " : ""}Settle up shows the fewest payments to even out, with Pay with Venmo, and every cost and payment is a tap away. TripTab never moves money itself.`,
       target: () => document.querySelector('section[aria-labelledby="money-title"]'),
     },
     {
@@ -630,9 +645,16 @@ export default function TripPage() {
       tab: "people",
       title: "People",
       body: editable
-        ? "Drop the group link in your group chat: each person picks their name and they're on the trip. Add how people pay you back here too."
-        : "Everyone on the trip, and how each of them gets paid back.",
+        ? "Tap Invite, or copy the group link here, and drop it in your group chat: each person picks their name and they're on the trip. Your Venmo, Zelle and phone come from Your profile."
+        : "Everyone on the trip, and how each of them gets paid back. Your own Venmo, Zelle and phone come from Your profile.",
       target: () => document.querySelector('section[aria-labelledby="people-title"]'),
+    },
+    {
+      id: "help",
+      tab: "itinerary",
+      title: "Help, any time",
+      body: "This line is at the bottom of every page: Show me around replays this tour, Guide explains each part of TripTab, and Send feedback is for a bug or something you'd like added.",
+      target: () => document.querySelector('[data-tour="help"]'),
     },
   ];
 
@@ -722,6 +744,8 @@ export default function TripPage() {
           >
             <FileText /> <span className="hidden md:inline">PDF</span>
           </Button>
+          {/* Five buttons don't fit a phone's header; there, Help is the line at the bottom of the page. */}
+          <HelpButton help={help} className="!hidden sm:!inline-flex" />
           {me && (
             <span className="hidden rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-gold-dark lg:inline">
               You're {me.role === "owner" ? "an" : "a"} {ROLE_LABEL[me.role]}
@@ -835,11 +859,7 @@ export default function TripPage() {
                 <button
                   type="button"
                   className="ml-1 mt-1 block text-xs font-semibold text-foreground/80 underline underline-offset-4"
-                  onClick={() => {
-                    setMoneyOpen(false);
-                    setTouring(true);
-                    track("tour started", { auto: false });
-                  }}
+                  onClick={startTour}
                 >
                   Show me around
                 </button>
@@ -953,6 +973,9 @@ export default function TripPage() {
             )}
             </div>
           </aside>
+          <div className="lg:col-span-2">
+            <HelpFooter help={help} onTour={startTour} />
+          </div>
         </div>
       </div>
 

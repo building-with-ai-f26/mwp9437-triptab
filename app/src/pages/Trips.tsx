@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { CalendarDays, LogOut, MapPin, Plus, UserRound, Users } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
+import { HelpButton, HelpFooter, useHelp } from "../components/Help";
 import { LinkGoogle } from "../components/LinkGoogle";
 import { ForwardFrom } from "../components/ForwardFrom";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
@@ -16,6 +17,7 @@ const RESORT = photoFor("resort lisbon");
 export default function Trips() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const help = useHelp();
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +38,7 @@ export default function Trips() {
           <Button variant="glass" size="sm" onClick={() => navigate("/you")} aria-label="You: your profile">
             <UserRound /> <span className="hidden sm:inline">You</span>
           </Button>
+          <HelpButton help={help} />
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out">
             <LogOut /> <span className="hidden sm:inline">Sign out</span>
           </Button>
@@ -100,6 +103,7 @@ export default function Trips() {
           <LinkGoogle />
           <ForwardFrom />
         </main>
+        <HelpFooter help={help} />
       </div>
     </div>
   );
