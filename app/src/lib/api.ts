@@ -157,6 +157,12 @@ export interface ItemPerson {
   going: boolean;
 }
 
+/** A thumbs up on a plan from someone on the trip (11/23 review, item 7). */
+export interface ItemVote {
+  item_id: string;
+  traveler_id: string;
+}
+
 /** Something that still needs doing, and who's on it (Build 4). */
 export interface ActionItem {
   id: string;
@@ -179,6 +185,8 @@ export interface TripBundle {
   expenses: ExpenseRow[];
   itemPeople: ItemPerson[];
   ownMarks: OwnMark[];
+  /** Thumbs up on plans. Null when this database doesn't have votes yet: the app then hides them. */
+  votes: ItemVote[] | null;
   actions: ActionItem[];
   /**
    * Recorded payments, oldest first. Null when this database doesn't have them yet (production
@@ -193,7 +201,7 @@ export interface TripBundle {
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay, inbox] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay, inbox, votes] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -210,6 +218,8 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("travelers").select("id, zelle, pay_locked").eq("trip_id", id),
     // Asked apart too, so a database without email-in still loads the trip.
     supabase.from("inbox_items").select("*").eq("trip_id", id).in("status", ["new", "failed", "held"]).order("received_at", { ascending: false }),
+    // Asked apart as well, so a database without votes yet still loads the trip.
+    supabase.from("item_votes").select("item_id, traveler_id, items!inner(trip_id)").eq("items.trip_id", id),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -239,6 +249,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
       must(travelers.data, travelers.error) as { id: string }[],
     ),
     ownMarks: (marks.data as OwnMark[] | null) ?? [],
+    votes: votes.error ? null : (votes.data as (ItemVote & { items: unknown })[]).map(({ item_id, traveler_id }) => ({ item_id, traveler_id })),
     actions: must(actions.data, actions.error) as ActionItem[],
     payments: payments.error ? null : (payments.data as Payment[]),
     inbox: inbox.error ? null : (inbox.data as InboxItem[]),
@@ -730,6 +741,15 @@ export async function clearOwnLine(itemId: string, travelerId: string): Promise<
 }
 
 /** In or out of a plan. You can set your own; owners can set anyone's. */
+/** Your thumbs up on a plan, on or off. Only your own. */
+export async function setVote(itemId: string, travelerId: string, on: boolean): Promise<void> {
+  const q = on
+    ? supabase.from("item_votes").upsert({ item_id: itemId, traveler_id: travelerId }, { ignoreDuplicates: true })
+    : supabase.from("item_votes").delete().eq("item_id", itemId).eq("traveler_id", travelerId);
+  const { error } = await q;
+  if (error) throw new Error(friendly(error));
+}
+
 export async function setGoing(itemId: string, travelerId: string, going: boolean) {
   const { error } = await supabase.from("item_people").upsert({ item_id: itemId, traveler_id: travelerId, going });
   if (error) throw new Error(friendly(error));

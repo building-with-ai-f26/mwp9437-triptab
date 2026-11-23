@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarPlus, Check, CircleDollarSign, Pencil, Sparkles } from "lucide-react";
+import { CalendarPlus, Check, CircleDollarSign, Pencil, Sparkles, ThumbsUp } from "lucide-react";
 import { Button, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, OwnMark } from "../../lib/api";
 import { bookedLabel, isGoing, myShareOf, ownLineOf, ownProgress } from "../../lib/ledger";
@@ -27,6 +27,8 @@ export function PlanPanel({
   onPayMode,
   onLogOwn,
   onClearOwn,
+  votes,
+  onVote,
   section,
 }: {
   tripName: string;
@@ -45,6 +47,9 @@ export function PlanPanel({
   onPayMode: (mode: PayMode) => Promise<void>;
   onLogOwn: (travelerId: string, cents: number, withPoints: boolean) => Promise<void>;
   onClearOwn: (travelerId: string) => Promise<void>;
+  /** Thumbs up on a Suggested plan: who wants it (11/23 review, item 7). Left out, voting is hidden. */
+  votes?: { names: string[]; mine: boolean } | null;
+  onVote?: (on: boolean) => Promise<void>;
   /**
    * Which half to show (Mike's 11/19 review: lead with the plan, disclose cost on a tap). "cost" is
    * who pays, Confirm with the real cost and own costs, inside the dialog's Cost and who pays;
@@ -238,6 +243,29 @@ export function PlanPanel({
       </>
       )}
 
+      {showGoing && item.status === "suggested" && votes && onVote && meId && (
+        <div data-testid="vote">
+          <p className="label-luxury mb-1.5 text-white/80">Want this one?</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <button
+              type="button"
+              aria-pressed={votes.mine}
+              disabled={busy === "vote"}
+              onClick={() => run("vote", () => onVote(!votes.mine))}
+              className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors ${
+                votes.mine ? "bg-primary text-primary-foreground" : "border border-white/25 text-white hover:bg-white/10"
+              }`}
+            >
+              <ThumbsUp className="size-4" /> {votes.mine ? "You want this" : "I want this"}
+            </button>
+            <p className="text-sm text-white/80">
+              {votes.names.length === 0
+                ? "Nobody's voted yet. A thumbs up helps the group pick."
+                : `${votes.names.length === 1 ? votes.names[0] : `${votes.names.slice(0, -1).join(", ")} and ${votes.names[votes.names.length - 1]}`} ${votes.names.length === 1 && votes.names[0] !== "You" ? "wants" : "want"} this.`}
+            </p>
+          </div>
+        </div>
+      )}
       {showGoing && billed && (
         <p className="rounded-2xl bg-white/5 px-3 py-2.5 text-sm text-white" data-testid="bill-sets-in">
           {meId ? (share != null ? `You're in: your share is ${dollars(share)}. ` : "You're not on this bill. ") : ""}
