@@ -282,3 +282,34 @@
     animation: none;
   }
 }
+
+/* Tap targets (docs/DESIGN.md, section 5; 11/23 review, item 9): on a touch screen or a phone-width
+   window, anything you tap is at least 44 px tall, whatever height its own classes give it. A link
+   inside a sentence stays inline; a checkbox or radio is tapped by its label's row. */
+@media (pointer: coarse), (max-width: 640px) {
+  button,
+  select,
+  [role="tab"],
+  [role="radio"],
+  a[href][class*="inline-flex"],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
+    min-height: 44px;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
+}
+
+/* A sheet's main buttons stay in view while its fields scroll (11/23 review, item 9: Add to trip
+   sat below an 844 px screen). The row pins to the bottom of the dialog's scrolling body, over the
+   dialog's own dark, and clears the phone's home indicator. -1rem cancels the body's padding. */
+@utility sheet-actions {
+  position: sticky;
+  bottom: -1rem;
+  z-index: 10;
+  margin: 0.5rem -1.25rem -1rem;
+  padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom));
+  background: rgb(30, 30, 30);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}

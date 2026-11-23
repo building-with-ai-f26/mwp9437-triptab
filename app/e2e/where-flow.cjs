@@ -28,6 +28,7 @@ async function run(browser, label, opts, result) {
   await h.startSkiTrip(p, `where-${label}`);
 
   // Saturday 2/6 is in Chamonix.
+  await h.showDay(p, '2027-02-06');
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   const d = h.dlg(p);
   await d.getByLabel('What').fill('Skiing');

@@ -138,6 +138,7 @@ async function measure(page, screen) {
     low += await measure(p, `${label}: week view`);
     await p.getByRole('radio', { name: 'Day' }).click();
     // Dialogs: add a plan (dark dialog) and, on phones, the other tabs.
+    await h.showDay(p, '2027-02-05');
     await p.locator('#day-2027-02-05').getByRole('button', { name: 'Add to day' }).click();
     low += await measure(p, `${label}: add a plan dialog`);
     await h.dlg(p).getByRole('button', { name: 'Close' }).click();

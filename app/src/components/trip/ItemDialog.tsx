@@ -977,7 +977,7 @@ function ItemForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+      <div className="sheet-actions flex flex-wrap items-center justify-between gap-2">
         {it ? (
           <Button
             type="button"

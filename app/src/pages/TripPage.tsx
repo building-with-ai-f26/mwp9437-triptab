@@ -816,7 +816,7 @@ export default function TripPage() {
                 <DayChips days={days} active={active} onPick={jump} />
                 <div className="divide-y divide-foreground/10 pb-16">
                   {days.map((d, i) => (
-                    <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} />
+                    <DayBlock key={d.date} day={d} last={i === days.length - 1} actions={actions} foldEmpty={!wide} startOpen={i === 0 && items.length === 0} />
                   ))}
                 </div>
               </MovePlans>

@@ -113,6 +113,7 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).waitFor({ state: 'detached' });
 
   // Paid with no amount, from Add a plan (C27).
+  await h.showDay(p, '2027-02-07');
   await p.locator('#day-2027-02-07').getByRole('button', { name: 'Add to day' }).click();
   const f = h.dlg(p);
   await f.getByLabel('What').fill('Ski lessons');

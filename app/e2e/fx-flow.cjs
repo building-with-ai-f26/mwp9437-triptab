@@ -69,6 +69,7 @@ async function run(browser, label, opts, result) {
 
   // An estimate in euros on a new plan.
   if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click();
+  await h.showDay(p, '2027-02-07');
   await p.locator('#day-2027-02-07').getByRole('button', { name: 'Add to morning' }).click();
   const e = h.dlg(p);
   await e.getByLabel('What').fill('Ski school');
