@@ -127,6 +127,18 @@ The preferences survey (C51) changed Plan with AI's prompt: the function now add
 - **The tastes were used and the request still won.** Case 11 got an izakaya; case 12 got tapas, not Italian.
 - **What this doesn't show.** One run, and two cases on tastes. No case checks that a note never hints at who likes what: the prompt forbids it, but nothing here measures it. On a two-person trip a count is close to a name; the count is only ever sent to the model, never shown in the app.
 
+## Only once three people have answered (Nov 23, about 11:20 AM New York; C53)
+
+Mike's C53 call: with one or two answers on a trip, a count like "1 of 2 like Italian" is close to a name, so the tastes line now goes into the prompt only when at least 3 people on the trip have answered. That changes what the model is sent, so the eval was rerun on TripTab dev with the changed function (pull request #92). The fixture trip now has three people, who all tick the case's tastes.
+
+| Run | Cases passing all four rules | Ideas | Real cost |
+| --- | --- | --- | --- |
+| `plan-three-answers-20261123-1621` | 12 of 12 | see the run's file | $0.2261 |
+| before (`plan-tastes-20261123-0353`) | 12 of 12 | 34 | $0.2164 |
+
+- **No drop**, and the tastes still arrive with three answers: case 11 got an izakaya again, case 12 got tapas.
+- **Not covered by the eval:** that one or two answers send nothing. That is a unit test on the function's own code (`tastesLine` in `src/lib/planAiRules.test.ts`), not something this run measures.
+
 # Describe your trip eval: results
 
 Built the night of Nov 18, 2026 (New York time), from the 11/17 pod note "type or dictate what's already planned in free form". On Start a trip, a person types, pastes or dictates the trip; `describe-trip` returns its name and stops, the plans it mentions and up to five questions for what's missing. The stops fill the Start a trip form, and the plans open on import's review screen once the trip exists, with the questions as optional follow-ups: the ones left ticked go on the person's To do list (Mike's 11/18 call). To run it: `cd app && npm run eval:describe`. All runs below are on TripTab dev.
