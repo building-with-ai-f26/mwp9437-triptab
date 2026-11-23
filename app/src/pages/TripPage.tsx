@@ -68,6 +68,7 @@ import {
   type ExpenseRow,
   setActionDone,
   setGoing,
+  setVote,
   setRole,
   unconfirmItem,
   updateAction,
@@ -264,7 +265,7 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link, expenses, itemPeople, ownMarks, items, actions: todos, payments } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, ownMarks, items, actions: todos, payments, votes } = bundle;
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
@@ -450,6 +451,11 @@ export default function TripPage() {
       return null;
     },
     going: (item) => goingBadge(goingList(item, travelers, itemPeople), travelers.length, meId),
+    votes: (item) => {
+      if (!votes) return null;
+      const on = votes.filter((v) => v.item_id === item.id);
+      return { count: on.length, mine: on.some((v) => v.traveler_id === meId) };
+    },
   };
 
   /** PostHog: an own line was logged; and the plan's status, which follows the lines, if it moved. */
@@ -954,6 +960,23 @@ export default function TripPage() {
           openItem && (
             <PlanPanel
               section="going"
+              votes={
+                votes
+                  ? {
+                      names: travelers.filter((t) => votes.some((v) => v.item_id === openItem.id && v.traveler_id === t.id)).map((t) => (t.id === meId ? "You" : t.name)),
+                      mine: votes.some((v) => v.item_id === openItem.id && v.traveler_id === meId),
+                    }
+                  : null
+              }
+              onVote={
+                meId
+                  ? async (on) => {
+                      await setVote(openItem.id, meId, on);
+                      track(on ? "plan voted" : "plan vote removed", { kind: openItem.kind });
+                      await reload();
+                    }
+                  : undefined
+              }
               tripName={trip.name}
               item={openItem}
               travelers={travelers}

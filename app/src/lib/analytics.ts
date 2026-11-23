@@ -179,6 +179,8 @@ export type EventName =
   | "confirm email resent"
   | "email confirmed"
   | "opted out"
+  | "plan voted"
+  | "plan vote removed"
   | "opted in";
 
 export function track(event: EventName, props: Record<string, unknown> = {}): void {

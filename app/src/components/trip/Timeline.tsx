@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { BedDouble, Bus, Check, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, ThumbsUp, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
   clock,
   dayChip,
@@ -41,6 +41,8 @@ export interface TimelineActions {
   aboard?: (item: Item) => { names: string[]; everyone: boolean };
   /** Who's in, as initials on the card, or Everyone (Mike's 11/19 review); null on a trip of one. */
   going?: (item: Item) => GoingBadge | null;
+  /** Thumbs up on a Suggested plan: how many, and whether yours is one (11/23 review, item 7). Null hides it. */
+  votes?: (item: Item) => { count: number; mine: boolean } | null;
   /** On a Suggested plan: "Suggested by Jordan", or "AI idea, kept by you". */
   suggestedBy?: (item: Item) => string | null;
   /** Drag and drop (Owners, Day by day view): move a plan to a day and part. */
@@ -187,6 +189,7 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
   const out = actions.isOut?.(item) ?? false;
   const confirmed = item.status === "confirmed";
   const going = actions.going?.(item) ?? null;
+  const votes = item.status === "suggested" ? (actions.votes?.(item) ?? null) : null;
 
   return (
     <button
@@ -239,6 +242,15 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
             {placed?.label && <span className="text-[11px] font-medium text-foreground/80">{placed.label}</span>}
             {out && <span className="text-[11px]">{item.kind === "flight" ? "Not your flight" : "You're out"}</span>}
             {!out && actions.note?.(item) && <span className="text-[11px] text-foreground/75">{actions.note(item)}</span>}
+            {votes && votes.count > 0 && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${votes.mine ? "bg-primary text-primary-foreground" : "bg-[#efe6da] text-foreground"}`}
+                data-testid="votes"
+                aria-label={`${votes.count} ${votes.count === 1 ? "person wants" : "people want"} this${votes.mine ? ", you included" : ""}`}
+              >
+                <ThumbsUp className="size-3" aria-hidden /> {votes.count}
+              </span>
+            )}
             {going && <GoingFaces badge={going} />}
           </div>
         </div>
