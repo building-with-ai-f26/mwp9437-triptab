@@ -45,8 +45,8 @@ async function run(browser, label, opts, result) {
   await tab(o, 'People');
   const link = (await o.locator('section[aria-labelledby="link-title"] code').textContent()).trim();
   await v.goto(link);
-  await v.getByText(/Join as/).waitFor();
-  await v.getByRole('button', { name: 'Join the trip' }).click();
+  // Vic isn't on the list yet, so the page offers one tap: Join as Vic.
+  await v.getByRole('button', { name: 'Join as Vic' }).click();
   await v.waitForURL(TRIP);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
 
