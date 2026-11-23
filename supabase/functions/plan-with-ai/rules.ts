@@ -201,9 +201,15 @@ const top = (counts: Record<string, number> | null | undefined): string =>
     .map(([k, n]) => `${k} (${n})`)
     .join(", ");
 
-/** One line for the prompt, or null when nobody on the trip has answered. */
+/**
+ * Fewer answers than this and the counts stay out of the prompt (C53, Mike's call 11/23): with one
+ * or two answers on a trip, "1 of 2 like Italian" is close to a name, and private picks stay private.
+ */
+export const MIN_TASTE_ANSWERS = 3;
+
+/** One line for the prompt, or null when fewer than MIN_TASTE_ANSWERS people on the trip have answered. */
 export function tastesLine(t: TasteCounts | null | undefined): string | null {
-  if (!t || !(t.answered > 0)) return null;
+  if (!t || !(t.answered >= MIN_TASTE_ANSWERS)) return null;
   const cuisines = top(t.cuisines);
   const activities = top(t.activities);
   if (!cuisines && !activities) return null;
