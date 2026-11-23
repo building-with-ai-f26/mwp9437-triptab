@@ -21,7 +21,7 @@ export function TopBar({
           <Link
             to={back.to}
             aria-label={back.label}
-            className="grid size-9 shrink-0 place-items-center rounded-full text-foreground hover:bg-white/30"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-foreground hover:bg-white/30 sm:size-9"
           >
             <ArrowLeft className="size-5" />
           </Link>

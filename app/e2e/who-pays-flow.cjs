@@ -55,6 +55,7 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
 
   // 1. A flight, already booked: their own by default, logged while adding, Confirmed at once.
+  await h.showDay(o, '2027-02-05');
   await o.locator('#day-2027-02-05').getByRole('button', { name: 'Add to morning' }).click();
   await h.dlg(o).getByLabel('What').fill('UA 57 to Geneva');
   await h.dlg(o).getByRole('radio', { name: 'Flight' }).click();
@@ -129,6 +130,7 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   await h.dlg(o).getByRole('button', { name: 'Close' }).click();
 
   // 5. A shared dinner is still one bill, logged while adding it. Settle up has only that.
+  await h.showDay(o, '2027-02-06');
   await o.locator('#day-2027-02-06').getByRole('button', { name: 'Add to evening' }).click();
   await h.dlg(o).getByLabel('What').fill('Fondue at La Caleche');
   await h.dlg(o).getByRole('radio', { name: 'Meal' }).click();
