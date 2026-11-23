@@ -114,6 +114,19 @@ Build 3 added a second Supabase project, TripTab dev, for local runs, tests, eva
 - **Plan with AI's guard acted for the first time:** in the planted-instruction case (09), it dropped one of five ideas before it reached the app. All four rules still passed; the guard is why.
 - From here on, eval runs and their costs land in **dev's** `ai_calls` log, and real use in **production's**. The build log adds the two.
 
+## With the group's tastes (Nov 22, about 10:55 PM New York; C51)
+
+The preferences survey (C51) changed Plan with AI's prompt: the function now adds one line with how many of the trip's people like each cuisine and activity, never a name, and the prompt says the request comes first and never to say or guess who likes what. A prompt change ships only if the eval shows no drop, so the eval was rerun on TripTab dev with the changed function deployed there by the pull request's build (#89). Two cases were added, 12 in all: 11, an open "Dinner on Monday in Barcelona" for a group whose (private) picks lean Japanese, which passes only if the idea is Japanese; and 12, "A tapas dinner on Monday" for a group that likes Italian, which passes only if the request wins.
+
+| Run | Cases passing all four rules | Ideas | Dropped by the code's guard | Real cost |
+| --- | --- | --- | --- | --- |
+| `plan-tastes-20261123-0353` | 12 of 12 | 34 | 0 | $0.2164 |
+| before the change (`plan-dev-parity-20261118-0342`) | 10 of 10 | | 1 | $0.2017 |
+
+- **No drop.** The ten earlier cases all still pass, in one run.
+- **The tastes were used and the request still won.** Case 11 got an izakaya; case 12 got tapas, not Italian.
+- **What this doesn't show.** One run, and two cases on tastes. No case checks that a note never hints at who likes what: the prompt forbids it, but nothing here measures it. On a two-person trip a count is close to a name; the count is only ever sent to the model, never shown in the app.
+
 # Describe your trip eval: results
 
 Built the night of Nov 18, 2026 (New York time), from the 11/17 pod note "type or dictate what's already planned in free form". On Start a trip, a person types, pastes or dictates the trip; `describe-trip` returns its name and stops, the plans it mentions and up to five questions for what's missing. The stops fill the Start a trip form, and the plans open on import's review screen once the trip exists, with the questions as optional follow-ups: the ones left ticked go on the person's To do list (Mike's 11/18 call). To run it: `cd app && npm run eval:describe`. All runs below are on TripTab dev.
