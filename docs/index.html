@@ -218,7 +218,7 @@
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
           <div class="stat-value">Claude Max, $100/mo (shared with other work) + triptab.org, <span class="todo">$[domain price]</span></div>
-          <div class="meta" style="margin-top: 6px;">AI calls: $0 cash (the Max plan's API credit). At list price, $1.35 logged to date: $0.71 on 11/16 and $0.64 in Build 3 week. Hosting, database, email and analytics on free plans, $0.</div>
+          <div class="meta" style="margin-top: 6px;">AI calls: $0 cash. $1.35 to date ($0.71 on 11/16, $0.64 in Build 3 week), the same in TripTab's own log and the Claude Console, paid from the plan's API credit ($98.65 left; no card on file, so calls stop rather than bill). Hosting, database, email and analytics on free plans, $0.</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
@@ -291,7 +291,7 @@
           </li>
           <li><strong>What broke / changed in PRD:</strong> PRD v3 adds the hosting, database and security choices and the features from the pod test; the riskiest assumption stays "friends get into one shared trip". Broke, and fixed: a GitHub Actions deploy needed a secret only the class organization's admins can add, so deploys moved to Cloudflare's Workers Builds; the first production build's smoke check timed out while the new domain's DNS spread (the retry passed); Previews failed until the Wrangler config gained a previews block; the agent first committed public settings in <code>.env</code> files the course's <code>.gitignore</code> forbids (AGENTS.md rule 8); and the live database tests hit the dev database's sign-in limit and stopped two production builds on 11/22, so the tests now wait it out. The audit found 13 issues, four serious, none used on the live site, all fixed and live. Not done yet: the manual backup of production, which needs Docker for the Supabase CLI; it is being redone with PostgreSQL's own <code>pg_dump</code>.</li>
           <li><strong>Pod feedback (11/17):</strong> the pod tested TripTab on their phones and raised the Build 3 feature list above: a photo that waited for the place, a day for each AI idea, who suggested a plan, drag and drop, the phone dialog opening in place, the taken-spot sign-in, a guide for new users, and recording payments mid-trip. Every one of them is live.</li>
-          <li><strong>Cost & time this week:</strong> Agent: Claude Code (Claude Max, $100/month, shared with other work), so $0 extra. Domain: triptab.org, <span class="todo">$[price]</span>, bought 11/17 in Cloudflare. AI calls: 336 this week (327 on the dev database for evals and tests, 9 on production), $0.64 at list price, $0 cash on the Max plan's API credit. Cloudflare, Supabase, Resend and PostHog on free plans, $0 · <span class="todo">[hours]</span> hours</li>
+          <li><strong>Cost & time this week:</strong> Agent: Claude Code (Claude Max, $100/month, shared with other work), so $0 extra. Domain: triptab.org, <span class="todo">$[price]</span>, bought 11/17 in Cloudflare. AI calls: 336 this week (327 on the dev database for evals and tests, 9 on production), $0.64 at list price, matching the Claude Console day by day; $0 cash, paid from the Max plan's API credit. Cloudflare, Supabase, Resend and PostHog on free plans, $0 · about 10 hours</li>
         </ul>
       </div>
 
