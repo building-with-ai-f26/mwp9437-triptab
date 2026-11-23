@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, List as ListIcon, Luggage, Plus, Scale, Undo2 } from "lucide-react";
+import { Check, List as ListIcon, Luggage, MapPin, Plus, Scale, Undo2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, Payment, ShareInput } from "../../lib/api";
 import { KIND_ICON } from "./Timeline";
@@ -377,7 +377,6 @@ export function MoneyCard({
   canEdit,
   payments,
   lineCount,
-  showingAll,
   onShowAll,
   onAdd,
   onSettle,
@@ -392,9 +391,7 @@ export function MoneyCard({
   payments: Payment[] | null;
   /** How many lines the full list has. */
   lineCount: number;
-  /** Desktop only: the full list is open in the main column. */
-  showingAll?: boolean;
-  /** Desktop only: open or close the full list. Left out on a phone, where the list sits below. */
+  /** Desktop's Overview only: open the Money tab, where the full list is. Left out where the list is already on the page. */
   onShowAll?: () => void;
   onAdd: () => void;
   onSettle: () => void;
@@ -468,8 +465,8 @@ export function MoneyCard({
 
       <div className="flex flex-col gap-2">
         {onShowAll && lineCount > 0 && (
-          <Button variant="glass" className="w-full" onClick={onShowAll} aria-pressed={showingAll}>
-            <ListIcon /> {showingAll ? "Back to the itinerary" : `Every cost and payment (${lineCount})`}
+          <Button variant="glass" className="w-full" onClick={onShowAll}>
+            <ListIcon /> {`Every cost and payment (${lineCount})`}
           </Button>
         )}
         <Button className="w-full" onClick={onSettle} disabled={!anyMoney}>
@@ -589,6 +586,7 @@ export function TravelCard({
   meId,
   compact = false,
   onOpen,
+  onStops,
 }: {
   items: Item[];
   travelers: Traveler[];
@@ -597,13 +595,20 @@ export function TravelCard({
   /** A phone, atop the itinerary: nothing on a trip with no travel, one line when none is yours. */
   compact?: boolean;
   onOpen: (item: Item) => void;
+  /** Owners: change the trip's name, stops and dates (Mike's call 11/23: it lives here, with where and when). */
+  onStops?: () => void;
 }) {
   const [everyone, setEveryone] = useState(false);
   const travel = items
     .filter((i) => (TRAVEL_KINDS as readonly string[]).includes(i.kind) && i.status !== "suggested")
     .sort((a, b) => a.day.localeCompare(b.day) || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
   const mine = travel.filter((f) => meId && isGoing(f, meId, itemPeople));
-  if (compact && travel.length === 0) return null;
+  if (compact && travel.length === 0 && !onStops) return null;
+  const stopsButton = onStops && (
+    <Button variant="glass" size="sm" onClick={onStops}>
+      <MapPin /> Stops and dates
+    </Button>
+  );
 
   const seeEveryone = (
     <>
@@ -641,14 +646,17 @@ export function TravelCard({
 
   if (compact && mine.length === 0) {
     return (
-      <section className="glass-card-solid mt-4 flex items-center justify-between gap-2 rounded-2xl px-4 py-2" aria-labelledby="travel-title">
+      <section className="glass-card-solid mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-2" aria-labelledby="travel-title">
         <h2 id="travel-title" className="flex min-w-0 items-center gap-2 text-sm font-semibold">
           <Luggage className="size-4 shrink-0 text-primary" />
           <span className="truncate">
-            Travel and lodging <span className="font-normal text-muted-foreground">· none of yours yet</span>
+            Travel and lodging <span className="font-normal text-muted-foreground">· {travel.length ? "none of yours yet" : "none yet"}</span>
           </span>
         </h2>
-        {seeEveryone}
+        <div className="flex flex-wrap gap-2">
+          {travel.length > 0 && seeEveryone}
+          {stopsButton}
+        </div>
       </section>
     );
   }
@@ -678,7 +686,10 @@ export function TravelCard({
       ) : (
         <p className="mb-2 text-sm text-muted-foreground">No flight, car or stay of yours on the trip yet.</p>
       )}
-      {seeEveryone}
+      <div className="flex flex-wrap gap-2">
+        {seeEveryone}
+        {stopsButton}
+      </div>
     </section>
   );
 }

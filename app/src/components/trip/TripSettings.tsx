@@ -3,7 +3,7 @@ import { MapPin, Plus, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog } from "../ui";
 import { dateRange, nightsBetween, tripSpan, validateTrip, type Stop, type StopDraft, type Trip } from "../../lib/model";
 
-/** Owners change a trip after starting it: its name and stops (the stops set the dates), or delete it. */
+/** Owners change a trip after starting it: its name and stops (the stops set the dates), or delete it. Opened from Travel and lodging. */
 export function TripSettingsDialog({
   open,
   trip,
@@ -20,7 +20,7 @@ export function TripSettingsDialog({
   onDelete: () => Promise<void>;
 }) {
   return (
-    <Dialog open={open} onClose={onClose} title="Trip settings">
+    <Dialog open={open} onClose={onClose} title="Stops and dates">
       {open && <SettingsForm {...{ trip, stops, onClose, onSave, onDelete }} />}
     </Dialog>
   );

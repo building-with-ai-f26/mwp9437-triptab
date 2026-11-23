@@ -65,7 +65,7 @@ async function run(browser, label, opts, result) {
   await tab(o, 'People');
   const vicRow = people(o).locator('li').filter({ hasText: 'Vic' });
   r.onTheTrip = (await vicRow.getByTestId('pay-line').innerText()).replace(/\s+/g, ' ').trim();
-  r.phoneForOwner = (await vicRow.innerText()).includes('917-555-0142');
+  r.phoneForOwner = (await vicRow.innerText()).includes('(917) 555-0142');
   r.locked = (await vicRow.getByRole('button', { name: /^Locked: only Vic can change this/ }).count()) === 1;
   r.noChangeWhileLocked = (await vicRow.getByRole('button', { name: /Venmo/ }).count()) === 0;
   await vicRow.scrollIntoViewIfNeeded();
@@ -110,7 +110,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const ok = r.name === 'Vic' && r.email && r.startsLocked && /10 digits/.test(r.shortZelle) && r.overflow <= 0 && (label !== 'phone' || r.minTap >= 44) &&
-        r.kept === '@vic-tt | (555) 123-4567 | 917-555-0142' && /Venmo @vic-tt · Zelle \(555\) 123-4567/.test(r.onTheTrip) && r.phoneForOwner && r.locked &&
+        r.kept === '@vic-tt | (555) 123-4567 | (917) 555-0142' && /Venmo @vic-tt · Zelle \(555\) 123-4567/.test(r.onTheTrip) && r.phoneForOwner && r.locked &&
         r.noChangeWhileLocked && r.unlockedForOwner && r.ownerFixed && r.profileKeepsHis === '@vic-tt' && r.newName === 'Victor';
       if (!ok) result.failure = `${label}: a check failed`;
     }

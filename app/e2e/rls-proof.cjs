@@ -234,9 +234,9 @@ function probe(page, req) {
     <p style="margin:14px 0 0;color:#57534e">${out.checks.filter((c) => c.ok).length} of ${out.checks.length} as they should be: refused or empty for B, and the control working for A.</p></body>`);
   await report.screenshot({ path: `${h.OUT}/rls-refused-api.png`, fullPage: true });
 
-  // 4. Clean up: A deletes the trip in the app (Trip settings, Delete trip).
+  // 4. Clean up: A deletes the trip in the app (Stops and dates in Travel and lodging, Delete trip).
   a.on('dialog', (d) => d.accept());
-  await a.getByRole('button', { name: 'Trip settings' }).click();
+  await a.getByRole('button', { name: 'Stops and dates' }).click();
   await h.dlg(a).getByRole('button', { name: 'Delete trip' }).click();
   await a.waitForURL(/\/trips$/);
   const gone = await probe(a, { path: `/rest/v1/trips?id=eq.${trip}&select=id`, token: A.token });

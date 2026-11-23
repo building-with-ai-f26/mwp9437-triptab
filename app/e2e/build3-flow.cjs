@@ -129,7 +129,7 @@ async function addPlan(page, day, slot, f) {
   result.openedFromList = await dlg(o).getByLabel('What').inputValue();
   if (result.openedFromList !== 'Fondue at La Caleche') throw new Error(`the list opened ${result.openedFromList}`);
   await dlg(o).getByRole('button', { name: 'Close' }).click();
-  await o.getByRole('button', { name: 'Back to the itinerary' }).first().click();
+  await o.getByRole('tab', { name: 'Overview' }).click();
   await o.locator('#day-2027-02-06').scrollIntoViewIfNeeded();
   await o.waitForTimeout(500);
   await shot(o, 'trip-money-desktop');

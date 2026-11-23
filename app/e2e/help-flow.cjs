@@ -107,7 +107,7 @@ async function run(browser, label, opts, result) {
   try {
     await run(browser, 'desktop', h.DESKTOP, result);
     await run(browser, 'phone', h.PHONE, result);
-    const SECTIONS = 'Start a trip and get everyone in|Plans|Money|To do|You: your profile|On a phone|Help and feedback';
+    const SECTIONS = 'Start a trip and get everyone in|Plans|Money|To do|You: your profile|On a phone or a computer|Help and feedback';
     for (const [label, r] of Object.entries(result)) {
       const phone = label === 'phone';
       const ok = r.footer === 'Show me around Guide Send feedback Privacy' && r.minTap >= 44 && r.clearOfBar && r.onEveryTab && r.headerButton === !phone &&

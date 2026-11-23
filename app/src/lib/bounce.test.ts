@@ -8,7 +8,7 @@ describe("bounceFor", () => {
     expect(text).toContain("This came from mike.personal@gmail.com");
     expect(text).toContain("isn't on this trip");
     expect(text).toContain("the email you sign in with");
-    expect(text).toContain("or add mike.personal@gmail.com under Also forward from on My trips");
+    expect(text).toContain("or add mike.personal@gmail.com under Also forward from on your profile");
   });
 
   it("says when the sender couldn't be checked, not that they're off the trip", () => {

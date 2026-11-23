@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Plus, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -109,7 +109,8 @@ import { subscribeToTrip } from "../lib/live";
 import { photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
-type Tab = "itinerary" | "money" | "todo" | "people";
+/** Desktop adds Overview: the itinerary with every card beside it. A phone shows it as Itinerary. */
+type Tab = "overview" | "itinerary" | "money" | "todo" | "people";
 
 export default function TripPage() {
   const { id = "" } = useParams();
@@ -117,11 +118,13 @@ export default function TripPage() {
   const navigate = useNavigate();
   const [bundle, setBundle] = useState<TripBundle | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("itinerary");
-  // Desktop: every cost and payment takes the main column in place of the itinerary (11/19 review).
-  const [moneyOpen, setMoneyOpen] = useState(false);
+  const [chosen, setTab] = useState<Tab>("overview");
   const wide = useWide();
-  // The bottom bar (phones): each section keeps its own place, as tab bars do; tapping the section
+  // The section on screen. Desktop has a banner of tabs (Mike's call 11/23): Overview, then one
+  // section each. A phone has no Overview: its bottom bar starts on Itinerary.
+  const tab: Tab = !wide && chosen === "overview" ? "itinerary" : chosen;
+  const overview = wide && tab === "overview";
+  // The bottom bar (phones) and the banner (desktop): each section keeps its own place, as tab bars do; tapping the section
   // you're on goes back to its top.
   const scrollOf = useRef<Partial<Record<Tab, number>>>({});
   // Where a pane was left is put back once that pane is on the page and laid out. (Doing it a
@@ -248,7 +251,7 @@ export default function TripPage() {
       if (tries > 120 || tourSeen()) return window.clearInterval(timer);
       if (document.querySelector("dialog[open]")) return;
       window.clearInterval(timer);
-      setMoneyOpen(false);
+      setTab("overview");
       setTouring(true);
       track("tour started", { auto: true });
     }, 1000);
@@ -592,7 +595,8 @@ export default function TripPage() {
   );
   const firstPlan = () => document.querySelector('main .item-card:not([data-continued="true"])');
   const startTour = () => {
-    setMoneyOpen(false);
+    // Desktop: the tour runs on Overview, where every section is on the page at once.
+    if (wide) setTab("overview");
     setTouring(true);
     track("tour started", { auto: false });
   };
@@ -658,7 +662,25 @@ export default function TripPage() {
     },
   ];
 
-  const travelCard = <TravelCard items={items} travelers={travelers} itemPeople={itemPeople} meId={meId} compact={!wide} onOpen={openPlan} />;
+  const travelCard = (
+    <TravelCard
+      items={items}
+      travelers={travelers}
+      itemPeople={itemPeople}
+      meId={meId}
+      compact={!wide}
+      onOpen={openPlan}
+      onStops={editable ? () => setSettingsOpen(true) : undefined}
+    />
+  );
+  const sections = (
+    [
+      ["itinerary", "Itinerary", CalendarDays],
+      ["money", "Money", Wallet],
+      ["todo", "To do", ListChecks],
+      ["people", "People", Users],
+    ] as const
+  );
 
   const peopleCard = (
     <PeopleCard
@@ -730,11 +752,6 @@ export default function TripPage() {
               <UserPlus /> <span className="hidden md:inline">Invite</span>
             </Button>
           )}
-          {editable && (
-            <Button variant="glass" size="sm" aria-label="Trip settings" title="Trip settings" onClick={() => setSettingsOpen(true)}>
-              <Settings />
-            </Button>
-          )}
           <Button
             variant="glass"
             size="sm"
@@ -754,19 +771,36 @@ export default function TripPage() {
         </TopBar>
         <ConfirmBanner />
 
+        {/* Desktop: the trip's sections as a banner under the header (Mike's call, 11/23). Overview is
+            the itinerary with every card beside it; each other tab is that section with room to itself. */}
+        <nav aria-label="Trip sections" data-testid="top-tabs" className="sticky top-16 z-30 hidden border-b border-foreground/10 bg-[#f4f0ea]/95 shadow-sm backdrop-blur lg:block">
+          <div className="mx-auto flex h-12 max-w-6xl items-center gap-1.5 px-6" role="tablist">
+            {([["overview", "Overview", LayoutDashboard], ...sections] as const).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => pickTab(key)}
+                className={`inline-flex h-9 items-center gap-2 rounded-full px-4 font-display text-sm transition-colors ${
+                  tab === key ? "bg-primary font-bold text-primary-foreground shadow-md" : "font-semibold text-foreground hover:bg-white/70"
+                }`}
+              >
+                <Icon className="size-4" /> {label}
+                {key === "people" && (
+                  <span aria-hidden className={`rounded-full px-1.5 text-[11px] font-bold leading-4 ${tab === key ? "bg-white text-foreground" : "bg-foreground text-white"}`}>
+                    {travelers.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </nav>
+
         {/* On a phone the bottom bar covers the last 4.5rem (plus the home indicator), so the page ends above it. */}
-        <div className="mx-auto max-w-6xl px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8 lg:pb-0">
-          <main className={tab === "itinerary" ? "" : "hidden lg:block"}>
-            {wide && moneyOpen ? (
-              <div className="space-y-3 pb-16 pt-4 sm:pt-6">
-                <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setMoneyOpen(false)}>
-                  <ArrowLeft /> Back to the itinerary
-                </Button>
-                {moneyList("money-lines-title")}
-              </div>
-            ) : (
+        <div className={`mx-auto max-w-6xl px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-0 ${overview ? "grid grid-cols-[minmax(0,1fr)_380px] gap-8" : ""}`}>
+          <main className={overview || tab === "itinerary" ? "" : "hidden"}>
             <>
-            {!wide && travelCard}
+            {!overview && travelCard}
             {meId && travelers.length > 1 && items.length > 0 && (
               <YourPlans
                 items={items}
@@ -843,12 +877,13 @@ export default function TripPage() {
                 </Button>
               </div>
             )}
-            <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
-              <div data-tour="itinerary">
+            <div className="pb-3 pt-4 sm:pt-6">
+              <div data-tour="itinerary" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                 <h2 className="font-display text-xl font-bold italic sm:text-2xl">Your Itinerary</h2>
-                <p className="mt-1.5 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full bg-white/45 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">
-                  <span className="inline-flex items-center gap-1.5 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-5 rounded-[4px] border-2 border-dotted border-foreground/55" />Suggested is dotted</span>
-                  <span className="font-medium text-foreground/80">Planned is solid</span>
+                {/* One row, phones included (Mike's call 11/23): the swatches say dotted and solid. */}
+                <p data-testid="legend" className="inline-flex items-center gap-x-2.5 whitespace-nowrap rounded-full bg-white/45 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm sm:gap-x-3">
+                  <span className="inline-flex items-center gap-1 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-4 rounded-[4px] border-2 border-dotted border-foreground/55" />Suggested</span>
+                  <span className="inline-flex items-center gap-1 font-medium text-foreground/85"><span aria-hidden className="inline-block h-3 w-4 rounded-[4px] border-2 border-foreground/55 bg-white/70" />Planned</span>
                   <span className="inline-flex items-center gap-1 font-semibold text-green-900">
                     Confirmed <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800"><Check className="size-2.5" strokeWidth={3} /></span>
                   </span>
@@ -856,39 +891,35 @@ export default function TripPage() {
                     Paid <span className="inline-flex items-center rounded-full bg-white/75 px-1 text-[10px] font-bold text-green-800">$<Check className="size-2.5" strokeWidth={3} /></span>
                   </span>
                 </p>
-                <button
-                  type="button"
-                  className="ml-1 mt-1 block text-xs font-semibold text-foreground/80 underline underline-offset-4"
-                  onClick={startTour}
-                >
-                  Show me around
-                </button>
               </div>
-              {editable && (
-                <div className="flex flex-wrap gap-2" data-tour="add">
-                  <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => setChoosingAi(true)}>
-                    <Sparkles /> AI help
-                  </Button>
-                  <Button size="sm" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
-                    <Plus /> Add a plan
-                  </Button>
+              {/* One row too: the view on the left, adding on the right. */}
+              <div data-testid="itinerary-actions" className="mt-3 flex items-center justify-between gap-2">
+                <div className="shrink-0 [&>div]:flex-nowrap max-sm:[&_button]:px-3">
+                <Segmented
+                  dark={false}
+                  label="Itinerary view"
+                  value={view}
+                  onChange={(v) => {
+                    setView(v);
+                    if (v === "week") track("week view opened", { days: days.length });
+                  }}
+                  options={[
+                    { value: "days", label: wide ? "Day by day" : "Days" },
+                    { value: "week", label: "Week" },
+                  ]}
+                />
                 </div>
-              )}
-            </div>
-            <div className="mb-3">
-              <Segmented
-                dark={false}
-                label="Itinerary view"
-                value={view}
-                onChange={(v) => {
-                  setView(v);
-                  if (v === "week") track("week view opened", { days: days.length });
-                }}
-                options={[
-                  { value: "days", label: "Day by day" },
-                  { value: "week", label: "Week" },
-                ]}
-              />
+                {editable && (
+                  <div className="flex shrink-0 gap-1.5 sm:gap-2" data-tour="add">
+                    <Button size="sm" variant="glass" className="!bg-white/60 font-semibold max-sm:!px-2.5" onClick={() => setChoosingAi(true)}>
+                      <Sparkles /> AI help
+                    </Button>
+                    <Button size="sm" className="max-sm:!px-2.5" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
+                      <Plus /> Add a plan
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             {error && <ErrorNote>{error}</ErrorNote>}
             {view === "week" ? (
@@ -904,11 +935,18 @@ export default function TripPage() {
               </MovePlans>
             )}
             </>
-            )}
           </main>
 
-          <aside className={`space-y-4 pb-16 pt-4 sm:pt-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto ${tab === "itinerary" ? "hidden" : ""}`}>
-            <div className={tab === "todo" ? "" : "hidden lg:block"}>
+          <aside
+            className={`pb-16 pt-4 sm:pt-6 ${
+              overview
+                ? "sticky top-32 max-h-[calc(100dvh-8rem)] space-y-4 self-start overflow-y-auto"
+                : wide && tab === "money"
+                  ? "grid grid-cols-[380px_minmax(0,1fr)] items-start gap-8"
+                  : `space-y-4 ${wide ? "mx-auto max-w-2xl" : ""}`
+            } ${tab === "itinerary" ? "hidden" : ""}`}
+          >
+            <div className={overview || tab === "todo" ? "" : "hidden"}>
               <ActionsCard
                 trip={trip}
                 actions={todos}
@@ -935,8 +973,8 @@ export default function TripPage() {
                 }}
               />
             </div>
-            {wide && travelCard}
-            <div className={`space-y-4 ${tab === "money" ? "" : "hidden lg:block"}`}>
+            {overview && travelCard}
+            <div className={`space-y-4 ${overview || tab === "money" ? "" : "hidden"}`}>
               <MoneyCard
                 travelers={travelers}
                 expenses={expenses}
@@ -945,10 +983,9 @@ export default function TripPage() {
                 canEdit={editable}
                 payments={payments}
                 lineCount={lineCount}
-                showingAll={moneyOpen}
-                onShowAll={wide ? () => {
-                  setMoneyOpen((o) => !o);
-                  if (!moneyOpen) track("money list opened", { lines: lineCount });
+                onShowAll={overview ? () => {
+                  pickTab("money");
+                  track("money list opened", { lines: lineCount });
                 } : undefined}
                 onAdd={() => setExpenseTarget({ kind: "general" })}
                 onSettleFx={async (e, cents) => {
@@ -963,7 +1000,8 @@ export default function TripPage() {
               />
               {!wide && moneyList("money-lines-title")}
             </div>
-            <div className={`space-y-4 ${tab === "people" ? "" : "hidden lg:block"}`}>
+            {wide && tab === "money" && <div>{moneyList("money-lines-title")}</div>}
+            <div className={`space-y-4 ${overview || tab === "people" ? "" : "hidden"}`}>
             {peopleCard}
             {!editable && (
               <section className="glass-card-solid rounded-2xl p-4 text-sm text-muted-foreground">
@@ -973,7 +1011,7 @@ export default function TripPage() {
             )}
             </div>
           </aside>
-          <div className="lg:col-span-2">
+          <div className={overview ? "col-span-2" : ""}>
             <HelpFooter help={help} onTour={startTour} />
           </div>
         </div>
@@ -1004,14 +1042,7 @@ export default function TripPage() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-foreground/10 bg-[#f4f0ea] pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(24,18,12,0.08)] lg:hidden"
       >
         <div className="mx-auto flex max-w-md" role="tablist">
-          {(
-            [
-              ["itinerary", "Itinerary", CalendarDays],
-              ["money", "Money", Wallet],
-              ["todo", "To do", ListChecks],
-              ["people", "People", Users],
-            ] as const
-          ).map(([key, label, Icon]) => (
+          {sections.map(([key, label, Icon]) => (
             <button
               key={key}
               role="tab"
@@ -1040,11 +1071,11 @@ export default function TripPage() {
       {touring && (
         <Tour
           steps={tourSteps}
-          onTab={setTab}
+          onTab={(t) => setTab(wide ? "overview" : t)}
           onClose={(finished, step) => {
             setTouring(false);
             markTourSeen();
-            setTab("itinerary");
+            setTab("overview");
             track(finished ? "tour finished" : "tour skipped", { step: step + 1, steps: tourSteps.length });
           }}
         />

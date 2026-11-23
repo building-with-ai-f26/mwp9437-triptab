@@ -6,7 +6,8 @@ import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
 import { myProfile, saveMyPrefs, saveMyProfile, type Profile } from "../lib/api";
 import { ACTIVITIES, CUISINES, tasteLabel } from "../lib/tastes";
 import { nameOf, useAuth } from "../lib/auth";
-import { zelleLabel } from "../lib/pay";
+import { phoneAsTyped, zelleLabel } from "../lib/pay";
+import { ForwardFrom } from "../components/ForwardFrom";
 import { photoFor } from "../lib/photos";
 import { supabase } from "../lib/supabase";
 import { track } from "../lib/analytics";
@@ -45,7 +46,7 @@ export default function You() {
       if (!p) return;
       setVenmo(p.venmo ? `@${p.venmo}` : "");
       setZelle(p.zelle ? zelleLabel(p.zelle) : "");
-      setPhone(p.phone ?? "");
+      setPhone(phoneAsTyped(p.phone ?? ""));
       setLocked(p.locked);
       setCuisines(p.cuisines ?? []);
       setActivities(p.activities ?? []);
@@ -109,10 +110,10 @@ export default function You() {
                 <input className="field" value={venmo} placeholder="@username" autoCapitalize="none" autoCorrect="off" autoComplete="off" onChange={(e) => (setVenmo(e.target.value), edit())} />
               </Row>
               <Row label="Zelle phone or email" hint="Everyone on your trips sees it too.">
-                <input className="field" value={zelle} placeholder="(555) 123-4567 or you@mail.com" autoCapitalize="none" autoCorrect="off" autoComplete="off" inputMode="email" onChange={(e) => (setZelle(e.target.value), edit())} />
+                <input className="field" value={zelle} placeholder="(555) 123-4567 or you@mail.com" autoCapitalize="none" autoCorrect="off" autoComplete="off" inputMode="email" onChange={(e) => (setZelle(phoneAsTyped(e.target.value)), edit())} />
               </Row>
               <Row label="Phone" hint="Only the Owners of your trips see it, so they can text you an invite or a reminder.">
-                <input className="field" value={phone} placeholder="(555) 123-4567" type="tel" autoComplete="tel" maxLength={32} onChange={(e) => (setPhone(e.target.value), edit())} />
+                <input className="field" value={phone} placeholder="(555) 123-4567" type="tel" autoComplete="tel" maxLength={32} onChange={(e) => (setPhone(phoneAsTyped(e.target.value)), edit())} />
               </Row>
 
               <fieldset className="rounded-2xl border border-foreground/10 bg-white/40 p-3">
@@ -199,6 +200,8 @@ export default function You() {
               </div>
             </form>
           )}
+          {/* The other addresses you forward bookings from: yours, so it's kept with your profile (Mike's call 11/23). */}
+          {profile && <ForwardFrom />}
         </main>
         <HelpFooter help={help} />
       </div>

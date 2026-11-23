@@ -1,5 +1,5 @@
-// Also forward from (C31, Mike's call 11/21), at 1280 and 390 wide, against TripTab dev: on My
-// Trips, add another address to forward bookings from, type the code (dev hands a test address's
+// Also forward from (C31, Mike's call 11/21), at 1280 and 390 wide, against TripTab dev: on Your
+// profile (moved there 11/23), add another address to forward bookings from, type the code (dev hands a test address's
 // code back, since example.com gets no mail), see it work, then remove it. Run with `npm run dev`
 // going.
 const { chromium } = require('playwright');
@@ -10,6 +10,8 @@ async function run(browser, label, opts, result) {
   const p = h.watch(await (await h.context(browser, opts)).newPage(), label);
   await p.goto(`${h.BASE}/sign-in?next=/trips`);
   await h.signUp(p, 'Mike', `fwd-${label}`);
+  await p.waitForURL(/\/trips$/);
+  await p.getByRole('button', { name: 'You: your profile' }).click();
   const box = p.getByTestId('forward-from');
   await box.waitFor();
   r.intro = (await box.locator('p').first().innerText()).replace(/\s+/g, ' ').trim();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanVenmo, cleanZelle, venmoLooksRight, zelleLabel, zelleLooksRight } from "./pay";
+import { cleanVenmo, cleanZelle, phoneAsTyped, venmoLooksRight, zelleLabel, zelleLooksRight } from "./pay";
 import { venmoNote } from "./ledger";
 
 describe("how people pay you", () => {
@@ -30,6 +30,23 @@ describe("how people pay you", () => {
   it("shows a phone the way people write it", () => {
     expect(zelleLabel("5551234567")).toBe("(555) 123-4567");
     expect(zelleLabel("jordan@mail.example.com")).toBe("jordan@mail.example.com");
+  });
+
+  it("formats a US phone as it's typed, and never gets stuck on a delete", () => {
+    expect(phoneAsTyped("6178931350")).toBe("(617) 893-1350");
+    expect(phoneAsTyped("617")).toBe("617");
+    expect(phoneAsTyped("6178")).toBe("(617) 8");
+    expect(phoneAsTyped("(617) ")).toBe("617");
+    expect(phoneAsTyped("(617) 893-")).toBe("(617) 893");
+    expect(phoneAsTyped("1 617 893 1350")).toBe("(617) 893-1350");
+    expect(phoneAsTyped("+1 617 893 1350")).toBe("(617) 893-1350");
+    expect(phoneAsTyped("")).toBe("");
+  });
+
+  it("leaves another country's number, an email and extra digits as typed", () => {
+    expect(phoneAsTyped("+44 20 7946 0958")).toBe("+44 20 7946 0958");
+    expect(phoneAsTyped("jordan@mail.example.com")).toBe("jordan@mail.example.com");
+    expect(phoneAsTyped("617893135099")).toBe("617893135099");
   });
 
   it("notes a Venmo payment with TripTab, the trip and its dates", () => {

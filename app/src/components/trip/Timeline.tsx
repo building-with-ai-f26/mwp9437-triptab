@@ -70,7 +70,7 @@ export function DayChips({ days, active, onPick }: { days: TimelineDay[]; active
     <nav
       ref={ref}
       aria-label="Days"
-      className="glass-bar sticky top-14 z-30 -mx-4 flex gap-1.5 overflow-x-auto border-x-0 border-t-0 border-b border-white/10 px-4 py-2 sm:top-16 sm:-mx-6 sm:gap-2 sm:px-6"
+      className="glass-bar sticky top-14 z-30 -mx-4 flex gap-1.5 overflow-x-auto border-x-0 border-t-0 border-b border-white/10 px-4 py-2 sm:top-16 sm:-mx-6 sm:gap-2 sm:px-6 lg:top-28"
     >
       {days.map((d) => (
         <DayChip key={d.date} day={d} on={d.date === active} onPick={onPick} />
@@ -354,7 +354,7 @@ function FoldedDay({ day, actions, onOpen }: { day: TimelineDay; actions: Timeli
         data-date={day.date}
         data-folded
         data-over={isOver || undefined}
-        className={`scroll-mt-32 rounded-2xl py-2 transition-colors sm:scroll-mt-36 ${isOver ? "bg-primary/15 outline-2 outline-dashed outline-primary" : ""}`} aria-label={longDay(day.date)}>
+        className={`scroll-mt-32 rounded-2xl py-2 transition-colors sm:scroll-mt-36 lg:scroll-mt-48 ${isOver ? "bg-primary/15 outline-2 outline-dashed outline-primary" : ""}`} aria-label={longDay(day.date)}>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -415,7 +415,7 @@ export function DayBlock({
   const folded = foldEmpty && empty && !open;
   if (folded) return <FoldedDay day={day} actions={actions} onOpen={() => setOpen(true)} />;
   return (
-    <section id={`day-${day.date}`} data-date={day.date} className="scroll-mt-32 py-4 sm:scroll-mt-36" aria-label={longDay(day.date)}>
+    <section id={`day-${day.date}`} data-date={day.date} className="scroll-mt-32 py-4 sm:scroll-mt-36 lg:scroll-mt-48" aria-label={longDay(day.date)}>
       <header className="mb-3 flex items-center gap-3">
         <div className="glass grid size-11 shrink-0 place-items-center rounded-2xl !bg-white/85">
           <span className="font-display text-base font-bold text-gold-dark">{dayChip(day.date).date.split("/")[1]}</span>

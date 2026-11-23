@@ -8,7 +8,7 @@ import { clock, dollars, longDay, PART_LABEL, STATUS_LABEL, type Item } from "..
 /**
  * A trip's first view is about you (11/23 product manager review, item 4): how many plans you're
  * in, your share so far and where you stand, at the top of the itinerary. Tapping it lists every
- * plan with one tap to say you're in or out. A plan whose bill is in follows the bill (C47), so
+ * plan with where you stand ("You're in" or "You're out") and one button to change it (Join or Drop). A plan whose bill is in follows the bill (C47), so
  * it shows your share instead of a switch.
  */
 export function YourPlans({
@@ -69,13 +69,13 @@ export function YourPlans({
           </span>
         </span>
         <span className="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-foreground">
-          In or out <ChevronRight className="size-4" />
+          Join or drop <ChevronRight className="size-4" />
         </span>
       </button>
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Your plans">
         <p className="mb-3 text-sm text-white/80">
-          Tap to say you're in or out. It changes only you; the group sees who's in on each plan.
+          Each plan says whether you're in. Join or Drop changes only you; the group sees who's in on each plan.
         </p>
         <ul className="divide-y divide-white/10 rounded-2xl border border-white/10">
           {plans.map((item) => {
@@ -90,22 +90,34 @@ export function YourPlans({
                     {longDay(item.day)} · {item.start_time ? clock(item.start_time) : PART_LABEL[item.part]} · {STATUS_LABEL[item.status]}
                   </span>
                 </button>
+                {/* Where you stand, then what the button does (Mike's call 11/23): a status and an action, never one label for both. */}
                 {bill ? (
-                  <span className="shrink-0 text-right text-xs text-white/80">{myShare != null ? `In · your share ${dollars(myShare)}` : "Not on the bill"}</span>
+                  <span className="shrink-0 text-right text-xs text-white/80" data-status>
+                    {myShare != null ? (
+                      <>
+                        <b className="font-semibold text-green-200">You're in</b> · your share {dollars(myShare)}
+                      </>
+                    ) : (
+                      "Not on the bill"
+                    )}
+                  </span>
                 ) : (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={going}
-                    aria-label={`${item.title}: ${going ? "you're in" : "you're out"}`}
-                    disabled={busy === item.id}
-                    onClick={() => set(item, !going)}
-                    className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors ${
-                      going ? "bg-white/90 text-foreground" : "border border-white/25 text-white/80"
-                    }`}
-                  >
-                    {going ? (item.kind === "flight" ? "On it" : "I'm in") : item.kind === "flight" ? "Not me" : "I'm out"}
-                  </button>
+                  <>
+                    <span data-status className={`shrink-0 text-xs font-semibold ${going ? "text-green-200" : "text-white/70"}`}>
+                      {going ? "You're in" : "You're out"}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`${going ? "Drop" : "Join"} ${item.title}`}
+                      disabled={busy === item.id}
+                      onClick={() => set(item, !going)}
+                      className={`min-h-11 w-[4.5rem] shrink-0 rounded-full text-sm font-semibold transition-colors ${
+                        going ? "border border-white/30 text-white" : "bg-white/90 text-foreground"
+                      }`}
+                    >
+                      {going ? "Drop" : "Join"}
+                    </button>
+                  </>
                 )}
               </li>
             );
