@@ -32,7 +32,13 @@ export interface PlanEvalCase {
     max_cents?: number;
     forbidden_title?: string[];
     forbidden_cents_at_least?: number;
+    /** At least one idea names one of these (in its title, place or why): the group's tastes showed (C51). */
+    mention_any?: string[];
+    /** No idea names any of these: the request won over the group's tastes. */
+    mention_none?: string[];
   };
+  /** The eval's one traveler ticks these on their profile first, privately (C51). */
+  tastes?: { cuisines: string[]; activities: string[] };
 }
 
 export const PLAN_RULES = ["slots", "grounded", "request", "obedience"] as const;
@@ -102,6 +108,19 @@ export function scorePlanCase(c: PlanEvalCase, ideas: PlanIdea[], empty: string[
     if (e.max_cents != null && i.est_cents != null && i.est_cents > e.max_cents) {
       request = false;
       notes.push(`"${i.title}" is $${(i.est_cents / 100).toFixed(2)} a person, over the request's limit.`);
+    }
+  }
+
+  const says = (i: PlanIdea) => plain([i.title, i.location ?? "", i.why].join(" "));
+  if (e.mention_any && ideas.length > 0 && !ideas.some((i) => e.mention_any!.some((w) => says(i).includes(plain(w))))) {
+    request = false;
+    notes.push(`No idea mentions ${e.mention_any.join(" or ")}, though the group's tastes lean that way.`);
+  }
+  for (const i of ideas) {
+    const hit = e.mention_none?.find((w) => says(i).includes(plain(w)));
+    if (hit) {
+      request = false;
+      notes.push(`"${i.title}" mentions ${hit}: the group's tastes won over what the request asked for.`);
     }
   }
 

@@ -3,7 +3,8 @@ import { Link } from "react-router";
 import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus, Wallet } from "lucide-react";
 import { PayLine } from "./PayInfo";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
-import { inviteUrl, sendInviteEmail, type PersonDraft } from "../../lib/api";
+import { inviteUrl, sendInviteEmail, type PersonDraft, type TripTaste } from "../../lib/api";
+import { tastesSummary } from "../../lib/tastes";
 import { venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "../../lib/pay";
 import { ROLE_LABEL, type GroupLink, type Role, type Traveler, type Trip } from "../../lib/model";
 import { track } from "../../lib/analytics";
@@ -42,6 +43,7 @@ export function PeopleCard({
   onEditMyPay,
   onVenmoFor,
   linkControls,
+  tastes,
 }: {
   trip: Trip;
   travelers: Traveler[];
@@ -59,6 +61,8 @@ export function PeopleCard({
   onEditMyPay?: () => void;
   /** Owners: add or fix someone's Venmo, until they set their own. */
   onVenmoFor?: (t: Traveler) => void;
+  /** What people chose to share from their profile's survey (C51). */
+  tastes?: TripTaste[];
   /** Owners only: the group link lives inside People (Mike's call, 11/16). Viewers never get it. */
   linkControls?: {
     onChange: (patch: Partial<Pick<GroupLink, "default_role" | "enabled">>) => Promise<void>;
@@ -122,6 +126,8 @@ export function PeopleCard({
       <ul className="divide-y divide-foreground/10">
         {travelers.map((t) => {
           const me = t.id === meId;
+          const shared = tastes?.find((x) => x.traveler_id === t.id);
+          const taste = shared ? tastesSummary(shared.cuisines, shared.activities) : null;
           const url = link?.enabled ? inviteUrl(link.token, t.id) : null;
           return (
             <li key={t.id} className="py-2.5">
@@ -149,6 +155,12 @@ export function PeopleCard({
                     {canEdit && (t.email || t.phone) ? ` · ${t.email ?? t.phone}` : ""}
                   </p>
                   {payReady && <PayLine person={t} isMe={me} />}
+                  {/* What they chose to share from their profile's survey (C51); private picks never come here. */}
+                  {taste && (
+                    <p className="mt-0.5 text-xs text-foreground/80" data-testid="tastes-line">
+                      {taste}
+                    </p>
+                  )}
                 </div>
                 {canEdit && !me ? (
                   <select

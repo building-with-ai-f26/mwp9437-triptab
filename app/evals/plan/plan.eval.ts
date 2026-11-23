@@ -1,5 +1,5 @@
 /**
- * The Plan with AI eval (Build 4). Runs the 10 cases in ./cases through the deployed plan-with-ai
+ * The Plan with AI eval (Build 4). Runs the 12 cases in ./cases (10, and 2 on the group's tastes since C51) through the deployed plan-with-ai
  * function, as a throwaway Owner on a throwaway trip with some plans already on it, and scores
  * each against four rubric rules in code (src/lib/planEval.ts). Real calls, real cost: each is
  * logged in ai_calls as test_run. Results are saved to journal/evals/.
@@ -78,6 +78,10 @@ it(`Plan with AI eval: ${cases.length} cases`, async () => {
   let cost = 0;
   try {
     for (const c of cases) {
+      // The group's tastes come from profiles (C51): this case's are ticked first, privately, and
+      // cleared again for the next case. A database without profiles yet fails the case plainly.
+      const picks = await owner.rpc("save_my_prefs", { p_cuisines: c.tastes?.cuisines ?? [], p_activities: c.tastes?.activities ?? [], p_shared: false });
+      if (c.tastes && picks.error) throw new Error(`Couldn't set the tastes for ${c.id}: ${picks.error.message}`);
       const r = await call({ trip_id: tripId, request: c.request, test_run: true });
       const reply = r.status === 200 ? (r.body as unknown as Reply) : null;
       // "No ideas" (422 no_plans) is a valid answer for a case that expects none.

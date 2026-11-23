@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Check, Lock, LockOpen } from "lucide-react";
+import { Check, Eye, EyeOff, Lock, LockOpen } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { Button, ErrorNote, PhotoFrame, Spinner } from "../components/ui";
-import { myProfile, saveMyProfile, type Profile } from "../lib/api";
+import { myProfile, saveMyPrefs, saveMyProfile, type Profile } from "../lib/api";
+import { ACTIVITIES, CUISINES, tasteLabel } from "../lib/tastes";
 import { nameOf, useAuth } from "../lib/auth";
 import { zelleLabel } from "../lib/pay";
 import { photoFor } from "../lib/photos";
@@ -25,18 +26,32 @@ export default function You() {
   const [zelle, setZelle] = useState("");
   const [phone, setPhone] = useState("");
   const [locked, setLocked] = useState(true);
+  // The preferences survey (C51): optional, private unless you share it.
+  const [cuisines, setCuisines] = useState<string[]>([]);
+  const [activities, setActivities] = useState<string[]>([]);
+  const [shared, setShared] = useState(false);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only the latest load fills the form. A second reply arriving late (React runs this twice in
+    // development) would otherwise wipe what you'd started typing.
+    let stale = false;
     myProfile().then((p) => {
+      if (stale) return;
       setProfile(p);
       if (!p) return;
       setVenmo(p.venmo ? `@${p.venmo}` : "");
       setZelle(p.zelle ? zelleLabel(p.zelle) : "");
       setPhone(p.phone ?? "");
       setLocked(p.locked);
+      setCuisines(p.cuisines ?? []);
+      setActivities(p.activities ?? []);
+      setShared(p.prefs_shared ?? false);
     });
+    return () => {
+      stale = true;
+    };
   }, []);
 
   const edit = () => setState("idle");
@@ -53,6 +68,10 @@ export default function You() {
         await refreshUser();
       }
       await saveMyProfile({ venmo, zelle, phone, locked });
+      if (profile?.cuisines !== undefined) {
+        await saveMyPrefs(cuisines, activities, shared);
+        track("preferences saved", { cuisines: cuisines.length, activities: activities.length, shared });
+      }
       track("profile saved", { has_venmo: Boolean(venmo.trim()), has_zelle: Boolean(zelle.trim()), has_phone: Boolean(phone.trim()), locked });
       setState("saved");
     } catch (err) {
@@ -121,6 +140,42 @@ export default function You() {
                 </div>
               </fieldset>
 
+              {profile.cuisines !== undefined && (
+                <fieldset className="rounded-2xl border border-foreground/10 bg-white/40 p-3" data-testid="tastes">
+                  <legend className="label-luxury px-1 text-foreground/80">What you like (optional)</legend>
+                  <p className="mb-3 text-xs text-foreground/80">
+                    Tick what fits, so AI help suggests plans the group will like. It counts how many of the group picked each thing, never who.
+                  </p>
+                  <Picks label="Food" options={CUISINES} picked={cuisines} onChange={(v) => (setCuisines(v), edit())} />
+                  <Picks label="Things to do" options={ACTIVITIES} picked={activities} onChange={(v) => (setActivities(v), edit())} />
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Who sees what you like">
+                    {(
+                      [
+                        [false, "Private", "Nobody sees your picks. AI help still counts them, with no name.", EyeOff],
+                        [true, "Shared with the group", "The people on your trips see your picks beside your name.", Eye],
+                      ] as const
+                    ).map(([value, title, text, Icon]) => (
+                      <button
+                        key={title}
+                        type="button"
+                        role="radio"
+                        aria-checked={shared === value}
+                        onClick={() => (setShared(value), edit())}
+                        className={`flex min-h-11 items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          shared === value ? "border-primary bg-white/80 shadow-sm" : "border-foreground/10 bg-white/30 hover:bg-white/50"
+                        }`}
+                      >
+                        <Icon className={`mt-0.5 size-4 shrink-0 ${shared === value ? "text-primary" : "text-foreground/60"}`} />
+                        <span>
+                          <span className="block text-sm font-semibold text-foreground">{title}</span>
+                          <span className="block text-xs text-foreground/80">{text}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
               {error && <ErrorNote>{error}</ErrorNote>}
               <div className="flex items-center justify-end gap-3">
                 {state === "saved" && (
@@ -141,6 +196,33 @@ export default function You() {
             </form>
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+/** A row of chips to tick, any number of them. */
+function Picks({ label, options, picked, onChange }: { label: string; options: readonly string[]; picked: string[]; onChange: (v: string[]) => void }) {
+  return (
+    <div className="mb-2" role="group" aria-label={label}>
+      <p className="mb-1.5 text-xs font-semibold text-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const on = picked.includes(o);
+          return (
+            <button
+              key={o}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(on ? picked.filter((x) => x !== o) : [...picked, o])}
+              className={`min-h-9 rounded-full border px-3 text-sm transition-colors ${
+                on ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-foreground/15 bg-white/50 text-foreground hover:bg-white/80"
+              }`}
+            >
+              {tasteLabel(o)}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

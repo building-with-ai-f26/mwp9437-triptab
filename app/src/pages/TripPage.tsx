@@ -76,7 +76,9 @@ import {
   updateTrip,
   updateItem,
   updateLink,
+  tripTastes,
   type TripBundle,
+  type TripTaste,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
@@ -161,6 +163,12 @@ export default function TripPage() {
     const t = window.setTimeout(() => setMoveNote(null), 10_000);
     return () => window.clearTimeout(t);
   }, [moveNote]);
+
+  // What people chose to share from their profile's survey (C51), shown in People.
+  const [tastes, setTastes] = useState<TripTaste[]>([]);
+  useEffect(() => {
+    tripTastes(id).then(setTastes);
+  }, [id]);
 
   const reload = useCallback(
     () =>
@@ -640,6 +648,7 @@ export default function TripPage() {
         await removeTraveler(t.id);
         await reload();
       }}
+      tastes={tastes}
       payReady={paymentsReady}
       zelleReady={zelleReady}
       onEditMyPay={() => setEditingPay(true)}

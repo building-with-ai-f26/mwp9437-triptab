@@ -36,6 +36,10 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           until you change or clear them.
         </li>
         <li>
+          <b>What you like:</b> if you fill in the short survey on your profile, the cuisines and activities you
+          ticked. It's optional, and private unless you choose to share it.
+        </li>
+        <li>
           <b>Addresses you forward from:</b> if you add another email address under Also forward from, TripTab keeps it
           on your account and emails it a 6-digit code once, to check it's yours; only a scrambled form of the code is
           kept. Only you see these addresses, and you can remove them at any time.
@@ -75,6 +79,12 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           Your Venmo username and Zelle phone or email, if you add them, are shown to the people on your trips, so they
           can pay you. While your profile is locked, which it is unless you unlock it there, only you can change them or your phone
           number. Unlocked, an Owner of a trip you're on can add or fix them for that trip.</li>
+        <li>
+          What you like, from your profile's survey, is shown to nobody unless you set it to Shared with the group;
+          then the people on your trips see it beside your name. Private or shared, Plan with AI is told how many
+          people on the trip picked each thing ("3 of 4 like Italian"), never who, so its ideas fit the group. On a
+          trip of two, that can hint at the other person's picks.
+        </li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
       </ul>
@@ -93,7 +103,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Anthropic (Claude)</b> reads what you give the AI buttons, such as a pasted booking email, a PDF or a
-          screenshot, along with the trip's name, dates, stops and plans, and suggests plans back. It may search the
+          screenshot, along with the trip's name, dates, stops and plans (and, for Give me ideas, how many people on the trip picked
+          each cuisine and activity on their profiles, with no names), and suggests plans back. It may search the
           web to check things like a flight's times. On Start a trip, "Set it up" sends it the description you typed
           and today's date, and nothing else. An email forwarded to a trip's address goes to it the same way. Nothing goes to it unless you tap one of
           these buttons or forward an email, and under
