@@ -51,7 +51,7 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByText('Confirmed and paid. Undo the confirmation to change its status.').waitFor();
   r.paidLocked = (await h.dlg(p).getByRole('group', { name: 'Status' }).count()) === 0;
   await h.dlg(p).getByRole('button', { name: 'Close' }).click();
-  r.legend = (await p.getByText('Planned is solid').locator('..').innerText()).replace(/\s+/g, ' ');
+  r.legend = (await p.getByTestId('legend').innerText()).replace(/\s+/g, ' ');
   r.overflow = await h.overflowX(p);
   await h.shot(p, `confirmed-paid-${label}`);
 }
