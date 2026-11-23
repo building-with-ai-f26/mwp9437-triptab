@@ -23,7 +23,7 @@ async function run(browser, label, opts, result) {
   await v.getByRole('button', { name: 'You: your profile' }).click();
   const form = v.getByRole('form', { name: 'Your profile' });
   await form.waitFor();
-  r.name = await form.getByLabel('Name').inputValue();
+  r.name = await form.getByLabel(/^Name/).inputValue();
   r.email = (await v.getByTestId('you-email').innerText()).trim() === `demo-${h.run}-profile-vic-${label}@example.com`;
   r.startsLocked = (await form.getByRole('radio', { name: /^Locked/ }).getAttribute('aria-checked')) === 'true';
   await form.getByLabel('Venmo username').fill('@vic-tt');
@@ -31,7 +31,7 @@ async function run(browser, label, opts, result) {
   await form.getByRole('button', { name: 'Save' }).click();
   r.shortZelle = (await form.getByRole('alert').innerText()).trim();
   await form.getByLabel('Zelle phone or email').fill('(555) 123-4567');
-  await form.getByLabel('Phone').fill('917-555-0142');
+  await form.getByLabel(/^Phone/).fill('917-555-0142');
   r.overflow = await h.overflowX(v);
   r.minTap = await form.locator('input, button').evaluateAll((els) => Math.min(...els.map((e) => Math.round(e.getBoundingClientRect().height))));
   await form.getByRole('button', { name: 'Save' }).click();
@@ -40,7 +40,7 @@ async function run(browser, label, opts, result) {
   // It's there on a reload.
   await v.reload();
   await form.waitFor();
-  r.kept = [await form.getByLabel('Venmo username').inputValue(), await form.getByLabel('Zelle phone or email').inputValue(), await form.getByLabel('Phone').inputValue()].join(' | ');
+  r.kept = [await form.getByLabel('Venmo username').inputValue(), await form.getByLabel('Zelle phone or email').inputValue(), await form.getByLabel(/^Phone/).inputValue()].join(' | ');
 
   // ---------- Mike starts a trip and adds Vic with a guess at his Venmo ----------
   const o = h.watch(await (await h.context(browser, opts)).newPage(), `owner-${label}`);
@@ -68,6 +68,7 @@ async function run(browser, label, opts, result) {
   r.phoneForOwner = (await vicRow.innerText()).includes('917-555-0142');
   r.locked = (await vicRow.getByRole('button', { name: /^Locked: only Vic can change this/ }).count()) === 1;
   r.noChangeWhileLocked = (await vicRow.getByRole('button', { name: /Venmo/ }).count()) === 0;
+  await vicRow.scrollIntoViewIfNeeded();
   await h.shot(o, `profile-locked-${label}`);
 
   // ---------- Vic unlocks it in You; Mike can fix it on his trip ----------
@@ -93,12 +94,12 @@ async function run(browser, label, opts, result) {
   r.profileKeepsHis = await form.getByLabel('Venmo username').inputValue();
 
   // ---------- A new name is what the next trip offers ----------
-  await form.getByLabel('Name').fill('Victor');
+  await form.getByLabel(/^Name/).fill('Victor');
   await form.getByRole('button', { name: 'Save' }).click();
   await v.getByText('Saved, on all your trips.').waitFor();
   await v.reload();
   await form.waitFor();
-  r.newName = await form.getByLabel('Name').inputValue();
+  r.newName = await form.getByLabel(/^Name/).inputValue();
 }
 
 (async () => {
