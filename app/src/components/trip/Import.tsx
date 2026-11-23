@@ -32,6 +32,7 @@ export function ImportDialog({
   trip,
   items,
   onClose,
+  onPark,
   onSave,
   onDone,
   onExtend,
@@ -45,6 +46,8 @@ export function ImportDialog({
   trip: Trip;
   items: Item[];
   onClose: () => void;
+  /** How many unsaved plans wait in the shut dialog (0 once they're saved or discarded). Left out, shutting discards. */
+  onPark?: (waiting: number) => void;
   /** Saves the kept plans; returns once they're on the trip. */
   onSave: (kept: Draft[]) => Promise<void>;
   /** Called when a review ends, saved or not, for the usage log. */
@@ -98,10 +101,22 @@ export function ImportDialog({
     setTried(false);
     setBusy(false);
   };
+  /** Discard: the review goes, on purpose. */
   const close = () => {
     if (result) onDone(result, 0);
     settleQuestions();
     reset();
+    onPark?.(0);
+    onClose();
+  };
+  /**
+   * The X, Escape or a tap outside with plans still unsaved: they're kept, edits and all, not lost
+   * (11/23 review, item 9). The dialog shuts as it stands, and the trip offers the review back.
+   */
+  const shut = () => {
+    if (busy) return;
+    if (!result || drafts.length === 0 || !onPark) return close();
+    onPark(drafts.length);
     onClose();
   };
 
@@ -229,6 +244,7 @@ export function ImportDialog({
       onDone(result, kept.length);
       settleQuestions();
       reset();
+      onPark?.(0);
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -239,7 +255,7 @@ export function ImportDialog({
   const days = tripDays(trip.start_date, trip.end_date);
 
   return (
-    <Dialog open={open} onClose={close} title={result ? (heading ?? "Review what was found") : "Import bookings"}>
+    <Dialog open={open} onClose={shut} title={result ? (heading ?? "Review what was found") : "Import bookings"}>
       {open && !result && (
         <div onPaste={paste}>
           <p className="mb-3 text-sm text-white/75">
