@@ -94,6 +94,9 @@ export function parseSlot(id: string): { day: string; part: DayPart } | null {
 /** A day chip as a drop target: the plan moves to that day and keeps its part. */
 export const chipId = (day: string) => `chip:${day}`;
 
+/** A folded empty day (phones) as a drop target: the same, the plan moves there and keeps its part. */
+export const foldId = (day: string) => `fold:${day}`;
+
 let quietUntil = 0;
 /** True for a moment after a drop, so letting go doesn't also open the plan. */
 export const justDropped = Object.assign(() => Date.now() < quietUntil, {

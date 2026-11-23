@@ -13,6 +13,8 @@ async function run(browser, label, opts, result) {
     return route.continue();
   });
 
+  await h.showDay(p, '2027-02-07');
+
   await p.locator('#day-2027-02-07').getByRole('button', { name: 'Add to day' }).click();
   const d = h.dlg(p);
   await d.getByLabel('What').fill('Snowshoe walk');
