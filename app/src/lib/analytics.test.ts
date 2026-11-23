@@ -121,3 +121,45 @@ describe("emails and phone numbers never reach PostHog (security audit, 11/22)",
     expect(String(out.properties.$raw_user_agent)).toContain("27_2_1");
   });
 });
+
+describe("errors are scrubbed like every other event (C48, 11/23)", () => {
+  it("takes links, one-time codes, emails and phone numbers out of an error's message and stack", () => {
+    const event = {
+      uuid: "u2",
+      event: "$exception",
+      properties: {
+        $current_url: `https://triptab.org/join/${TOKEN}?code=2de13377-9a10`,
+        $exception_list: [
+          {
+            type: "Error",
+            value: `Couldn't text sam@example.com at (917) 555-0142 the link https://triptab.org/join/${TOKEN}`,
+            mechanism: { handled: false, synthetic: false },
+            stacktrace: {
+              type: "raw",
+              frames: [
+                { filename: "https://triptab.org/assets/index-B3x9.js", function: "join", lineno: 12, colno: 4040, in_app: true },
+                { filename: `https://triptab.org/join/${TOKEN}`, function: "onClick", lineno: 1, colno: 1, in_app: true },
+              ],
+            },
+          },
+        ],
+        where: "page",
+      },
+    } as unknown as CaptureResult;
+    const out = JSON.stringify(scrubEvent(event));
+    expect(out).not.toContain(TOKEN);
+    expect(out).not.toContain("sam@example.com");
+    expect(out).not.toContain("555-0142");
+    expect(out).not.toContain("2de13377");
+    expect(out).toContain("Couldn't text [email] at [number] the link https://triptab.org/join/[link]");
+    // What makes the report useful stays: the error's type, the file and where in it.
+    expect(out).toContain("index-B3x9.js");
+    expect(out).toContain('"lineno":12');
+    expect(out).toContain('"function":"onClick"');
+  });
+
+  it("leaves phone-like text alone in other events, as before", () => {
+    const event = { uuid: "u3", event: "plan added", properties: { note: "ref 2027-02-06 4155550100" } } as unknown as CaptureResult;
+    expect(scrubEvent(event)!.properties.note).toBe("ref 2027-02-06 4155550100");
+  });
+});

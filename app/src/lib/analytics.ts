@@ -43,19 +43,20 @@ export const hidePersonal = (s: string): string =>
   hideEmails(s).replace(PHONE, (m) => (m.replace(/\D/g, "").length >= 10 ? "[number]" : m));
 const TEXT_KEYS = new Set(["$el_text", "text"]);
 
-function scrubDeep(v: unknown, key = ""): unknown {
+/** `allText`: every string is treated as on-screen text (an error's message can quote anything). */
+function scrubDeep(v: unknown, key = "", allText = false): unknown {
   if (typeof v === "string") {
     const s = HAS_SECRET.test(v) ? scrubLinks(v) : v;
-    return TEXT_KEYS.has(key) ? hidePersonal(s) : hideEmails(s);
+    return allText || TEXT_KEYS.has(key) ? hidePersonal(s) : hideEmails(s);
   }
   if (Array.isArray(v)) {
-    for (let i = 0; i < v.length; i++) v[i] = scrubDeep(v[i], key);
+    for (let i = 0; i < v.length; i++) v[i] = scrubDeep(v[i], key, allText);
     return v;
   }
   if (v && typeof v === "object" && !(v instanceof Date)) {
     const o = v as Record<string, unknown>;
     for (const k of Object.keys(o)) {
-      const value = scrubDeep(o[k], k);
+      const value = scrubDeep(o[k], k, allText);
       if (HAS_SECRET.test(k)) {
         delete o[k];
         o[scrubLinks(k)] = value;
@@ -65,10 +66,14 @@ function scrubDeep(v: unknown, key = ""): unknown {
   return v;
 }
 
-/** PostHog's before_send: the same event with every group link token and one-time code taken out. */
+/**
+ * PostHog's before_send: the same event with every group link token and one-time code taken out.
+ * Errors (C48, 11/23) go through it like every other event, and more strictly: an error's message
+ * and stack can quote whatever was on screen, so phone numbers come out of all of it too.
+ */
 export function scrubEvent(event: CaptureResult | null): CaptureResult | null {
   if (!event) return event;
-  scrubDeep(event.properties);
+  scrubDeep(event.properties, "", event.event === "$exception");
   if (event.$set) scrubDeep(event.$set);
   if (event.$set_once) scrubDeep(event.$set_once);
   return event;
@@ -99,6 +104,9 @@ export function startAnalytics(): void {
       // visitor first landed on as it was, past both hooks below (security audit, 11/22: a one-time
       // code went out that way). The request still loads PostHog's settings; it just asks for no flags.
       advanced_disable_feature_flags: true,
+      // Errors the app runs into (C48, Mike's call 11/23): uncaught errors and failed promises, so a
+      // crash is something we can see. They pass through before_send below like everything else.
+      capture_exceptions: { capture_unhandled_errors: true, capture_unhandled_rejections: true, capture_console_errors: false },
       get_current_url: scrubLinks,
       before_send: scrubEvent,
     });
@@ -175,6 +183,11 @@ export type EventName =
 
 export function track(event: EventName, props: Record<string, unknown> = {}): void {
   run((ph) => ph.capture(event, props));
+}
+
+/** An error the app caught itself (the screen that replaces a crashed page), sent like any other. */
+export function reportError(error: unknown, where: string): void {
+  run((ph) => ph.captureException(error, { where }));
 }
 
 /**
