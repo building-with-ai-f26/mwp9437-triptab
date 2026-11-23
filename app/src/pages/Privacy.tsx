@@ -40,6 +40,10 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           ticked. It's optional, and private unless you choose to share it.
         </li>
         <li>
+          <b>Plans you say you want:</b> if you tap I want this on a suggested plan, TripTab keeps that vote until you
+          take it back or the plan is removed.
+        </li>
+        <li>
           <b>Addresses you forward from:</b> if you add another email address under Also forward from, TripTab keeps it
           on your account and emails it a 6-digit code once, to check it's yours; only a scrambled form of the code is
           kept. Only you see these addresses, and you can remove them at any time.
@@ -85,6 +89,7 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           people on the trip picked each thing ("3 of 4 like Italian"), never who, so its ideas fit the group. On a
           trip of two, that can hint at the other person's picks.
         </li>
+        <li>Your votes on suggested plans are shown, with your name, to the people on that trip.</li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
       </ul>
