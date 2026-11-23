@@ -928,6 +928,15 @@ export default function TripPage() {
         confirmsItself={
           openItem?.pay_mode === "own" && ownMarks.some((m) => m.item_id === openItem.id) && !costIsIn(openItem)
         }
+        onConfirmCost={
+          openItem && editable
+            ? () => {
+                track("confirm opened", { from: "plan top", kind: openItem.kind });
+                setExpenseTarget({ kind: "item", item: openItem, expense: expenseByItem.get(openItem.id) });
+                setDialog(null);
+              }
+            : undefined
+        }
         stopOn={(day) => (stops.find((s) => day >= s.start_date && day < s.end_date) ?? stops[stops.length - 1])?.name ?? null}
         travelers={travelers}
         meId={meId}
