@@ -19,6 +19,7 @@ async function prep(ctx) {
   await ctx.addInitScript(() => {
     try { localStorage.setItem('triptab.test_run', '1'); } catch {}
     try { localStorage.setItem('triptab.tour_seen', '1'); } catch {}
+    try { localStorage.setItem('triptab.pay_asked', '1'); } catch {}
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
     Object.defineProperty(navigator, 'userAgentData', {
       get: () => ({ brands: [{ brand: 'Google Chrome', version: '131' }], mobile: false, platform: 'Windows' }),
@@ -158,8 +159,6 @@ async function addPlan(page, day, slot, f) {
   await shot(v, 'join-pick-phone');
   await v.getByRole('button', { name: 'Vic' }).click();
   await signUp(v, 'Vic', 'vic');
-  await v.getByRole('button', { name: 'Join the trip' }).waitFor();
-  await shot(v, 'join-confirm-phone');
   await joinTrip(v);
   await v.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();

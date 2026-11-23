@@ -1,5 +1,5 @@
 // How people pay you (Mike's notes, 11/18), at 1280 and 390 wide. The Owner adds Vic with a Venmo
-// guess; Vic joins by the group link and is asked how people pay him back, with the guess filled in;
+// guess; Vic joins by the group link and, at his first Settle up, is asked how people pay him back, with the guess filled in;
 // a short Zelle number is refused; he saves his own Venmo and Zelle. Then, for the Owner: Vic's row
 // in People shows both with a lock and no Change Venmo; Settle up pays Vic with Venmo (the note says
 // TripTab, the trip and its dates) or copies his Zelle; and the Owner adds their own from Settle up.
@@ -28,25 +28,41 @@ async function run(browser, label, opts, result) {
   await d.getByText('Added Vic').waitFor();
   await d.getByRole('button', { name: 'Done' }).click();
   const groupUrl = (await o.locator('section[aria-labelledby="link-title"] code').textContent()).trim();
+  // A cost Vic paid, so there's something to settle when he gets there.
+  await tab(o, 'Money');
+  await money(o).getByRole('button', { name: 'Expense' }).click();
+  d = h.dlg(o);
+  await d.getByLabel('What for').fill('Chalet groceries');
+  await d.getByLabel('Amount').fill('90');
+  await d.getByLabel('Paid by').selectOption({ label: 'Vic' });
+  await d.getByRole('button', { name: 'Add to the tab' }).click();
+  // The dialog closes once it's saved; the Money card is a summary now, with no lines (11/19).
+  await h.dlg(o).waitFor({ state: 'detached' });
 
   // ---------- Vic joins and is asked how people pay him back ----------
   const v = h.watch(await (await h.context(browser, opts)).newPage(), `vic-${label}`);
   await v.goto(groupUrl);
   await v.getByRole('button', { name: 'Vic' }).click();
   await h.signUp(v, 'Vic', `pay-vic-${label}`);
-  await v.getByRole('button', { name: 'Join the trip' }).click();
-  await v.getByRole('heading', { name: 'How should people pay you back?' }).waitFor();
-  r.prefilled = await v.getByLabel('Venmo username').inputValue();
-  await v.getByLabel('Venmo username').fill('@vic-tt');
-  await v.getByLabel('Zelle phone or email').fill('555-12');
-  await v.getByRole('button', { name: 'Save and open the trip' }).click();
-  r.shortZelle = (await v.getByRole('alert').innerText()).trim();
-  await v.getByLabel('Zelle phone or email').fill('(555) 123-4567');
-  r.stepOverflow = await h.overflowX(v);
-  await h.shot(v, `join-pay-step-${label}`);
-  await v.getByRole('button', { name: 'Save and open the trip' }).click();
+  // No pay step on the way in any more (C45, 11/23): he lands on the trip, and his first Settle up asks.
   await v.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
+  await v.evaluate(() => localStorage.removeItem('triptab.pay_asked'));
+  await tab(v, 'Money');
+  await money(v).getByRole('button', { name: 'Settle up' }).click();
+  const ask = h.dlg(v).getByTestId('ask-my-pay');
+  await ask.getByRole('heading', { name: 'How should people pay you back?' }).waitFor();
+  r.prefilled = await ask.getByLabel('Venmo username').inputValue();
+  await ask.getByLabel('Venmo username').fill('@vic-tt');
+  await ask.getByLabel('Zelle phone or email').fill('555-12');
+  await ask.getByRole('button', { name: 'Save' }).click();
+  r.shortZelle = (await ask.getByRole('alert').innerText()).trim();
+  await ask.getByLabel('Zelle phone or email').fill('(555) 123-4567');
+  r.stepOverflow = await h.overflowX(v);
+  await h.shot(v, `join-pay-step-${label}`);
+  await ask.getByRole('button', { name: 'Save' }).click();
+  await ask.waitFor({ state: 'detached' });
+  await h.dlg(v).getByText('Venmo @vic-tt').waitFor();
 
   // ---------- The Owner: Vic's row is locked to him ----------
   await o.reload();
@@ -68,14 +84,6 @@ async function run(browser, label, opts, result) {
 
   // ---------- Settle up: pay Vic with Venmo or Zelle ----------
   await tab(o, 'Money');
-  await money(o).getByRole('button', { name: 'Expense' }).click();
-  d = h.dlg(o);
-  await d.getByLabel('What for').fill('Chalet groceries');
-  await d.getByLabel('Amount').fill('90');
-  await d.getByLabel('Paid by').selectOption({ label: 'Vic' });
-  await d.getByRole('button', { name: 'Add to the tab' }).click();
-  // The dialog closes once it's saved; the Money card is a summary now, with no lines (11/19).
-  await h.dlg(o).waitFor({ state: 'detached' });
   await money(o).getByRole('button', { name: 'Settle up' }).click();
   d = h.dlg(o);
   const toVic = d.getByTestId('transfer').filter({ hasText: 'Vic' });

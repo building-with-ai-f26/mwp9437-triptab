@@ -9,6 +9,8 @@ import { PayInfoForm, ZelleCopy } from "./PayInfo";
 import { dollars, todayIso, type Traveler } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import type { Transfer } from "../../types";
+import { markPayAsked, payAsked } from "../../lib/firstVisit";
+import { track } from "../../lib/analytics";
 
 /**
  * Recorded payments (Build 3, the 11/17 pod feedback): Settle up with Pay with Venmo and Record it
@@ -62,6 +64,7 @@ export function SettleDialog({
     <Dialog open={open} onClose={onClose} title="Settle up">
       {open && (
         <div>
+          {paymentsReady && zelleReady && me && !me.pay_locked && <AskMyPay me={me} onSave={onSaveMyPay} />}
           <p className="mb-4 text-sm text-white/80">
             The fewest payments that square everyone up. TripTab doesn't move money: pay with Venmo, cash or any app, then record it so
             balances stay right.
@@ -127,6 +130,48 @@ export function SettleDialog({
         </div>
       )}
     </Dialog>
+  );
+}
+
+/**
+ * How people pay you, asked at your first Settle up (C45, Mike's call 11/23) rather than as a step
+ * when joining: by then you've seen the trip, and it's the moment it matters. Asked once on a
+ * device; "How people pay you" stays at the bottom of Settle up and on your row in People.
+ */
+function AskMyPay({ me, onSave }: { me: Traveler; onSave: (venmo: string, zelle: string) => Promise<void> }) {
+  const [show, setShow] = useState(() => !payAsked());
+  if (!show) return null;
+  const done = () => {
+    markPayAsked();
+    setShow(false);
+  };
+  return (
+    <section className="mb-4 rounded-2xl border border-white/15 bg-white/5 p-4" aria-label="How should people pay you back?" data-testid="ask-my-pay">
+      <h3 className="font-display text-lg font-semibold text-white">How should people pay you back?</h3>
+      <p className="mb-3 mt-0.5 text-sm text-white/80">
+        {me.venmo || me.zelle ? "An Owner added this for you. Check it, or fix it." : "Add it once, and the group can pay you in a tap on every trip."}
+      </p>
+      <PayInfoForm
+        venmo={me.venmo}
+        zelle={me.zelle}
+        zelleReady
+        onSave={async (v, z) => {
+          await onSave(v, z);
+          done();
+        }}
+      >
+        <Button
+          type="button"
+          variant="light"
+          onClick={() => {
+            track("pay info skipped", { where: "settle up" });
+            done();
+          }}
+        >
+          Not now
+        </Button>
+      </PayInfoForm>
+    </section>
   );
 }
 
