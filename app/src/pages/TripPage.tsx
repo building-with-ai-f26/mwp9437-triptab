@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, Users, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarDays, CalendarPlus, Check, FileText, ListChecks, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -14,6 +14,7 @@ import { movePlan, type MovePatch } from "../lib/move";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { splitEqually } from "../lib/money";
 import { AddPersonDialog, PeopleCard } from "../components/trip/People";
+import { InviteCard, InviteDialog } from "../components/trip/Invite";
 import { ExpenseDialog, MoneyCard, TravelCard, type ExpenseTarget } from "../components/trip/Money";
 import { MoneyList } from "../components/trip/MoneyList";
 import { moneyLines } from "../lib/moneyLines";
@@ -121,6 +122,7 @@ export default function TripPage() {
   // Plans save as you go: "plan updated" goes to PostHog once per open dialog, not once per pause.
   const trackedEdit = useRef<string | null>(null);
   const [addingPerson, setAddingPerson] = useState(false);
+  const [inviting, setInviting] = useState(false);
   // How people pay you (your own), and an Owner adding someone's Venmo, from People.
   const [editingPay, setEditingPay] = useState(false);
   const [venmoFor, setVenmoForPerson] = useState<Traveler | null>(null);
@@ -664,6 +666,20 @@ export default function TripPage() {
           >
             <CalendarPlus /> <span className="hidden md:inline">Calendar</span>
           </Button>
+          {editable && link && (
+            <Button
+              variant="glass"
+              size="sm"
+              aria-label="Invite the group"
+              title="Invite the group"
+              onClick={() => {
+                setInviting(true);
+                track("invite opened", { from: "header", people: travelers.length });
+              }}
+            >
+              <UserPlus /> <span className="hidden md:inline">Invite</span>
+            </Button>
+          )}
           {editable && (
             <Button variant="glass" size="sm" aria-label="Trip settings" title="Trip settings" onClick={() => setSettingsOpen(true)}>
               <Settings />
@@ -743,6 +759,17 @@ export default function TripPage() {
                   }}
                 />
               </div>
+            )}
+            {editable && link && travelers.length === 1 && (
+              <InviteCard
+                trip={trip}
+                link={link}
+                onAddPerson={() => setAddingPerson(true)}
+                onTurnOn={async () => {
+                  await updateLink(trip.id, { enabled: true });
+                  await reload();
+                }}
+              />
             )}
             <div className="flex flex-wrap items-end justify-between gap-2 pb-3 pt-4 sm:pt-6">
               <div data-tour="itinerary">
@@ -881,6 +908,23 @@ export default function TripPage() {
         </div>
       </div>
 
+      {editable && link && (
+        <InviteDialog
+          open={inviting}
+          onClose={() => setInviting(false)}
+          trip={trip}
+          link={link}
+          people={travelers.length}
+          onAddPerson={() => {
+            setInviting(false);
+            setAddingPerson(true);
+          }}
+          onTurnOn={async () => {
+            await updateLink(trip.id, { enabled: true });
+            await reload();
+          }}
+        />
+      )}
       {touring && (
         <Tour
           steps={tourSteps}
