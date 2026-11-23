@@ -12,7 +12,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@^1.9.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   capDecision, checkSuggestions, costUsd, EFFORT, emptySlots, MAX_REQUEST_CHARS, MAX_SEARCHES, MAX_TOKENS, MODEL, nyDayStart,
-  readCap, SUGGEST_TOOL, SYSTEM_PROMPT, TIMEOUT_MS, type PlanRow, type Usage,
+  readCap, SUGGEST_TOOL, SYSTEM_PROMPT, tastesLine, TIMEOUT_MS, type PlanRow, type TasteCounts, type Usage,
 } from "./rules.ts";
 
 const cors = {
@@ -93,11 +93,17 @@ Deno.serve(async (req) => {
   const empty = emptySlots(trip, plans);
   if (empty.length === 0) return fail(422, "no_slots", "Every slot on the trip already has a plan. Clear one first, or add ideas by hand.");
 
+  // The group's tastes from their profiles, as counts with no names (C51). A database without
+  // profiles yet, or a trip where nobody has answered, leaves the line out.
+  const { data: tasteCounts, error: tasteError } = await admin.rpc("trip_taste_counts", { p_trip: tripId });
+  const tastes = tasteError ? null : tastesLine(tasteCounts as TasteCounts | null);
+
   const context = [
     `Trip: ${trip.name}, ${trip.start_date} to ${trip.end_date}.`,
     `Stops (where the group is each day): ${(stops ?? []).map((s) => `${s.name} ${s.start_date} to ${s.end_date}`).join("; ")}.`,
     `Plans already on the trip: ${plans.length ? plans.map((p) => `${p.day} ${p.part}${p.end_day && p.end_day > p.day ? ` to ${p.end_day}` : ""}: ${p.title} (${p.kind}, ${p.status})`).join("; ") : "none"}.`,
     `Empty slots: ${empty.join(", ")}.`,
+    ...(tastes ? [tastes] : []),
   ].join("\n");
   const prompt = `${context}\n\n<group_request>\n${(request || "No request: suggest a few good ideas for the empty slots.").replaceAll("</group_request>", "")}\n</group_request>\n\nSuggest plans for the empty slots.`;
 

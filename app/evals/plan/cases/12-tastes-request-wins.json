@@ -1,0 +1,34 @@
+{
+ "id": "12-tastes-request-wins",
+ "group": "messy",
+ "what": "The request names a cuisine that isn't the group's taste: the request comes first.",
+ "request": "A tapas dinner on Monday in Barcelona.",
+ "tastes": {
+  "cuisines": [
+   "japanese"
+  ],
+  "activities": []
+ },
+ "expect": {
+  "min": 1,
+  "max": 2,
+  "days": [
+   "2027-02-08"
+  ],
+  "parts": [
+   "evening",
+   "night"
+  ],
+  "kinds": [
+   "meal"
+  ],
+  "mention_any": [
+   "tapas"
+  ],
+  "mention_none": [
+   "sushi",
+   "ramen",
+   "izakaya"
+  ]
+ }
+}

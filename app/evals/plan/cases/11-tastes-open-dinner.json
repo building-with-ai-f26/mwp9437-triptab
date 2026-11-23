@@ -1,0 +1,33 @@
+{
+ "id": "11-tastes-open-dinner",
+ "group": "normal",
+ "what": "The request leaves the cuisine open; the group's (private) tastes lean Japanese.",
+ "request": "Dinner on Monday in Barcelona.",
+ "tastes": {
+  "cuisines": [
+   "japanese"
+  ],
+  "activities": []
+ },
+ "expect": {
+  "min": 1,
+  "max": 2,
+  "days": [
+   "2027-02-08"
+  ],
+  "parts": [
+   "evening",
+   "night"
+  ],
+  "kinds": [
+   "meal"
+  ],
+  "mention_any": [
+   "japanese",
+   "sushi",
+   "ramen",
+   "izakaya",
+   "nikkei"
+  ]
+ }
+}

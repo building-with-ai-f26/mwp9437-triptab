@@ -376,6 +376,28 @@ export interface Profile {
   locked: boolean;
   /** False until you've saved it once; it then starts from what your trips hold. */
   saved: boolean;
+  /** The preferences survey (C51). Left out by a database that doesn't have it yet. */
+  cuisines?: string[];
+  activities?: string[];
+  /** Shared with the people on your trips, or private (the default). Plan with AI counts both, with no names. */
+  prefs_shared?: boolean;
+}
+
+/** Saves your preferences and whether the group sees them. */
+export async function saveMyPrefs(cuisines: string[], activities: string[], shared: boolean): Promise<void> {
+  const { error } = await supabase.rpc("save_my_prefs", { p_cuisines: cuisines, p_activities: activities, p_shared: shared });
+  if (error) throw new Error(friendly(error));
+}
+
+/** What the people on a trip chose to share, by traveler. Empty on a database without preferences yet. */
+export interface TripTaste {
+  traveler_id: string;
+  cuisines: string[];
+  activities: string[];
+}
+export async function tripTastes(tripId: string): Promise<TripTaste[]> {
+  const { data, error } = await supabase.rpc("trip_tastes", { p_trip: tripId });
+  return error ? [] : ((data as TripTaste[] | null) ?? []);
 }
 
 /** Your profile, or null on a database that doesn't have profiles yet. */
