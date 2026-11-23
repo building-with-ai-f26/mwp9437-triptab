@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Check, Copy, Link2, Mail, MessageSquare, RefreshCw, Settings2, Trash2, UserPlus, Wallet } from "lucide-react";
 import { PayLine } from "./PayInfo";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
@@ -174,6 +175,10 @@ export function PeopleCard({
                   >
                     <Wallet className="size-3" /> {t.venmo || t.zelle ? "Edit how people pay you" : "Add how people pay you"}
                   </button>
+                  {/* Your profile (C50): the same details for every trip, your phone, and the lock. */}
+                  <Link to="/you" className="ml-2 inline-flex h-8 items-center text-xs font-semibold text-foreground underline underline-offset-4">
+                    Your profile
+                  </Link>
                 </div>
               )}
               {payReady && canEdit && !me && t.user_id && !t.pay_locked && onVenmoFor && (

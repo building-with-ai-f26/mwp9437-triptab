@@ -31,8 +31,9 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           TripTab can send them their link, and a Venmo username, so the group can pay them.
         </li>
         <li>
-          <b>How people pay you:</b> if you add them, your Venmo username and a phone number or email for Zelle. They
-          are saved on all your trips, and on trips you join later, until you change or clear them.
+          <b>Your profile:</b> if you add them, your Venmo username, a phone number or email for Zelle, and your phone
+          number. They are kept once, on your profile (You), and put on all your trips and on trips you join later,
+          until you change or clear them.
         </li>
         <li>
           <b>Addresses you forward from:</b> if you add another email address under Also forward from, TripTab keeps it
@@ -72,9 +73,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         <li>Bookings forwarded to a trip's address, and who sent them, are shown to its Owners only.</li>
         <li>
           Your Venmo username and Zelle phone or email, if you add them, are shown to the people on your trips, so they
-          can pay you. Once you save your own, only you can change either one; until then, a trip's Owners can add or fix
-          your Venmo username and Zelle on that trip.
-        </li>
+          can pay you. While your profile is locked, which it is unless you unlock it there, only you can change them or your phone
+          number. Unlocked, an Owner of a trip you're on can add or fix them for that trip.</li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
       </ul>
