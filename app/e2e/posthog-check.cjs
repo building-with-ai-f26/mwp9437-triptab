@@ -10,6 +10,7 @@ const zlib = require('zlib');
 const BASE = 'http://localhost:5174';
 const run = Math.random().toString(36).slice(2, 7);
 const events = [];
+const exceptions = [];
 
 function decode(req) {
   const buf = req.postDataBuffer();
@@ -24,6 +25,7 @@ function decode(req) {
   try {
     const body = JSON.parse(text);
     const list = Array.isArray(body) ? body : body.batch ?? [body];
+    exceptions.push(...list.filter((e) => e.event === '$exception'));
     return list.map((e) => e.event).filter(Boolean);
   } catch {
     return [];
@@ -65,7 +67,8 @@ function decode(req) {
   await page.goto(`${BASE}/`);
   await page.getByRole('button', { name: 'Start a trip' }).click();
   const fold = page.getByRole('button', { name: 'Use email and a password instead' });
-  if (await fold.isVisible().catch(() => false)) await fold.click();
+  await Promise.race([fold.waitFor(), page.getByLabel('Email').waitFor()]);
+  if (await fold.isVisible()) await fold.click();
   await page.getByLabel('Your name').fill('Mike');
   await page.getByLabel('Email').fill(`demo-${run}-ph@example.com`);
   await page.getByLabel('Password').fill(`demo-${run}-Passw0rd`);
@@ -78,10 +81,14 @@ function decode(req) {
   await page.locator('dialog[open]').getByLabel('What').fill('Ski school');
   await page.locator('dialog[open]').getByRole('button', { name: 'Add to trip' }).click();
   await page.locator('#day-2027-02-06').getByText('Ski school').waitFor();
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
   await page.locator('dialog[open]').getByLabel('Name').fill('Vic');
   await page.locator('dialog[open]').getByRole('button', { name: 'Add to trip' }).click();
   await page.locator('dialog[open]').getByText('Added Vic').waitFor();
+  // Errors reach PostHog too, scrubbed (C48, 11/23): an uncaught error whose message holds an
+  // email, a phone number and a group link.
+  const TOKEN = '3f9c2a7be41d08c56a9e1f2b3c4d5e6f7a8b';
+  await page.evaluate((t) => setTimeout(() => { throw new Error(`Couldn't text sam@example.com at (917) 555-0142 the link https://triptab.org/join/${t}`); }, 0), TOKEN);
   // Let PostHog flush its queue.
   await page.waitForTimeout(6000);
   await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
@@ -92,6 +99,11 @@ function decode(req) {
   const need = ['trip created', 'person added', 'plan added', '$pageview'];
   const missing = need.filter((e) => !counts[e]);
   console.log(missing.length ? `MISSING: ${missing.join(', ')}` : 'All Build 2 events sent.');
+  const sent = JSON.stringify(exceptions);
+  const message = exceptions[0]?.properties?.$exception_list?.[0]?.value;
+  const leaked = [TOKEN, 'sam@example.com', '555-0142'].filter((x) => sent.includes(x));
+  const errorOk = exceptions.length > 0 && leaked.length === 0 && /\[email\].*\[number\].*join\/\[link\]/.test(message ?? '');
+  console.log(errorOk ? `Error captured and scrubbed: ${message}` : `ERROR CAPTURE FAILED: ${exceptions.length} sent, leaked ${JSON.stringify(leaked)}, message ${message}`);
   await browser.close();
-  process.exit(missing.length ? 1 : 0);
+  process.exit(missing.length || !errorOk ? 1 : 0);
 })();

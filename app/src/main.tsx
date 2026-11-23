@@ -1,10 +1,10 @@
-import { StrictMode, lazy, Suspense, type ReactNode } from "react";
+import { Component, StrictMode, lazy, Suspense, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, HashRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { HASH_ROUTES } from "./lib/api";
 import "./index.css";
 import { AuthProvider, useAuth } from "./lib/auth";
-import { startAnalytics } from "./lib/analytics";
+import { reportError, startAnalytics } from "./lib/analytics";
 import { reloadOnStaleBuild } from "./lib/staleBuild";
 import { isConfigured } from "./lib/supabase";
 import { Spinner } from "./components/ui";
@@ -46,6 +46,36 @@ function NotConfigured() {
   );
 }
 
+/**
+ * A page that crashes shows this instead of a blank screen, and the error goes to PostHog through
+ * the same scrubbing as every other event (C48, Mike's call 11/23).
+ */
+class CrashScreen extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false };
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+  componentDidCatch(error: unknown) {
+    reportError(error, "page");
+  }
+  render() {
+    if (!this.state.crashed) return this.props.children;
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-start justify-center gap-4 p-8">
+        <h1 className="font-display text-2xl font-semibold text-foreground">Something went wrong</h1>
+        <p className="text-foreground/80">That's on TripTab, not you. Reload to pick up where you were.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="min-h-11 rounded-full bg-foreground px-5 text-sm font-semibold text-white"
+        >
+          Reload
+        </button>
+      </main>
+    );
+  }
+}
+
 function App() {
   if (!isConfigured) return <NotConfigured />;
   return (
@@ -73,6 +103,8 @@ function App() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <CrashScreen>
+      <App />
+    </CrashScreen>
   </StrictMode>,
 );
