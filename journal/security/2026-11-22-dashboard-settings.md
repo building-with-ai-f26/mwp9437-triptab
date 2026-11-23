@@ -35,3 +35,11 @@ never a secret. SECURITY.md sections 6 and 8 are written from this.
   `item_id`, `user_id`, `status`), and group link tokens, codes and passwords go in POST bodies
   (`join_preview`, `join_trip`, `verifyOtp`).
 - **Step 1, the server.** Production runs PostgreSQL 17.11, so a backup needs `pg_dump` 17.
+
+## Follow-up on Mike's laptop (11/23, his calls C41 to C43)
+
+| # | Step | Result |
+|---|------|--------|
+| 1 | Backup of production (C41) | **Done.** PostgreSQL 17.12's command line tools only, from the official EDB installer (SHA256 matched, EDB-signed). `pg_dump` 17.12 through the session pooler, custom format, from production's PostgreSQL 17.11: `triptab-production-2026-11-23.dump`, 606,157 bytes. `pg_restore --list` reads it back: 1,021 lines, 1,013 entries, 66 of them table data. Saved in Mike's OneDrive with no git folder above it. Mike set a new database password to run it and keeps it in his password manager; nothing in TripTab uses that password (checked from the cloud: no code, script or config in the repository reads it, and triptab.org answered normally afterwards). |
+| 2 | Legacy full-account token (C42) | **Revoked.** After a reload, only "TripTab deploy (Cloudflare production builds)" and "TripTab dev deploy (Cloudflare previews)" remain, both expiring 17 Feb 2027. |
+| 3 | Supabase's email limit, production (C43) | **3 an hour**, saved, and reads 3 after a reload. Every other limit as on 11/22. |

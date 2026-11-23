@@ -1,6 +1,6 @@
 # SECURITY.md: TripTab's security audit (Build 3)
 
-Audited 11/19 and 11/22, 2026, on the finished Build 3 app at https://triptab.org. Advanced lane.
+Audited 11/19 and 11/22, 2026 (dashboard follow-ups 11/23), on the finished Build 3 app at https://triptab.org. Advanced lane.
 Every result below comes from a real run; the raw output is in [`journal/security/`](./journal/security/),
 and nothing here is estimated or made up.
 
@@ -8,8 +8,8 @@ and nothing here is estimated or made up.
 straight at the database, on the live site. No secret key is in the site's code, the repository or
 its history. `npm audit` is at 0. The audit ran 16 attacks and two code reviews; they found 13
 things worth fixing, four of them serious, and all 13 are fixed and live. A rollback was tried on
-triptab.org and works. Seven things are left, each listed at the end with why; the first, a manual
-backup of production, is still to do.
+triptab.org and works, and a manual backup of production was made on 11/23. Five things are left,
+each listed at the end with why.
 
 ## 1. What kind of app this is
 
@@ -60,7 +60,7 @@ The course's seven checks, in its order.
 | 1 | **Access controls.** A second account against another's trip on the live site; a Viewer trying to act as an Owner; a stranger and a signed-out visitor against every table and function; what live updates push to whom. | Refused throughout, except the three findings in section 4 (A, D, J), now fixed. |
 | 2 | **Secret keys stay on the server.** Searched the repository, all 152 commits of its history, and the 20 files triptab.org serves, for `sb_secret_`, `service_role`, `sk-or-`, `sk-ant-`, `sk-proj-`, `sk_live_`, Resend, Google and Supabase access-token shapes, private keys, and TripTab's own secrets by name. | None. Only the three values meant to be public: the two Supabase publishable keys and PostHog's `phc_` key. Secrets live in Supabase's and Cloudflare's secret stores; Mike types each one, and the agent checks them by name only. |
 | 3 | **File storage is private.** | Nothing to make private: no storage bucket exists. A forwarded email from an unknown sender is held up to 7 days in a table only the server can read. |
-| 4 | **Production is out of the agent's reach.** | See section 6. A rollback was tried on 11/22 and works. One gap: the manual backup of production didn't run on 11/22 (section 8). |
+| 4 | **Production is out of the agent's reach.** | See section 6. A rollback was tried on 11/22 and works; a manual backup of production was made on 11/23. |
 | 5 | **Spending caps and rate limits.** | See section 7. Two findings (B and C) fixed. |
 | 6 | **Dependencies.** `npm audit`, all dependencies and `--omit=dev`. | 0 vulnerabilities. Ten in dev tools (two critical, through Vitest 3) were fixed 11/19 by moving to Vitest 4.1.12 and typescript-eslint 8.73. |
 | 7 | **An agent security review that tries to break the app.** Two passes (11/19, 11/22): 16 attacks, a line-by-line read of every database function as deployed, and two independent code reviews (Edge Functions and the email Worker; the front end and the delivery pipeline). | Section 4 has what it found; section 5 is the attack log. |
@@ -137,6 +137,12 @@ migrations and functions as production; attacks that make accounts or change dat
   `90829df9` switched what triptab.org serves from `index-CDauWe8Q.js` to `index-DS3-vIhv.js`
   within seconds, and promoting `7f1c247b` again brought `index-CDauWe8Q.js` back. The database was
   untouched ([`journal/security/2026-11-22-dashboard-settings.md`](./journal/security/2026-11-22-dashboard-settings.md)).
+- **Backup:** a full dump of production, made 11/23 with PostgreSQL 17's `pg_dump` (production runs
+  17.11) through Supabase's session pooler: 592 KB, 66 tables' data, and `pg_restore --list` reads
+  all 1,013 entries back. It holds people's emails, so it sits in Mike's OneDrive outside any git
+  folder, never in this repository. Supabase's free plan keeps no backups of its own, so the next
+  one is a manual step too. Mike set a new database password to make it; nothing in TripTab uses
+  that password (the builds deploy with access tokens).
 
 ### Checks on every pull request
 
@@ -170,7 +176,7 @@ all of that passed, and a smoke check then confirms triptab.org serves the new b
 | Invite emails | Owners only; 3 a day to one person, 30 a trip, 50 a sender, 65 in all | The send-invite function |
 | Email into a trip | 20 a day per trip, 5 held from unknown senders, 8 MB each; only with Cloudflare's own DMARC pass and the Worker's shared secret | The Worker and the inbox-email function |
 | Forwarding addresses | 3 per account, 3 codes a day, 5 tries a code, 30 minutes | The confirm-email function |
-| Sign-in attempts | 30 per 5 minutes per address; Supabase's own emails 30 an hour | Supabase Auth (read 11/22) |
+| Sign-in attempts | 30 per 5 minutes per address; Supabase's own emails 3 an hour | Supabase Auth (read 11/22, emails lowered 11/23) |
 | Hosting, database, analytics, email | Free plans: past their limits they stop serving rather than bill | Cloudflare, Supabase, PostHog, Resend |
 
 Every AI call is logged with its tokens and list-price cost. The text sent is never stored.
@@ -179,33 +185,23 @@ Every AI call is logged with its tokens and list-price cost. The text sent is ne
 
 Known and not fixed, most important first.
 
-1. **No manual backup of production yet.** Supabase's free plan keeps none. A full dump needs the
-   database password, and the file holds people's emails, so it belongs on Mike's laptop and not in
-   this public repository. It was tried there on 11/22 and didn't run: the Supabase CLI's
-   `db dump` runs `pg_dump` inside Docker, and the laptop has no Docker. The next try uses
-   PostgreSQL 17's own `pg_dump` (production runs 17.11), with Mike typing the password at its
-   prompt.
-2. **A Supabase access token that opens the whole account never expires.** It came from a Supabase
-   CLI sign-in and has never been used; the builds don't use it (their two keys are each limited
-   to one project and expire 17 Feb 2027). Whoever held its value could change production
-   directly. Revoking it waits on Mike's OK.
-3. **Limits are checked, then counted, in two steps.** Requests sent at the same instant can each
+1. **Limits are checked, then counted, in two steps.** Requests sent at the same instant can each
    pass a limit before any of them is counted, so a burst can overshoot the AI caps or the email
    limits by the size of the burst. The monthly AI limit and the email provider's daily limit are
    the hard stops. The fix is to reserve before calling, in one database step.
-4. **Signed-in people can write as fast as the database lets them.** A trip, a plan and a to-do each
+2. **Signed-in people can write as fast as the database lets them.** A trip, a plan and a to-do each
    have size limits, but nothing limits how many of them one account makes (1,100 to-dos went in
    with one request during this audit). On the free plan the worst case is a full database, not a
    bill.
-5. **Supabase's own sign-up, magic-link and password-reset endpoints send email outside TripTab's
-   limits** (attack 12). They can't make a usable account, but they can use up the email provider's
-   100 a day. Supabase caps them at 30 an hour (read 11/22), so emptying a day's 100 takes about
-   three and a half hours. Password reset is the only one TripTab itself uses; lowering the cap to 3
-   an hour (72 a day at most) waits on Mike's OK.
-6. **Anyone holding a group link joins as an Owner by default** (Mike's 11/16 call: friends plan
+3. **Supabase's own sign-up, magic-link and password-reset endpoints send email outside TripTab's
+   limits** (attack 12). They can't make a usable account, but they draw on the email provider's 100
+   a day. Since 11/23 Supabase sends at most 3 an hour (it was 30), so 72 a day at most, which no
+   longer empties the day on its own but still eats into it. Password reset is the only one
+   TripTab itself uses.
+4. **Anyone holding a group link joins as an Owner by default** (Mike's 11/16 call: friends plan
    together). An Owner can delete the trip and set the pay details of someone who hasn't saved their
    own. An Owner can switch the link's role to Viewer, replace the link, or turn it off.
-7. **Smaller ones.** Sign-up says whether an email already has an account. A password-reset link
+5. **Smaller ones.** Sign-up says whether an email already has an account. A password-reset link
    signs the browser in as the link's account without asking first. The site's
    Content-Security-Policy doesn't yet list which scripts and hosts are allowed. The email check
    trusts Cloudflare's verdict header as the first of its kind, and a message with two From lines
@@ -219,14 +215,14 @@ Known and not fixed, most important first.
    only the three accounts that can push (two admins and Mike) can start one, and its key opens
    TripTab dev only.
 
-**Settings read in the dashboards** (11/22, on Mike's laptop in his own browser; every value in
+**Settings read in the dashboards** (11/22, and changed where noted 11/23, on Mike's laptop in his own browser; every value in
 [`journal/security/2026-11-22-dashboard-settings.md`](./journal/security/2026-11-22-dashboard-settings.md)):
 
 | Where | What it says |
 |-------|--------------|
 | Supabase Auth, URL configuration | Site URL `https://triptab.org`; the only redirect allowed is `https://triptab.org/**`. A `localhost` entry was removed with Mike's OK; there was no GitHub Pages entry. |
-| Supabase Auth, rate limits | Emails 30 an hour; sign-up and sign-in 30 per 5 minutes per address; one-time code checks 30 per 5 minutes; token refresh 150 per 5 minutes; anonymous sign-in 30 an hour; 60 seconds between emails to one person. |
-| Supabase access tokens | The production build's key opens TripTab only, the Previews key TripTab dev only; both expire 17 Feb 2027. The two keys must differ: each opens one project, and both kinds of build deploy with theirs and pass. One more token opens the whole account (item 2). |
+| Supabase Auth, rate limits | Emails 3 an hour (30 until 11/23); sign-up and sign-in 30 per 5 minutes per address; one-time code checks 30 per 5 minutes; token refresh 150 per 5 minutes; anonymous sign-in 30 an hour; 60 seconds between emails to one person. |
+| Supabase access tokens | The production build's key opens TripTab only, the Previews key TripTab dev only; both expire 17 Feb 2027. The two keys must differ: each opens one project, and both kinds of build deploy with theirs and pass. A third token, from an old Supabase CLI sign-in, opened the whole account and never expired; it had never been used and was revoked 11/23, leaving only the two. |
 | Cloudflare builds | Production builds `main`; Previews build every other branch, each with its own key. |
 | GitHub | Public repository in the course's organization: 2 admins, Mike with write, 58 with read. GitHub Actions holds no secrets, so a first-time contributor's workflow has nothing to take. |
 | PostHog | Replay, heatmaps, autocapture, console logs and network timing on; request bodies and headers not recorded. The code adds the masking in finding F on top; the app writes nothing to the console, and its GET requests carry only ids. |
