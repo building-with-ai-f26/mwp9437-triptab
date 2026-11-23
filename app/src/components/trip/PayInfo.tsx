@@ -270,7 +270,7 @@ export function PayLine({ person, isMe = false }: { person: Traveler; isMe?: boo
       {why && (
         <p className="mt-1 rounded-lg bg-white/60 px-2 py-1 text-foreground" data-testid="pay-lock-why">
           {isMe
-            ? "Locked to you: you set it, so only you can change it, here in your row. Nobody else on the trip can."
+            ? "Locked to you: only you can change it, here or in your profile. Nobody else on the trip can. Your profile is also where you unlock it."
             : `Locked: ${person.name} set it, so only ${person.name} can change it. Owners can't.`}
         </p>
       )}
