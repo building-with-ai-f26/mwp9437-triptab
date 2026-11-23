@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ExternalLink, FileUp, Trash2 } from "lucide-react";
+import { ChevronDown, CircleDollarSign, ExternalLink, FileUp, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
   addDays,
@@ -80,6 +80,7 @@ export function ItemDialog({
   hasCost = false,
   confirmsItself = false,
   onImport,
+  onConfirmCost,
   onClose,
   onSave,
   onDelete,
@@ -101,6 +102,11 @@ export function ItemDialog({
   confirmsItself?: boolean;
   /** A new plan: read it from a confirmation instead (a screenshot, a PDF or pasted text; C22). */
   onImport?: () => void;
+  /**
+   * A Planned plan on one bill, with no cost in yet: confirming it with what it cost is the main
+   * thing to do, so it's the button at the top of the sheet (11/23 review, item 6).
+   */
+  onConfirmCost?: () => void;
   onClose: () => void;
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
@@ -121,7 +127,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onClose, onSave, onDelete }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onConfirmCost, onClose, onSave, onDelete }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -151,6 +157,7 @@ function ItemForm({
   hasCost = false,
   confirmsItself = false,
   onImport,
+  onConfirmCost,
 }: {
   state: ItemDialogState;
   trip: Trip;
@@ -170,6 +177,7 @@ function ItemForm({
   hasCost?: boolean;
   confirmsItself?: boolean;
   onImport?: () => void;
+  onConfirmCost?: () => void;
 }) {
   const it = state.item;
   const [kind, setKind] = useState<ItemKind>(it?.kind ?? state.kind);
@@ -493,6 +501,15 @@ function ItemForm({
             it, and TripTab fills the plan in.
           </span>
         </button>
+      )}
+
+      {it && onConfirmCost && status === "planned" && it.pay_mode === "split" && !hasCost && (
+        <div className="mb-4 rounded-2xl border border-white/15 bg-white/5 p-3" data-testid="confirm-first">
+          <Button type="button" className="w-full" onClick={onConfirmCost}>
+            <CircleDollarSign /> Confirm and log the cost
+          </Button>
+          <p className="mt-2 text-center text-xs text-white/75">Paid for it? Log what it cost, who paid and who's in, in one step.</p>
+        </div>
       )}
 
       <DarkField label="What">
@@ -977,7 +994,7 @@ function ItemForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+      <div className="sheet-actions flex flex-wrap items-center justify-between gap-2">
         {it ? (
           <Button
             type="button"
