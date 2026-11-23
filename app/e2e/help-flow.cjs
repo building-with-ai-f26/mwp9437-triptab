@@ -49,7 +49,7 @@ async function run(browser, label, opts, result) {
     await h.dlg(p).getByRole('button', { name: /Show me around/ }).click();
   }
   await tour.getByRole('heading', { name: 'Your itinerary' }).waitFor();
-  r.tourSteps = (await tour.getByText(/Show me around · 1 of \d+/).innerText()).match(/of (\d+)/)[1];
+  r.tourSteps = (await tour.getByText(/Show me around · 1 of \d+/i).innerText()).match(/of (\d+)/i)[1];
   await p.keyboard.press('Escape');
   await tour.waitFor({ state: 'detached' });
 
