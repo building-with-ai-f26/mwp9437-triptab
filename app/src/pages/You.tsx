@@ -34,7 +34,11 @@ export default function You() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only the latest load fills the form. A second reply arriving late (React runs this twice in
+    // development) would otherwise wipe what you'd started typing.
+    let stale = false;
     myProfile().then((p) => {
+      if (stale) return;
       setProfile(p);
       if (!p) return;
       setVenmo(p.venmo ? `@${p.venmo}` : "");
@@ -45,6 +49,9 @@ export default function You() {
       setActivities(p.activities ?? []);
       setShared(p.prefs_shared ?? false);
     });
+    return () => {
+      stale = true;
+    };
   }, []);
 
   const edit = () => setState("idle");
