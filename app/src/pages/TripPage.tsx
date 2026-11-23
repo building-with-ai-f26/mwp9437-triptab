@@ -116,6 +116,15 @@ export default function TripPage() {
   // Desktop: every cost and payment takes the main column in place of the itinerary (11/19 review).
   const [moneyOpen, setMoneyOpen] = useState(false);
   const wide = useWide();
+  // The bottom bar (phones): each section keeps its own place, as tab bars do; tapping the section
+  // you're on goes back to its top.
+  const scrollOf = useRef<Partial<Record<Tab, number>>>({});
+  const pickTab = (next: Tab) => {
+    if (next === tab) return window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollOf.current[tab] = window.scrollY;
+    setTab(next);
+    requestAnimationFrame(() => window.scrollTo({ top: scrollOf.current[next] ?? 0 }));
+  };
   // Show me around (the 11/17 pod notes): once per device, the first time a trip opens.
   const [touring, setTouring] = useState(false);
   const [dialog, setDialog] = useState<ItemDialogState | null>(null);
@@ -702,31 +711,8 @@ export default function TripPage() {
         </TopBar>
         <ConfirmBanner />
 
-        {/* Phone: one pane at a time (spring's Schedule / Details toggle). */}
-        <div className="flex gap-1 px-4 pt-3 lg:hidden" role="tablist">
-          {(
-            [
-              ["itinerary", "Itinerary", CalendarDays],
-              ["money", "Money", Wallet],
-              ["todo", "To do", ListChecks],
-              ["people", `People (${travelers.length})`, Users],
-            ] as const
-          ).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-1 py-2 font-display text-[13px] font-semibold transition-all sm:text-sm ${
-                tab === key ? "glass-card !bg-white/60 text-foreground shadow-md" : "text-foreground hover:bg-white/25"
-              }`}
-            >
-              <Icon className="hidden size-4 min-[420px]:inline" /> {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+        {/* On a phone the bottom bar covers the last 4.5rem (plus the home indicator), so the page ends above it. */}
+        <div className="mx-auto max-w-6xl px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8 lg:pb-0">
           <main className={tab === "itinerary" ? "" : "hidden lg:block"}>
             {wide && moneyOpen ? (
               <div className="space-y-3 pb-16 pt-4 sm:pt-6">
@@ -925,6 +911,47 @@ export default function TripPage() {
           }}
         />
       )}
+      {/* Phone: the trip's sections along the bottom, always in reach of a thumb (Mike's call, 11/23),
+          one pane at a time. Dialogs and sheets open in the browser's top layer, above it. */}
+      <nav
+        aria-label="Trip sections"
+        data-testid="bottom-bar"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-foreground/10 bg-[#f4f0ea] pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(24,18,12,0.08)] lg:hidden"
+      >
+        <div className="mx-auto flex max-w-md" role="tablist">
+          {(
+            [
+              ["itinerary", "Itinerary", CalendarDays],
+              ["money", "Money", Wallet],
+              ["todo", "To do", ListChecks],
+              ["people", "People", Users],
+            ] as const
+          ).map(([key, label, Icon]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              aria-label={key === "people" ? `People (${travelers.length})` : undefined}
+              onClick={() => pickTab(key)}
+              className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pb-1 pt-1.5 text-foreground"
+            >
+              <span className={`relative grid h-7 w-14 place-items-center rounded-full transition-colors ${tab === key ? "bg-primary text-primary-foreground shadow-md" : ""}`}>
+                <Icon className="size-5" />
+                {/* The head count, drawn from an attribute so the tab's text stays just "People". */}
+                {key === "people" && (
+                  <span
+                    aria-hidden
+                    data-count={travelers.length}
+                    className={`absolute -top-1 right-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4 after:content-[attr(data-count)] ${tab === key ? "bg-white text-foreground" : "bg-foreground text-white"}`}
+                  />
+                )}
+              </span>
+              <span className={`font-display text-[11px] ${tab === key ? "font-bold" : "font-semibold"}`}>{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
       {touring && (
         <Tour
           steps={tourSteps}
@@ -1078,7 +1105,7 @@ export default function TripPage() {
         <div
           role="status"
           data-testid="move-note"
-          className="glass-card-solid fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl px-4 py-3 text-sm shadow-xl"
+          className="glass-card-solid fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl px-4 py-3 text-sm shadow-xl lg:bottom-4"
         >
           <p className="min-w-0 flex-1 text-foreground">{moveNote.text}</p>
           {moveNote.undo && (
