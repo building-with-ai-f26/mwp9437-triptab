@@ -144,6 +144,23 @@ describe("the group link", () => {
     expect(data).not.toHaveProperty("token");
   });
 
+  it("shows who started the trip and the next 3 plans before signing in, and never a cost, a place or notes (C45)", async () => {
+    const { data } = await visitor.rpc("join_preview", { p_token: token });
+    expect(data.invited_by).toBe("Mike");
+    expect(typeof data.plan_count).toBe("number");
+    expect(Array.isArray(data.plans)).toBe(true);
+    expect(data.plans.length).toBeLessThanOrEqual(3);
+    expect(data.plans.length).toBe(Math.min(3, data.plan_count));
+    for (const p of data.plans) {
+      expect(Object.keys(p).sort()).toEqual(["day", "kind", "part", "start_time", "status", "title"]);
+    }
+    // Nothing about money, places, contacts or the link itself, anywhere in what comes back.
+    const all = JSON.stringify(data);
+    for (const key of ["est_cents", "cost", "location", "notes", "link", "email", "phone", "venmo", "zelle", "token", "created_by"]) {
+      expect(all).not.toContain(`"${key}"`);
+    }
+  });
+
   it("shows nothing for a made-up token", async () => {
     const { data } = await visitor.rpc("join_preview", { p_token: "not-a-real-token" });
     expect(data).toBeNull();
