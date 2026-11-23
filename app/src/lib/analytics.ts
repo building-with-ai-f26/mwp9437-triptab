@@ -124,6 +124,8 @@ function run(fn: (ph: PostHog) => void) {
 
 export type EventName =
   | "signed up"
+  | "landing start"
+  | "landing section opened"
   | "signed in"
   | "google linked"
   | "trip created"
