@@ -19,10 +19,13 @@ export function PlanWithAiDialog({
   onClose,
   onSave,
   onDone,
+  onPark,
 }: {
   open: boolean;
   trip: Trip;
   onClose: () => void;
+  /** How many unsaved ideas wait in the shut dialog (0 once they're added or discarded). */
+  onPark?: (waiting: number) => void;
   /** Adds the kept ideas as Suggested plans; returns once they're on the trip. */
   onSave: (kept: PlanIdea[]) => Promise<void>;
   /** Called when a review ends, saved or not, for the usage log. */
@@ -45,9 +48,21 @@ export function PlanWithAiDialog({
     setError(null);
     setBusy(false);
   };
+  /** Discard: the ideas go, on purpose. */
   const close = () => {
     if (result) onDone(result, 0);
     reset();
+    onPark?.(0);
+    onClose();
+  };
+  /**
+   * The X, Escape or a tap outside with ideas still unsaved: they're kept, not lost (11/23 review,
+   * item 9). The dialog shuts with its review as it stands, and the trip offers it back.
+   */
+  const shut = () => {
+    if (busy) return;
+    if (!result || ideas.length === 0 || !onPark) return close();
+    onPark(ideas.length);
     onClose();
   };
 
@@ -78,6 +93,7 @@ export function PlanWithAiDialog({
       await onSave(kept);
       onDone(result, kept.length);
       reset();
+      onPark?.(0);
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -86,7 +102,7 @@ export function PlanWithAiDialog({
   };
 
   return (
-    <Dialog open={open} onClose={close} title={result ? "Ideas for your empty slots" : "Plan with AI"}>
+    <Dialog open={open} onClose={shut} title={result ? "Ideas for your empty slots" : "Plan with AI"}>
       {open && !result && (
         <div>
           <p className="mb-3 text-sm text-white/80">
