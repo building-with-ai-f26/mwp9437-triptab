@@ -14,6 +14,7 @@ import { movePlan, type MovePatch } from "../lib/move";
 import { ItemDialog, type ItemDialogState } from "../components/trip/ItemDialog";
 import { splitEqually } from "../lib/money";
 import { AddPersonDialog, PeopleCard } from "../components/trip/People";
+import { YourPlans } from "../components/trip/YourPlans";
 import { InviteCard, InviteDialog } from "../components/trip/Invite";
 import { ExpenseDialog, MoneyCard, TravelCard, type ExpenseTarget } from "../components/trip/Money";
 import { MoneyList } from "../components/trip/MoneyList";
@@ -97,7 +98,7 @@ import {
   type ItemStatus,
   type Traveler,
 } from "../lib/model";
-import { bookedLabel, goingList, isGoing, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
+import { bookedLabel, goingList, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
 import { subscribeToTrip } from "../lib/live";
@@ -724,6 +725,22 @@ export default function TripPage() {
             ) : (
             <>
             {!wide && travelCard}
+            {meId && travelers.length > 1 && items.length > 0 && (
+              <YourPlans
+                items={items}
+                itemPeople={itemPeople}
+                expenses={expenses}
+                meId={meId}
+                share={myNumbers(expenses, meId, payments ?? []).share}
+                balance={balances[meId] ?? 0}
+                onGoing={async (item, going) => {
+                  await setGoing(item.id, meId, going);
+                  track(going ? "opted in" : "opted out", { kind: item.kind, from: "your plans" });
+                  await reload();
+                }}
+                onOpen={openPlan}
+              />
+            )}
             {editable && bundle.inbox && bundle.inbox.length > 0 && (
               <div className="pt-4 sm:pt-6">
                 <InboxBanner
