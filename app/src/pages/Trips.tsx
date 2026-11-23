@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { CalendarDays, LogOut, MapPin, Plus, Users } from "lucide-react";
+import { CalendarDays, LogOut, MapPin, Plus, UserRound, Users } from "lucide-react";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
 import { LinkGoogle } from "../components/LinkGoogle";
@@ -32,6 +32,9 @@ export default function Trips() {
         <TopBar back={{ to: "/", label: "Home" }} title={<span className="italic">My Trips</span>}>
           <Button variant="glass" size="sm" onClick={() => navigate("/trips/new")}>
             <Plus /> <span className="hidden sm:inline">New trip</span>
+          </Button>
+          <Button variant="glass" size="sm" onClick={() => navigate("/you")} aria-label="You: your profile">
+            <UserRound /> <span className="hidden sm:inline">You</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out">
             <LogOut /> <span className="hidden sm:inline">Sign out</span>

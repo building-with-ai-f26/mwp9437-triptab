@@ -365,6 +365,41 @@ export async function setMyPay(venmo: string, zelle: string): Promise<void> {
   if (error) throw new Error(friendly(error));
 }
 
+// ---------- Your profile (C50, Mike's call 11/23) ----------
+
+/** Venmo, Zelle and phone kept once and put on every trip you join, with the lock you set. */
+export interface Profile {
+  venmo: string | null;
+  zelle: string | null;
+  phone: string | null;
+  /** Locked: no Owner can change your Venmo, Zelle or phone on any trip. */
+  locked: boolean;
+  /** False until you've saved it once; it then starts from what your trips hold. */
+  saved: boolean;
+}
+
+/** Your profile, or null on a database that doesn't have profiles yet. */
+export async function myProfile(): Promise<Profile | null> {
+  const { data, error } = await supabase.rpc("my_profile");
+  if (error) return null;
+  return data as Profile;
+}
+
+/** Saves your profile and puts it on every trip you're on. Blank clears Venmo or Zelle. */
+export async function saveMyProfile(p: { venmo: string; zelle: string; phone: string; locked: boolean }): Promise<void> {
+  if (!venmoLooksRight(p.venmo)) throw new Error(VENMO_FORMAT);
+  if (!zelleLooksRight(p.zelle)) throw new Error(ZELLE_FORMAT);
+  if (p.phone.trim().length > 32) throw new Error("That phone number is too long.");
+  const { error } = await supabase.rpc("save_my_profile", {
+    p_venmo: cleanVenmo(p.venmo) ?? "",
+    p_zelle: cleanZelle(p.zelle) ?? "",
+    p_phone: p.phone.trim(),
+    p_locked: p.locked,
+  });
+  if (error?.code === "23514") throw new Error(error.message.includes("zelle") ? ZELLE_FORMAT : error.message.includes("phone") ? "That phone number is too long." : VENMO_FORMAT);
+  if (error) throw new Error(friendly(error));
+}
+
 /** Your own Venmo, Zelle and lock on one trip (after joining it), or null if this database has no Zelle yet. */
 export async function myPayOn(tripId: string, userId: string): Promise<{ venmo: string | null; zelle: string | null; pay_locked: boolean } | null> {
   const { data, error } = await supabase.from("travelers").select("venmo, zelle, pay_locked").eq("trip_id", tripId).eq("user_id", userId).maybeSingle();

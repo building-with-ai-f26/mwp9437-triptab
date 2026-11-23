@@ -19,6 +19,7 @@ const PrintTrip = lazy(() => import("./pages/PrintTrip"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
+const You = lazy(() => import("./pages/You"));
 
 startAnalytics();
 reloadOnStaleBuild();
@@ -90,6 +91,7 @@ function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/trips" element={<RequireUser><Trips /></RequireUser>} />
+            <Route path="/you" element={<RequireUser><You /></RequireUser>} />
             <Route path="/trips/new" element={<RequireUser><NewTrip /></RequireUser>} />
             <Route path="/trips/:id" element={<RequireUser><TripPage /></RequireUser>} />
             <Route path="/trips/:id/print" element={<RequireUser><PrintTrip /></RequireUser>} />
