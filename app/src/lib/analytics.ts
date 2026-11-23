@@ -146,6 +146,7 @@ export type EventName =
   | "group link opened"
   | "name claimed"
   | "plan confirmed"
+  | "confirm opened"
   | "own cost logged"
   | "trip extended"
   | "ai import"
