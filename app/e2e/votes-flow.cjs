@@ -33,9 +33,11 @@ async function run(browser, label, opts, result) {
   await h.joinTrip(j);
   await j.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await day(j).getByText('Fondue at La Caleche').click();
-  await h.dlg(j).getByText('Fondue at La Caleche').first().waitFor();
+  // A Planned plan opens with its title in a field, and no vote.
+  await h.dlg(j).getByRole('heading').first().waitFor();
   r.plannedHasVote = await h.dlg(j).getByTestId('vote').count();
-  await h.dlg(j).getByRole('button', { name: 'Close' }).click();
+  await j.keyboard.press('Escape');
+  await h.dlg(j).waitFor({ state: 'detached' });
   await day(j).getByText('Glacier hike').click();
   const vote = h.dlg(j).getByTestId('vote');
   await vote.getByRole('button', { name: 'I want this' }).click();
