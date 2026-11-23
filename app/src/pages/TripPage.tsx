@@ -499,7 +499,7 @@ export default function TripPage() {
     if (paid.mode === "split") {
       const inIds = item.kind === "flight" ? (meId ? [meId] : []) : travelers.map((t) => t.id);
       const parts = splitEqually(paid.totalCents, inIds);
-      await confirmItem(item.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })));
+      await confirmItem(item.id, paid.totalCents, paid.paidBy, "even", inIds.map((id) => ({ traveler_id: id, amount_cents: parts[id] })), travelers.map((t) => t.id));
       if (paid.foreign) await markForeign(await expenseIdForItem(item.id), paid.foreign, undefined, item.title, paid.paidBy, paid.totalCents);
       track("plan confirmed", { kind: item.kind, split: "even", people: inIds.length, from_status: from, who_pays: "split" });
       track("plan status changed", { kind: item.kind, from: from === "new" ? "planned" : from, to: "confirmed", who_pays: "split" });
@@ -1189,7 +1189,7 @@ export default function TripPage() {
         onClose={() => setExpenseTarget(null)}
         onSubmit={async (target, input) => {
           if (target.kind === "item") {
-            await confirmItem(target.item.id, input.total, input.paidBy, input.mode, input.shares);
+            await confirmItem(target.item.id, input.total, input.paidBy, input.mode, input.shares, travelers.map((t) => t.id));
             if (input.foreign || target.expense?.currency) {
               await markForeign(await expenseIdForItem(target.item.id), input.foreign, target.expense, target.item.title, input.paidBy, input.total);
             }
