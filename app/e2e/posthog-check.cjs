@@ -65,7 +65,7 @@ function decode(req) {
   });
 
   await page.goto(`${BASE}/`);
-  await page.getByRole('button', { name: 'Start a trip' }).click();
+  await page.getByRole('button', { name: 'Start a trip' }).first().click();
   const fold = page.getByRole('button', { name: 'Use email and a password instead' });
   await Promise.race([fold.waitFor(), page.getByLabel('Email').waitFor()]);
   if (await fold.isVisible()) await fold.click();

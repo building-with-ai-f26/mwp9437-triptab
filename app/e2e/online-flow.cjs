@@ -10,7 +10,7 @@ const ROOT = (process.argv[2] || 'https://building-with-ai-f26.github.io') + '/m
   const oCtx = await h.context(browser, h.DESKTOP);
   const o = h.watch(await oCtx.newPage(), 'owner');
   await o.goto(ROOT);
-  await o.getByRole('button', { name: 'Start a trip' }).click();
+  await o.getByRole('button', { name: 'Start a trip' }).first().click();
   await o.waitForURL(/#\/sign-in/);
   await h.signUp(o, 'Mike', 'owner');
   await o.waitForURL(/#\/trips\/new/);

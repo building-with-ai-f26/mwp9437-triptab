@@ -78,7 +78,7 @@ async function addPlan(page, day, slot, f) {
   const o = await ownerCtx.newPage();
   watch(o, 'owner');
   await o.goto(`${BASE}/`);
-  await o.getByRole('button', { name: 'Start a trip' }).click();
+  await o.getByRole('button', { name: 'Start a trip' }).first().click();
   await o.waitForURL(/sign-in/);
   await signUp(o, 'Mike', 'owner');
   await o.waitForURL(/\/trips\/new/);
