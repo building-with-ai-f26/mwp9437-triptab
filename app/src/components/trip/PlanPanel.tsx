@@ -60,6 +60,8 @@ export function PlanPanel({
   const share = myShareOf(expense, meId);
   const payer = travelers.find((t) => t.id === expense?.paid_by)?.name;
   const own = item.pay_mode === "own";
+  // The plan's one bill is in: who's in is who's on it, changed where the bill is (C47).
+  const billed = !own && Boolean(expense);
   const progress = ownProgress(item, travelers, itemPeople, ownMarks);
   const marked = new Set(ownMarks.filter((m) => m.item_id === item.id).map((m) => m.traveler_id));
   const logged = Boolean(expense) || marked.size > 0;
@@ -236,7 +238,16 @@ export function PlanPanel({
       </>
       )}
 
-      {showGoing && meId && (
+      {showGoing && billed && (
+        <p className="rounded-2xl bg-white/5 px-3 py-2.5 text-sm text-white" data-testid="bill-sets-in">
+          {meId ? (share != null ? `You're in: your share is ${dollars(share)}. ` : "You're not on this bill. ") : ""}
+          <span className="text-white/70">
+            Who's in follows the bill, split {going.length} {going.length === 1 ? "way" : "ways"}.
+            {canEdit ? "" : " An Owner can change who's on it."}
+          </span>
+        </p>
+      )}
+      {showGoing && meId && !billed && (
         <div>
           <p className="label-luxury mb-1.5 text-white/80">{flight ? "Are you on this flight?" : "Are you in?"}</p>
           <Segmented
@@ -256,7 +267,16 @@ export function PlanPanel({
         <p className="label-luxury mb-1.5 text-white/80">
           {flight ? "On this flight" : "Who's in"} ({going.length} of {travelers.length})
         </p>
-        {canEdit ? (
+        {billed ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-sm text-white/80">{going.length ? going.map((t) => t.name).join(", ") : "Nobody yet"}</p>
+            {canEdit && (
+              <Button size="sm" variant="light" onClick={onConfirm}>
+                <Pencil /> Change who's in
+              </Button>
+            )}
+          </div>
+        ) : canEdit ? (
           <div className="flex flex-wrap gap-1.5">
             {travelers.map((t) => {
               const on = isGoing(item, t.id, itemPeople);

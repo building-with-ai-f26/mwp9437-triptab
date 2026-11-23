@@ -17,6 +17,23 @@ export function goingList(item: Pick<Item, "id" | "kind">, travelers: Traveler[]
   return travelers.filter((t) => isGoing(item, t.id, people));
 }
 
+/**
+ * Who's in on a plan and who's on its bill always match (C47, Mike's call 11/23). Once a plan has
+ * its one split bill, the bill says who's in: a dinner split 3 ways with Sam left out shows Sam as
+ * out everywhere, whatever the in or out rows said before. Plans with no bill, and plans where
+ * everyone pays their own, keep their rows as they are.
+ */
+export function peopleMatchingBills(people: ItemPerson[], expenses: ExpenseRow[], travelers: Pick<Traveler, "id">[]): ItemPerson[] {
+  const bills = new Map(expenses.filter((e) => e.item_id && !e.own).map((e) => [e.item_id as string, e]));
+  if (bills.size === 0) return people;
+  const rest = people.filter((p) => !bills.has(p.item_id));
+  const fromBills = [...bills].flatMap(([itemId, bill]) => {
+    const on = new Set(bill.expense_shares.map((s) => s.traveler_id));
+    return travelers.map((t) => ({ item_id: itemId, traveler_id: t.id, going: on.has(t.id) }));
+  });
+  return [...rest, ...fromBills];
+}
+
 function toSettleExpense(e: ExpenseRow): Expense {
   return {
     id: e.id,
