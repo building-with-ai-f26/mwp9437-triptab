@@ -9,6 +9,7 @@ import type { SplitMode } from "./split";
 import type { ImportResult } from "./importPlans";
 import { cleanVenmo, cleanZelle, VENMO_FORMAT, venmoLooksRight, ZELLE_FORMAT, zelleLooksRight } from "./pay";
 import { inboxAddressFor, type InboxItem } from "./inbox";
+import { peopleMatchingBills } from "./ledger";
 
 export { cleanVenmo, venmoLooksRight, zelleLabel, zelleLooksRight } from "./pay";
 
@@ -231,8 +232,11 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     items: must(items.data, items.error) as Item[],
     link: (link.data as GroupLink | null) ?? null,
     expenses: must(expenses.data, expenses.error) as ExpenseRow[],
-    itemPeople: (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(
-      ({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going }),
+    // Who's in follows a plan's bill once it has one (C47), so every screen reads the same people.
+    itemPeople: peopleMatchingBills(
+      (must(people.data, people.error) as (ItemPerson & { items: unknown })[]).map(({ item_id, traveler_id, going }) => ({ item_id, traveler_id, going })),
+      must(expenses.data, expenses.error) as ExpenseRow[],
+      must(travelers.data, travelers.error) as { id: string }[],
     ),
     ownMarks: (marks.data as OwnMark[] | null) ?? [],
     actions: must(actions.data, actions.error) as ActionItem[],
@@ -549,7 +553,15 @@ export interface ShareInput {
 }
 
 /** Confirm a plan: its real cost, who paid, who's in and the split, all in one transaction. */
-export async function confirmItem(itemId: string, total: number, paidBy: string, mode: SplitMode, shares: ShareInput[]) {
+export async function confirmItem(
+  itemId: string,
+  total: number,
+  paidBy: string,
+  mode: SplitMode,
+  shares: ShareInput[],
+  /** Everyone on the trip, so the people left off the bill are marked out of the plan too (C47). */
+  everyone: string[] = [],
+) {
   const { error } = await supabase.rpc("confirm_item", {
     p_item: itemId,
     p_total_cents: total,
@@ -558,6 +570,14 @@ export async function confirmItem(itemId: string, total: number, paidBy: string,
     p_shares: shares,
   });
   if (error) throw new Error(friendly(error));
+  // Who's in follows the bill (C47): the same people stay in or out if the bill is undone later.
+  if (everyone.length) {
+    const on = new Set(shares.map((s) => s.traveler_id));
+    const { error: e2 } = await supabase
+      .from("item_people")
+      .upsert(everyone.map((id) => ({ item_id: itemId, traveler_id: id, going: on.has(id) })));
+    if (e2) throw new Error(friendly(e2));
+  }
 }
 
 /** Undo a confirmation: the expense goes and the plan is Planned again. */
