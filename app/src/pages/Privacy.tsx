@@ -46,7 +46,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         <li>
           <b>Feedback you send:</b> if you use Send feedback, what you wrote, whether you called it a bug, an idea or
           something else, and which page you were on (without the trip or invite link). It's kept with your account
-          so it can be looked into, and deleted if your account is.
+          so it can be looked into, and deleted if your account is. It's also emailed, with your name and email, to the
+          person who builds TripTab, through Resend (the service that sends TripTab's emails), so they can reply.
         </li>
         <li>
           <b>Addresses you forward from:</b> if you add another email address under Also forward from, TripTab keeps it
@@ -95,7 +96,7 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           only once at least 3 people on the trip have answered, so a count can't point at one person.
         </li>
         <li>Your votes on suggested plans are shown, with your name, to the people on that trip.</li>
-        <li>Feedback you send is read only by the person who builds TripTab, never by the people on your trips.</li>
+        <li>Feedback you send is read only by the person who builds TripTab, who gets it by email too, never by the people on your trips.</li>
         <li>A price you mark as your own (when everyone pays their own) is shown only to you.</li>
         <li>TripTab never sells your data, shows ads, or shares it with anyone beyond the services below.</li>
       </ul>

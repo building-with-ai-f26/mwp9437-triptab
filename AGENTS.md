@@ -51,7 +51,7 @@ app/                      the web app (Vite)
   src/*.test.ts           unit tests (npm test); src/*.live.test.ts runs only with npm run test:rls
   e2e/                    Playwright click-throughs and the PostHog check
 supabase/migrations/      the database: tables, row-level security, functions (applied in order)
-supabase/functions/       Edge Functions: sign-up; confirm-email; ai-status; send-invite (invite emails, rules.ts holds the limits); import-bookings, plan-with-ai and describe-trip (index.ts calls Claude; rules.ts holds the
+supabase/functions/       Edge Functions: sign-up; confirm-email; ai-status; send-invite (invite emails, rules.ts holds the limits); send-feedback (saves a Send feedback note as the caller and emails it to Mike, Reply-To the sender; never emails from dev); import-bookings, plan-with-ai and describe-trip (index.ts calls Claude; rules.ts holds the
                           system prompt, prices, caps and output checks)
 app/evals/                the AI evals: import/ (10 cases) and plan/ (12 since C51: 2 on the group's tastes), with their runners
 docs/                     Product Page (index.html), PRODUCT_VISION.md, DESIGN.md, screenshots/, app/ (the published build)

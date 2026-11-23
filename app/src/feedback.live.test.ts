@@ -52,3 +52,34 @@ describe("sending feedback", () => {
     expect((await send(stan, "idea", "Stan's first")).error).toBeNull();
   });
 });
+
+// The send-feedback function (11/23): what the app calls. It saves as the caller, so the same rules
+// hold, and on TripTab dev it never emails.
+describe("sending feedback through the send-feedback function", () => {
+  const viaFunction = async (c: SupabaseClient, body: Record<string, unknown>) => {
+    const { data, error } = await c.functions.invoke("send-feedback", { body });
+    const ctx = (error as { context?: unknown } | null)?.context;
+    const failed = ctx instanceof Response ? { status: ctx.status, ...((await ctx.json().catch(() => ({}))) as object) } : null;
+    return { data, failed };
+  };
+
+  it("saves Stan's note and doesn't email it from dev", async () => {
+    const r = await viaFunction(stan, { kind: "bug", message: "The PDF cut off the last day.", page: "/trips/:id/print" });
+    expect(r.failed).toBeNull();
+    expect(r.data).toEqual({ ok: true, emailed: false });
+  });
+
+  it("passes the database's refusals on in words, and keeps the daily limit", async () => {
+    expect((await viaFunction(stan, { kind: "bug", message: "   " })).failed).toMatchObject({ status: 400, code: "bad_request" });
+    expect((await viaFunction(stan, { kind: "praise", message: "Hi" })).failed).toMatchObject({ status: 400, code: "bad_request" });
+    // Vic used all 10 today above.
+    const limited = await viaFunction(vic, { kind: "idea", message: "One more" });
+    expect(limited.failed).toMatchObject({ status: 400, code: "limit" });
+    expect((limited.failed as { error?: string }).error).toMatch(/10 today/);
+  });
+
+  it("turns away someone who isn't signed in", async () => {
+    const r = await viaFunction(client(), { kind: "bug", message: "Hello from nobody" });
+    expect(r.failed?.status).toBe(401);
+  });
+});

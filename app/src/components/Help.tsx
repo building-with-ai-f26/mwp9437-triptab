@@ -97,7 +97,8 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
             />
           </DarkField>
           <p className="text-xs text-white/70">
-            TripTab keeps what you write here, with your account and which page you're on, so it can be looked into.
+            TripTab keeps what you write here, with your account and which page you're on, and emails it to the person
+            who builds TripTab, who may reply.
             Leave out anything private, like a password.
           </p>
           {error && (

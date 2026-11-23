@@ -24,9 +24,9 @@ Read when the task needs it: [Plan.md](./Plan.md) (the Build 2 plan; section 5 h
 
 Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build the full product in the vision, in the order the runbook sets, and keep going past each week's minimum. Two guardrails: each Monday's submission still shows working evidence for that week's required items, and breadth without proof scores a 3, so finish and verify one piece before starting the next. Build mode (Mike's call, 11/18): nothing waits on a pod test; take the vision as far as it goes.
 
-## Current build: Build 3, due Mon 11/23 at noon
+## Current build: Build 4, due Mon 11/30 at noon
 
-Advanced lane (Mike's call, 11/17): the app moves to triptab.org on Cloudflare, every merge to main deploys once the tests pass, each pull request gets a preview on a separate dev database, and a security audit goes in SECURITY.md. The required items and the work order are in the runbook's Steps table and Build 3 session block. Builds are due Mondays at noon, New York time; each can be redone once within 7 days of feedback. Replace this section when the build is submitted.
+Build 3 was submitted 11/23. Build 4 is Track B (Mike's call C55, 11/23): 3 to 5 outside users, the friends on Mike's Euro ski trip, use triptab.org; Claude reads their session replays and the `feedback` table, lists the top three friction points, fixes them, and writes the Build 4 log on the Product Page. The work order is in the runbook's Steps table. Builds are due Mondays at noon, New York time; each can be redone once within 7 days of feedback. Replace this section when the build is submitted.
 
 ## Design
 
