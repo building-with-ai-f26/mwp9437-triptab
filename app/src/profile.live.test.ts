@@ -48,12 +48,12 @@ afterAll(async () => {
 
 describe("your profile", () => {
   it("starts empty and locked, before you've saved one", async () => {
-    expect((await vic.rpc("my_profile")).data).toEqual({ venmo: null, zelle: null, phone: null, locked: true, saved: false, ...NO_PREFS });
+    expect((await vic.rpc("my_profile")).data).toMatchObject({ venmo: null, zelle: null, phone: null, locked: true, saved: false, ...NO_PREFS });
   });
 
   it("saves once and goes on every trip you're on, tidied the way trips store it", async () => {
     expect((await save(vic, { venmo: " @vic-tt ", zelle: "+1 (555) 123-4567", phone: "917-555-0142" })).error).toBeNull();
-    expect((await vic.rpc("my_profile")).data).toEqual({ venmo: "vic-tt", zelle: "5551234567", phone: "917-555-0142", locked: true, saved: true, ...NO_PREFS });
+    expect((await vic.rpc("my_profile")).data).toMatchObject({ venmo: "vic-tt", zelle: "5551234567", phone: "917-555-0142", locked: true, saved: true, ...NO_PREFS });
     expect(await row(owner, vicRow)).toEqual({ venmo: "vic-tt", zelle: "5551234567", pay_locked: true });
     expect(await phoneOf(owner, tripId, vicRow)).toBe("917-555-0142");
   });

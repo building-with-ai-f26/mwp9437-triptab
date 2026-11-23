@@ -112,7 +112,7 @@ async function measure(page, screen) {
   for (const [label, opts] of [['desktop', h.DESKTOP], ['phone', { ...h.PHONE, deviceScaleFactor: 1 }]]) {
     const p = h.watch(await (await h.context(browser, opts)).newPage(), label);
     await p.goto(`${h.BASE}/`);
-    await p.getByRole('button', { name: 'Start a trip' }).waitFor();
+    await p.getByRole('button', { name: 'Start a trip' }).first().waitFor();
     low += await measure(p, `${label}: landing`);
     await p.goto(`${h.BASE}/sign-in?next=/trips/new`);
     await h.withEmail(p);

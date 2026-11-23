@@ -67,6 +67,8 @@ async function run(browser, label, opts, result) {
   r.noListAfterExample = (await p.getByRole('listbox').count()) === 0;
   await p.getByRole('button', { name: 'Start the trip' }).click();
   await p.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
+  // An empty day is folded to one row (11/23): open it to reach its slots.
+  await h.showDay(p, '2027-02-14');
   const slot = p.locator('#day-2027-02-14').getByRole('button', { name: 'Add to evening' });
   await slot.scrollIntoViewIfNeeded();
   const scrolledTo = await p.evaluate(() => Math.round(window.scrollY));
