@@ -1,13 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { Check, UserPlus } from "lucide-react";
+import { BedDouble, Bus, Check, Palmtree, Plane, UserPlus, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { Brand } from "../components/Brand";
 import { AuthForm } from "../components/AuthForm";
 import { Button, PhotoFrame, Spinner } from "../components/ui";
 import { joinPreview, joinTrip, type JoinPreview } from "../lib/api";
 import { quietFirstVisit } from "../lib/firstVisit";
 import { nameOf, useAuth } from "../lib/auth";
-import { dateRange, ROLE_LABEL } from "../lib/model";
+import { clock, dateRange, longDay, PART_LABEL, ROLE_LABEL, STATUS_LABEL, type ItemKind } from "../lib/model";
 import { LANDING_PHOTO, photoFor } from "../lib/photos";
 import { track } from "../lib/analytics";
 
@@ -162,6 +162,7 @@ export default function Join() {
         <>
           {!pick && (
             <>
+              <TripPeek preview={preview} />
               <h2 className="label-luxury mb-2 text-white/80">Who are you?</h2>
               <ul className="mb-3 grid grid-cols-2 gap-2">
                 {preview.people.map((p) => (
@@ -304,10 +305,71 @@ export default function Join() {
   );
 }
 
+const PLAN_ICON: Record<ItemKind, LucideIcon> = { activity: Palmtree, meal: UtensilsCrossed, transport: Bus, flight: Plane, stay: BedDouble };
+
+/**
+ * The trip before sign-up (C45, Mike's call 11/23): the next plans and who's coming, so a friend
+ * sees something worth joining for before being asked for an account. Titles, days and status
+ * only; costs, places and notes wait until you're on the trip. Nothing shows on a database that
+ * doesn't send plans yet.
+ */
+function TripPeek({ preview }: { preview: JoinPreview }) {
+  const plans = preview.plans ?? [];
+  const joined = preview.people.filter((p) => p.claimed);
+  const more = (preview.plan_count ?? plans.length) - plans.length;
+  if (preview.plans === undefined) return null;
+  const names = joined.map((p) => p.name);
+  const coming =
+    names.length === 0
+      ? null
+      : names.length <= 3
+        ? `${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`} ${names.length === 1 ? "is" : "are"} in`
+        : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more are in`;
+  return (
+    <section className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-3" aria-label="A look at the trip" data-testid="trip-peek">
+      {plans.length > 0 ? (
+        <>
+          <h2 className="label-luxury mb-2 text-white/80">Next up</h2>
+          <ul className="space-y-2">
+            {plans.map((p, i) => {
+              const Icon = PLAN_ICON[p.kind] ?? Palmtree;
+              return (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white">
+                  <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-white/10">
+                    <Icon className="size-3.5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{p.title}</span>
+                    <span className="block text-xs text-white/70">
+                      {longDay(p.day)} · {p.start_time ? clock(p.start_time) : PART_LABEL[p.part]} · {STATUS_LABEL[p.status]}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {more > 0 && <p className="mt-2 text-xs text-white/70">and {more} more {more === 1 ? "plan" : "plans"} on the trip</p>}
+        </>
+      ) : (
+        <p className="text-sm text-white/80">No plans yet. Join and help shape it.</p>
+      )}
+      {coming && (
+        <p className="mt-3 border-t border-white/10 pt-2.5 text-sm text-white" data-testid="whos-coming">
+          <span className="label-luxury mr-1.5 text-white/80">Who's coming</span>
+          {coming}
+          {preview.people.length > joined.length ? `, ${preview.people.length - joined.length} more invited` : ""}
+        </p>
+      )}
+    </section>
+  );
+}
+
 function TripHeading({ preview }: { preview: JoinPreview }) {
   return (
     <>
-      <p className="label-luxury mb-1 text-white/60">You're invited to</p>
+      <p className="label-luxury mb-1 text-white/60" data-testid="invited-by">
+        {preview.invited_by ? `${preview.invited_by} invited you to` : "You're invited to"}
+      </p>
       <h1 className="mb-1 font-display text-3xl font-bold italic leading-tight text-white">{preview.name}</h1>
       <p className="mb-5 text-sm text-white/70">
         {dateRange(preview.start_date, preview.end_date)}

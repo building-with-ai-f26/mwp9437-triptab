@@ -484,6 +484,13 @@ export interface JoinPreview {
   stops: string[];
   people: { id: string; name: string; claimed: boolean }[];
   my_traveler_id: string | null;
+  /**
+   * The trip before sign-up (C45, 11/23): who started it, how many plans it has and the next 3.
+   * Left out by a database that doesn't have that migration yet; the invite then shows as before.
+   */
+  invited_by?: string | null;
+  plan_count?: number;
+  plans?: { title: string; kind: ItemKind; day: string; part: DayPart; start_time: string | null; status: ItemStatus }[];
 }
 
 export async function joinPreview(token: string): Promise<JoinPreview | null> {

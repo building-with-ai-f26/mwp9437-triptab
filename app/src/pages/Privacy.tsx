@@ -63,9 +63,10 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
       <ul>
         <li>A trip is visible only to the people on it. Strangers see nothing, including whether it exists.</li>
         <li>
-          Anyone with a trip's group link, signed in or not, can see the trip's name, dates and stops, and the names
-          of the people on it and whether they've joined, so they can pick their own. An Owner can turn the link off
-          or make a new one at any time.
+          Anyone with a trip's group link, signed in or not, can see the trip's name, dates and stops, the names
+          of the people on it and whether they've joined, so they can pick their own, who started the trip, and
+          its next three plans (what, which day and whether it's confirmed; never a cost, a place or notes). An
+          Owner can turn the link off or make a new one at any time.
         </li>
         <li>Emails and phone numbers of the people on a trip are shown to its Owners only.</li>
         <li>Bookings forwarded to a trip's address, and who sent them, are shown to its Owners only.</li>
