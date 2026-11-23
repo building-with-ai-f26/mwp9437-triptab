@@ -32,7 +32,7 @@ app/                      the web app (Vite)
   src/pages/              one file per screen (Landing, SignIn, ResetPassword, Trips, NewTrip, TripPage, PrintTrip, Join)
   src/components/         ui.tsx (button, dialog, fields), TopBar, Brand, AuthForm
   src/components/trip/    Timeline (day chips, days, item cards, stays), ItemDialog, PlanPanel (who pays, cost, own lines, in/out),
-                          Money (confirm/expense dialog, money card, settle up, flights), People (people, group link),
+                          Money (confirm/expense dialog, money card, settle up, flights), People (people, group link), Invite (the Invite the group card and dialog),
                           WeekView, Actions (action items), TripSettings, Import and PlanWithAi (the two AI review screens)
   src/lib/model.ts        types that mirror the tables, date helpers, validation, price labels
   src/lib/timeline.ts     lays a trip out day by day: morning, day, evening, night, and stays; a plan shows in every slot it covers
