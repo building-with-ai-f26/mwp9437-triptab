@@ -339,3 +339,10 @@ describe("flight times from the confirmation (T1, 11/23 ski trip test)", () => {
     expect(draftPlacement(toDraft(stay, trip, []), trip)).toEqual({ day: "2027-02-06", part: "night", end_day: "2027-02-10", end_part: null, start_time: null, end_time: null });
   });
 });
+
+describe("a same-day landing time sets the landing part (T1 review)", () => {
+  it("tapping Night on an 11:00 to 14:15 card still lands in the Day", () => {
+    const d = { ...toDraft(proposal({ day: "2027-02-10", part: null, depart_time: "11:00", arrive_time: "14:15" }), trip, []), end_part: "night" as const };
+    expect(draftPlacement(d, trip)).toMatchObject({ part: "morning", end_part: "day", end_time: "14:15" });
+  });
+});

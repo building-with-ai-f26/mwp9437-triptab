@@ -47,7 +47,7 @@ async function run(browser, label, opts, result) {
   await d.getByLabel('Ends at (optional)').fill('16:00');
   r.timesPickParts = await pressed(d);
   // Three days, as three plans (T6, 11/24): Sat plus Sun and Mon ticked in More days.
-  for (const m of ['Sun, Feb 7', 'Mon, Feb 8']) await d.getByRole('group', { name: 'More days' }).getByRole('button', { name: m }).click();
+  for (const m of ['Sun, Feb 7', 'Mon, Feb 8']) await d.getByTestId('more-days').getByRole('button', { name: m }).click();
   await cost.click();
   await d.getByLabel(/Estimated/).fill('60');
   await d.getByRole('radio', { name: 'Per person' }).click();
@@ -55,6 +55,9 @@ async function run(browser, label, opts, result) {
   await d.getByLabel('Starts at (optional)').scrollIntoViewIfNeeded();
   await h.shot(p, `plan-dialog-times-${label}`);
   await d.getByRole('button', { name: 'Add to trip' }).click();
+  // Three plans save one after another; live updates can draw the first before the dialog closes.
+  await d.waitFor({ state: 'detached' });
+  await p.locator('#day-2027-02-08 .item-card').filter({ hasText: 'Ski school' }).first().waitFor();
   const sat = p.locator('#day-2027-02-06 .item-card').filter({ hasText: 'Ski school' });
   await sat.first().waitFor();
   r.satCards = (await sat.allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));

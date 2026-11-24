@@ -24,12 +24,12 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { name: 'Day', exact: true }).click();
   await h.openTimes(h.dlg(p));
   for (const m of ['Sun, Feb 7', 'Mon, Feb 8', 'Tue, Feb 9', 'Wed, Feb 10', 'Thu, Feb 11']) {
-    await h.dlg(p).getByRole('group', { name: 'More days' }).getByRole('button', { name: m }).click();
+    await h.dlg(p).getByTestId('more-days').getByRole('button', { name: m }).click();
   }
   await h.openCost(h.dlg(p));
   await h.dlg(p).getByLabel(/Estimated/).fill('84');
   await h.dlg(p).getByRole('radio', { name: 'Per person' }).click();
-  await h.dlg(p).getByRole('group', { name: 'More days' }).scrollIntoViewIfNeeded();
+  await h.dlg(p).getByTestId('more-days').scrollIntoViewIfNeeded();
   await h.shot(p, `span-activity-dialog-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Add to trip' }).click();
   await inDay(p, '2027-02-11', 'Skiing').first().waitFor();

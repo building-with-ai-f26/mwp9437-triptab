@@ -1275,10 +1275,11 @@ export default function TripPage() {
         }}
         onAddMany={async (plans) => {
           // T6: one plan per day picked, each its own plan; the first day may stretch the trip.
-          const first = plans[0]?.input.day;
-          if (first && (first < trip.start_date || first > trip.end_date)) {
-            await extendTrip(trip.id, first);
-            track("trip extended", { via: "plan", kind: plans[0].input.kind, side: first < trip.start_date ? "before" : "after" });
+          for (const day of [plans[0]?.input.day, plans[plans.length - 1]?.input.day]) {
+            if (day && (day < trip.start_date || day > trip.end_date)) {
+              await extendTrip(trip.id, day);
+              track("trip extended", { via: "plan", kind: plans[0].input.kind, side: day < trip.start_date ? "before" : "after" });
+            }
           }
           for (const p of plans) await createPlan(p.input, p.paid, "form");
           track("plans repeated", { kind: plans[0]?.input.kind, days: plans.length });
@@ -1288,7 +1289,9 @@ export default function TripPage() {
           // T6: an activity or meal over several days becomes one plan per day; who's in carries over.
           const people = itemPeople.filter((x) => x.item_id === item.id);
           const days = splitDays(item);
-          for (const day of days) {
+          // The plan's estimate was for all its days: each day gets its share, to the cent.
+          const est = item.est_cents != null ? Object.values(splitEqually(item.est_cents, days)) : null;
+          for (const [i, day] of days.entries()) {
             const added = await addItem(trip.id, {
               kind: item.kind,
               title: item.title,
@@ -1302,7 +1305,7 @@ export default function TripPage() {
               link: item.link ?? null,
               notes: item.notes,
               status: item.status,
-              est_cents: item.est_cents,
+              est_cents: est ? est[i] : null,
               cost_type: item.cost_type,
               pay_mode: item.pay_mode,
             });

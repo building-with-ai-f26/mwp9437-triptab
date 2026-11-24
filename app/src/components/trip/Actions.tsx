@@ -42,8 +42,13 @@ export function ActionsCard({
   const open = actions.filter((a) => !a.done);
   const [view, setView] = useState<TodoView>(loadView);
   // A person filter from another trip, or someone no longer on this one, shows everyone.
+  // Signed out, "Mine" means nobody; with one to-do or none there are no controls, so nothing is hidden.
   const filter: TodoFilter =
-    view.filter.startsWith("person:") && !travelers.some((t) => `person:${t.id}` === view.filter) ? "everyone" : view.filter;
+    actions.length <= 1 ||
+    (view.filter === "mine" && !meId) ||
+    (view.filter.startsWith("person:") && !travelers.some((t) => `person:${t.id}` === view.filter))
+      ? "everyone"
+      : view.filter;
   const pick = (next: Partial<TodoView>) => {
     const v = { ...view, ...next };
     setView(v);

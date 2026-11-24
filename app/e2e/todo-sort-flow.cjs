@@ -25,6 +25,10 @@ const EXPECT = {
 const card = (p) => p.locator('section[aria-labelledby="actions-title"]');
 const openTitles = async (p) => (await card(p).getByTestId('todo-open').locator('li p.text-sm').allInnerTexts().catch(() => [])).map((t) => t.trim());
 
+const p_empty = async (input) => {
+  for (let i = 0; i < 40 && (await input.inputValue()) !== ''; i++) await new Promise((r) => setTimeout(r, 100));
+};
+
 async function show(p, filterLabel, sortLabel) {
   await card(p).getByLabel('Show to-dos for').selectOption({ label: filterLabel });
   await card(p).getByLabel('Sort to-dos by').selectOption({ label: sortLabel });
@@ -52,6 +56,8 @@ async function run(browser, label, opts, result) {
     await card(o).getByLabel('Due by (optional)').fill(due);
     await card(o).getByRole('button', { name: 'Add', exact: true }).click();
     await card(o).getByText(title, { exact: true }).waitFor();
+    // The box clears once the save is done; typing before that would be wiped.
+    await p_empty(card(o).getByLabel('New action item'));
   }
   r.defaults = await openTitles(o);
   for (const key of Object.keys(EXPECT)) {

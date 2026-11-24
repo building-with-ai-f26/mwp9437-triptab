@@ -262,7 +262,8 @@ export function draftPlacement(d: Draft, trip: Pick<Trip, "start_date" | "end_da
   const end_time = travel && !(overnightBooking && !end_day) ? p.arrive_time : null;
   let end_part: DayPart | null;
   if (travel && end_day) end_part = end_time ? partOfEndTime(end_time) : null;
-  else if (travel) end_part = d.end_part ?? (end_time ? partOfEndTime(end_time) : null);
+  // A same-day landing time sets its part too; the card's picks count only when there's no time.
+  else if (travel) end_part = end_time ? partOfEndTime(end_time) : d.end_part;
   else end_part = d.end_part;
   // On one day, an end part at or before the start part is no span at all.
   if (end_part && !end_day && PARTS.indexOf(end_part) <= PARTS.indexOf(d.part)) end_part = null;

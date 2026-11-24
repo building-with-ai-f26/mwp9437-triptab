@@ -104,7 +104,8 @@ export function WeekView({ days, actions }: { days: TimelineDay[]; actions: Time
                   <div
                     key={d.date + part}
                     data-segment={`${d.date}|${PARTS[seg.from]}-${PARTS[seg.to]}`}
-                    className="flex min-w-0 gap-1 border-b border-l border-white/30 p-1"
+                    // Week columns are narrow: one span stacks the day's other plans under it; two overlapping spans sit side by side.
+                    className={`flex min-w-0 gap-1 border-b border-l border-white/30 p-1 ${seg.lanes.length === 1 ? "flex-col" : ""}`}
                     style={{ gridColumn: col, gridRow: `${seg.from + 2} / ${seg.to + 3}` }}
                   >
                     {seg.lanes.map((lane, li) => (

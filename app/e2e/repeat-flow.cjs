@@ -54,7 +54,7 @@ async function addOnDays(p, day, slotLabel, title, kind, more) {
     await d.getByLabel('Where (optional)').fill('Chamonix');
   }
   await h.openTimes(d);
-  const group = d.getByRole('group', { name: 'More days' });
+  const group = d.getByTestId('more-days');
   for (const m of more) await group.getByRole('button', { name: m }).click();
   return d;
 }
@@ -62,13 +62,17 @@ async function addOnDays(p, day, slotLabel, title, kind, more) {
 async function run(browser, label, opts, result) {
   const r = (result[label] = {});
   const p = h.watch(await (await h.context(browser, opts)).newPage(), label);
+  // Place suggestions come from an outside service; faked empty here, as in where-flow.
+  await p.route('**/photon.komoot.io/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ type: 'FeatureCollection', features: [] }) }),
+  );
   const url = await h.startSkiTrip(p, `repeat-${label}`);
   const tripId = url.match(/trips\/([0-9a-f-]{36})/)[1];
 
   // 1. A ski day on seven days: Sat 2/6, then six more ticked.
   const d = await addOnDays(p, '2027-02-06', 'Add to morning', 'Ski day', null, ['Sun, Feb 7', 'Mon, Feb 8', 'Tue, Feb 9', 'Wed, Feb 10', 'Thu, Feb 11', 'Fri, Feb 12']);
   r.summary = (await d.getByRole('button', { name: /Times, or more days/ }).innerText()).replace(/\s+/g, ' ');
-  await d.getByRole('group', { name: 'More days' }).scrollIntoViewIfNeeded();
+  await d.getByTestId('more-days').scrollIntoViewIfNeeded();
   await h.shot(p, `repeat-more-days-${label}`);
   await d.getByRole('button', { name: 'Add to trip' }).click();
   await p.locator('dialog[open]').waitFor({ state: 'detached' });

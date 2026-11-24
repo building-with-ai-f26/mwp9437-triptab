@@ -151,12 +151,12 @@ async function desktop(browser, result) {
   await card(p, '2027-02-09', 'evening', 'Fondue').waitFor();
   r.chipDrop = await moved(p, 'Moved Fondue to Tue, Feb 9');
 
-  // A spanning card (T5): Ski school, Morning to Day, dragged to Wed's morning moves the whole span.
+  // A spanning card (T5): Ski school, Morning to Day, dragged to Sun's morning moves the whole span.
   await addSpan(p, '2027-02-06');
   await bringUp(p, slot(p, '2027-02-06', 'morning'));
-  await mouseDrag(p, spanCard(p, '2027-02-06', 'morning', 'day', 'Ski school'), slot(p, '2027-02-10', 'morning'));
-  await spanCard(p, '2027-02-10', 'morning', 'day', 'Ski school').waitFor();
-  r.spanNote = await moved(p, 'Moved Ski school to Wed, Feb 10, morning');
+  await mouseDrag(p, spanCard(p, '2027-02-06', 'morning', 'day', 'Ski school'), slot(p, '2027-02-07', 'morning'));
+  await spanCard(p, '2027-02-07', 'morning', 'day', 'Ski school').waitFor();
+  r.spanNote = await moved(p, 'Moved Ski school to Sun, Feb 7, morning');
   r.spanMoved = (await spanCard(p, '2027-02-06', 'morning', 'day', 'Ski school').count()) === 0;
   await h.shot(p, 'drag-desktop-span-moved');
   r.overflow = await h.overflowX(p);
@@ -269,7 +269,7 @@ const result = {};
   const m = result.phone;
   const ok =
     d.clickOpens && d.cancelLeftItAlone && d.timeKept && /Moved Fondue to Sun, Feb 7, evening/.test(d.noteSameDay) && /7:00 PM time was cleared/.test(d.noteOtherPart) &&
-    d.undoneToEvening && d.afterReload && /Tue, Feb 9, evening/.test(d.chipDrop) && d.overflow <= 0 && d.spanMoved && m.spanMoved &&
+    d.undoneToEvening && d.afterReload && /Tue, Feb 9, evening/.test(d.chipDrop) && d.overflow <= 0 && d.spanMoved && m.spanMoved && /Moved Ski school to Sun, Feb 7, morning/.test(d.spanNote) && /Moved Ski school to Thu, Feb 11/.test(m.spanNote) &&
     m.swipeMovedNothing && m.cancelLeftItAlone && /Moved Fondue to Sat, Feb 6, morning/.test(m.note) && /Mon, Feb 8, morning/.test(m.chipDrop) && m.scrolledBehind > 150 && m.droppedAfterScroll > '2027-02-08|morning' && m.tapOpens && m.overflow <= 0 &&
     result.errors.length === 0;
   if (!ok) process.exit(1);
