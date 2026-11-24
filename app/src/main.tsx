@@ -8,6 +8,7 @@ import { reportError, startAnalytics } from "./lib/analytics";
 import { reloadOnStaleBuild } from "./lib/staleBuild";
 import { isConfigured } from "./lib/supabase";
 import { Spinner } from "./components/ui";
+import { NewVersionNote } from "./components/NewVersion";
 import Landing from "./pages/Landing";
 import SignIn from "./pages/SignIn";
 
@@ -100,6 +101,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        <NewVersionNote />
       </Router>
     </AuthProvider>
   );

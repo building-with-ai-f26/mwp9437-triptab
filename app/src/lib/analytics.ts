@@ -160,6 +160,8 @@ export type EventName =
   | "help opened"
   | "guide opened"
   | "feedback sent"
+  | "new version offered"
+  | "new version reloaded"
   | "tour finished"
   | "tour skipped"
   | "payment recorded"
