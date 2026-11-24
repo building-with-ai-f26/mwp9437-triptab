@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Pencil, Plus, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Pencil, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -734,7 +734,7 @@ export default function TripPage() {
           back={{ to: "/trips", label: "My trips" }}
           title={
             // T3 (Mike's 11/23 test): an Owner renames or deletes the trip where they'd look, its name.
-            // No header gear: Mike took it out in his 11/23 review (pull request 95).
+            // The header's Trip settings button is back too (Mike's C62, 11/24).
             editable ? (
               <button
                 type="button"
@@ -792,6 +792,21 @@ export default function TripPage() {
           >
             <FileText /> <span className="hidden md:inline">PDF</span>
           </Button>
+          {/* Trip settings for Owners (Mike's C62, 11/24, reversing the 11/23 removal): an icon on a phone. */}
+          {editable && (
+            <Button
+              variant="glass"
+              size="sm"
+              aria-label="Trip settings"
+              title="Trip settings: rename, stops and dates, or delete"
+              onClick={() => {
+                setSettingsOpen(true);
+                track("trip settings opened", { from: "header" });
+              }}
+            >
+              <Settings /> <span className="hidden md:inline">Settings</span>
+            </Button>
+          )}
           {/* Five buttons don't fit a phone's header; there, Help is the line at the bottom of the page. */}
           <HelpButton help={help} className="!hidden sm:!inline-flex" />
           {me && (

@@ -71,8 +71,8 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
           <b>Calendar and PDF:</b> add your plans to your own calendar, or print the trip.
         </li>
         <li>
-          <b>Trip settings:</b> an Owner taps the trip's name at the top (it has a pencil) to rename the trip, change
-          its stops and dates, or delete it. Stops and dates, in Travel and lodging, opens the same place.
+          <b>Trip settings:</b> an Owner taps the trip's name at the top (it has a pencil), or Settings beside it, to rename
+          the trip, change its stops and dates, or delete it. Stops and dates, in Travel and lodging, opens the same place.
         </li>
       </ul>
     ),
