@@ -32,6 +32,7 @@ import { ImportDialog } from "../components/trip/Import";
 import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
 import { atEstimate, costToCome, draftCents, draftPlacement, mergePatch, type Draft } from "../lib/importPlans";
+import { splitDays } from "../lib/repeat";
 import { foreignLabel } from "../lib/rates";
 import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
@@ -1270,6 +1271,48 @@ export default function TripPage() {
         }}
         onDelete={async (item) => {
           await deleteItem(item.id);
+          await reload();
+        }}
+        onAddMany={async (plans) => {
+          // T6: one plan per day picked, each its own plan; the first day may stretch the trip.
+          for (const day of [plans[0]?.input.day, plans[plans.length - 1]?.input.day]) {
+            if (day && (day < trip.start_date || day > trip.end_date)) {
+              await extendTrip(trip.id, day);
+              track("trip extended", { via: "plan", kind: plans[0].input.kind, side: day < trip.start_date ? "before" : "after" });
+            }
+          }
+          for (const p of plans) await createPlan(p.input, p.paid, "form");
+          track("plans repeated", { kind: plans[0]?.input.kind, days: plans.length });
+          await reload();
+        }}
+        onSplit={async (item) => {
+          // T6: an activity or meal over several days becomes one plan per day; who's in carries over.
+          const people = itemPeople.filter((x) => x.item_id === item.id);
+          const days = splitDays(item);
+          // The plan's estimate was for all its days: each day gets its share, to the cent.
+          const est = item.est_cents != null ? Object.values(splitEqually(item.est_cents, days)) : null;
+          for (const [i, day] of days.entries()) {
+            const added = await addItem(trip.id, {
+              kind: item.kind,
+              title: item.title,
+              day,
+              part: item.part,
+              end_day: null,
+              end_part: item.end_part,
+              start_time: item.start_time,
+              end_time: item.end_time,
+              location: item.location,
+              link: item.link ?? null,
+              notes: item.notes,
+              status: item.status,
+              est_cents: est ? est[i] : null,
+              cost_type: item.cost_type,
+              pay_mode: item.pay_mode,
+            });
+            for (const x of people) await setGoing(added.id, x.traveler_id, x.going);
+          }
+          await deleteItem(item.id);
+          track("plan split", { kind: item.kind, days: days.length });
           await reload();
         }}
       />

@@ -166,3 +166,80 @@ export function weeks<T>(days: T[], size = 7): T[][] {
   for (let i = 0; i < days.length; i += size) out.push(days.slice(i, i + size));
   return out;
 }
+
+/** One plan's run of parts on one day: a card where it starts, a line where it runs on (T5). */
+export interface Run {
+  item: Item;
+  /** Indexes into PARTS, first and last part it covers on this day. */
+  from: number;
+  to: number;
+  /** Where it starts: the card, with its price and status. Otherwise a slim line ("Lands 7:25 AM"). */
+  first: boolean;
+  label: string | null;
+}
+
+/** Consecutive parts held together by plans that run across them: drawn as one block of rows. */
+export interface Segment {
+  from: number;
+  to: number;
+  /** Side by side when two runs overlap: each lane is a column of runs that don't. */
+  lanes: Run[][];
+  /** Plans that sit in one part inside the segment (lunch while skiing), by part: an extra column. */
+  singles: Partial<Record<DayPart, Run[]>>;
+}
+
+export interface DayLayout {
+  /** A part outside every segment: its plans, each in this one part. */
+  parts: Partial<Record<DayPart, Run[]>>;
+  segments: Segment[];
+}
+
+/**
+ * T5 (Mike's 11/23 ski trip test, C58): how a day's plans are drawn. A plan covering parts in a row
+ * on one day is one card as tall as those rows, not a card plus "continues" rows. Across midnight,
+ * a flight is one card on the day it leaves (through Night), and on the arrival day a single line
+ * ("Lands 7:25 AM") covers every part from Morning through the part it lands in. A plan in one part
+ * is drawn in that part, as before.
+ */
+export function dayLayout(day: Pick<TimelineDay, "date" | "parts" | "placed">): DayLayout {
+  const runs = new Map<string, Run>();
+  PARTS.forEach((part, i) => {
+    for (const item of day.parts[part]) {
+      const run = runs.get(item.id);
+      if (run) {
+        run.to = i;
+        continue;
+      }
+      const at = day.placed[part][item.id] ?? { first: true, label: null };
+      runs.set(item.id, { item, from: i, to: i, first: at.first, label: at.label });
+    }
+  });
+  // A run that carries on from an earlier day is labelled by where it ends today: "Lands 7:25 AM"
+  // on the arrival day, "In the air" on a day it's in the air throughout.
+  for (const run of runs.values()) {
+    const travel = run.item.kind === "flight" || run.item.kind === "transport";
+    if (!run.first && travel) run.label = placement(run.item, { day: day.date, part: PARTS[run.to] }).label;
+  }
+  const spans = [...runs.values()].filter((r) => r.to > r.from).sort((a, b) => a.from - b.from || b.to - a.to);
+  const segments: Segment[] = [];
+  for (const run of spans) {
+    const seg = segments[segments.length - 1];
+    if (seg && run.from <= seg.to) {
+      seg.to = Math.max(seg.to, run.to);
+      const lane = seg.lanes.find((l) => l[l.length - 1].to < run.from);
+      if (lane) lane.push(run);
+      else seg.lanes.push([run]);
+    } else {
+      segments.push({ from: run.from, to: run.to, lanes: [[run]], singles: {} });
+    }
+  }
+  const parts: DayLayout["parts"] = {};
+  for (const run of runs.values()) {
+    if (run.to > run.from) continue;
+    const part = PARTS[run.from];
+    const seg = segments.find((s) => s.from <= run.from && run.from <= s.to);
+    const into = seg ? seg.singles : parts;
+    (into[part] ??= []).push(run);
+  }
+  return { parts, segments };
+}

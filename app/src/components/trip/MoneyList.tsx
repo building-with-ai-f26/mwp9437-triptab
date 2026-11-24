@@ -88,7 +88,7 @@ export function MoneyList({
                 on ? "border-primary bg-primary text-primary-foreground" : "border-foreground/25 bg-white/50 text-foreground hover:bg-white/70"
               }`}
             >
-              {MONEY_KIND_LABEL[k]} <span className="tabular-nums opacity-80">{n}</span>
+              {MONEY_KIND_LABEL[k]} <span className="tabular-nums">{n}</span>
             </button>
           );
         })}

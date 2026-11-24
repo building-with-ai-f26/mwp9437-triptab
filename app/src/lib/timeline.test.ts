@@ -1,6 +1,6 @@
 /** Plans that span time: one plan, shown in every slot it covers, with one cost. */
 import { describe, expect, it } from "vitest";
-import { buildTimeline, itemSlots, placement, spansTime, whenText } from "./timeline";
+import { buildTimeline, dayLayout, itemSlots, placement, spansTime, whenText } from "./timeline";
 import { clock, partOfTime, validateItem, type Item } from "./model";
 
 const trip = { start_date: "2027-02-04", end_date: "2027-02-16" };
@@ -160,5 +160,51 @@ describe("clock times", () => {
     expect(clock("00:30")).toBe("12:30 AM");
     expect(clock("12:00")).toBe("12:00 PM");
     expect(["06:40", "12:00", "17:05", "22:15"].map(partOfTime)).toEqual(["morning", "day", "evening", "night"]);
+  });
+});
+
+describe("one card per span (T5, C58)", () => {
+  const layoutOn = (date: string, items: Item[]) => dayLayout(buildTimeline(trip, [], items).find((d) => d.date === date)!);
+  const show = (r: { item: Item; first: boolean; label: string | null; from: number; to: number }) => `${r.item.title}:${r.from}-${r.to}:${r.first ? "card" : "line"}:${r.label ?? ""}`;
+
+  it("skiing Morning to Day is one card over two rows", () => {
+    const l = layoutOn("2027-02-06", [item({ title: "Ski", end_part: "day" })]);
+    expect(l.segments).toHaveLength(1);
+    expect(l.segments[0].lanes.map((lane) => lane.map(show))).toEqual([["Ski:0-1:card:"]]);
+    expect(l.parts).toEqual({});
+  });
+
+  it("an overnight flight: one card Evening to Night, then one line in Fri Morning", () => {
+    const f = item({ kind: "flight", title: "UA 57", day: "2027-02-04", part: "evening", end_day: "2027-02-05", end_part: "morning", start_time: "17:35", end_time: "07:25" });
+    const thu = layoutOn("2027-02-04", [f]);
+    expect(thu.segments.map((s) => s.lanes.flat().map(show))).toEqual([["UA 57:2-3:card:Departs 5:35 PM, lands Fri 7:25 AM"]]);
+    const fri = layoutOn("2027-02-05", [f]);
+    expect(fri.segments).toEqual([]);
+    expect(fri.parts.morning?.map(show)).toEqual(["UA 57:0-0:line:Lands 7:25 AM"]);
+  });
+
+  it("a flight landing at 14:30 the next day: its line covers Fri Morning and Day", () => {
+    const f = item({ kind: "flight", title: "LX 8", day: "2027-02-04", part: "evening", end_day: "2027-02-05", end_part: "day", start_time: "19:00", end_time: "14:30" });
+    const fri = layoutOn("2027-02-05", [f]);
+    expect(fri.segments.map((s) => s.lanes.flat().map(show))).toEqual([["LX 8:0-1:line:Lands 2:30 PM"]]);
+  });
+
+  it("a plan in one part inside a span sits beside it; two overlapping spans get two lanes", () => {
+    const l = layoutOn("2027-02-06", [
+      item({ title: "Ski", end_part: "day" }),
+      item({ title: "Lunch", kind: "meal", part: "day" }),
+      item({ title: "Lesson", part: "day", end_part: "evening" }),
+      item({ title: "Fondue", kind: "meal", part: "night" }),
+    ]);
+    expect(l.segments).toHaveLength(1);
+    expect([l.segments[0].from, l.segments[0].to]).toEqual([0, 2]);
+    expect(l.segments[0].lanes.map((lane) => lane.map((r) => r.item.title))).toEqual([["Ski"], ["Lesson"]]);
+    expect(l.segments[0].singles.day?.map((r) => r.item.title)).toEqual(["Lunch"]);
+    expect(l.parts.night?.map((r) => r.item.title)).toEqual(["Fondue"]);
+  });
+
+  it("back-to-back spans that don't share a part are separate blocks", () => {
+    const l = layoutOn("2027-02-06", [item({ title: "Ski", end_part: "day" }), item({ title: "Spa", part: "evening", end_part: "night" })]);
+    expect(l.segments.map((s) => [s.from, s.to])).toEqual([[0, 1], [2, 3]]);
   });
 });

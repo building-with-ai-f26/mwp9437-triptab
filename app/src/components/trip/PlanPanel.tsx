@@ -339,7 +339,8 @@ export function PlanPanel({
         size="sm"
         variant="light"
         onClick={() => {
-          downloadIcs(`${item.title}.ics`, icsForItems({ name: tripName }, [item]));
+          // The status you see (T2), as on the card.
+          downloadIcs(`${item.title}.ics`, icsForItems({ name: tripName }, [{ ...item, status: statusFor(item, meId, itemPeople, ownMarks) }]));
           track("calendar downloaded", { scope: "plan", kind: item.kind });
         }}
       >

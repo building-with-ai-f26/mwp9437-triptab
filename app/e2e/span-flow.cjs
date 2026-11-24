@@ -14,7 +14,8 @@ async function run(browser, label, opts, result) {
   const r = (result[label] = {});
   await h.startSkiTrip(p, `span-${label}`);
 
-  // 1. Skiing, morning to day, Sat 2/6 through Thu 2/11: one plan, twelve slots.
+  // 1. Skiing, morning to day, Sat 2/6 through Thu 2/11: since T6 (11/24) six plans, one a day, each
+  // one card over Morning and Day (T5).
   await h.showDay(p, '2027-02-06');
   await p.locator('#day-2027-02-06').getByRole('button', { name: 'Add to morning' }).click();
   await h.dlg(p).getByLabel('What').fill('Skiing');
@@ -22,11 +23,13 @@ async function run(browser, label, opts, result) {
   // Parts of the day are select all that apply (11/17): Morning is on, add Day.
   await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { name: 'Day', exact: true }).click();
   await h.openTimes(h.dlg(p));
-  await h.dlg(p).getByLabel('Every day through').selectOption('2027-02-11');
+  for (const m of ['Sun, Feb 7', 'Mon, Feb 8', 'Tue, Feb 9', 'Wed, Feb 10', 'Thu, Feb 11']) {
+    await h.dlg(p).getByTestId('more-days').getByRole('button', { name: m }).click();
+  }
   await h.openCost(h.dlg(p));
   await h.dlg(p).getByLabel(/Estimated/).fill('84');
   await h.dlg(p).getByRole('radio', { name: 'Per person' }).click();
-  await h.dlg(p).getByLabel('Every day through').scrollIntoViewIfNeeded();
+  await h.dlg(p).getByTestId('more-days').scrollIntoViewIfNeeded();
   await h.shot(p, `span-activity-dialog-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Add to trip' }).click();
   await inDay(p, '2027-02-11', 'Skiing').first().waitFor();
@@ -74,7 +77,7 @@ async function run(browser, label, opts, result) {
   r.openedFromALaterSlot = await h.dlg(p).getByLabel('What').inputValue();
   r.itKeptItsSpan = [
     (await h.dlg(p).getByRole('group', { name: 'Part of the day' }).getByRole('button', { pressed: true }).allInnerTexts()).join(' and '),
-    await h.dlg(p).getByLabel('Every day through').inputValue(),
+    await h.dlg(p).getByLabel('Every day through').count(),
   ];
   // One cost for the whole plan: confirm it once.
   await h.openCost(h.dlg(p));
@@ -82,7 +85,8 @@ async function run(browser, label, opts, result) {
   await h.dlg(p).getByLabel('What it cost').fill('504');
   await h.dlg(p).getByRole('radio', { name: 'Total' }).click();
   await h.dlg(p).getByRole('button', { name: 'Confirm and log' }).click();
-  await inDay(p, '2027-02-06', 'Skiing').first().locator('[title="Confirmed and paid"]').waitFor();
+  // Each day is its own plan (T6): confirming Mon's confirms Mon's alone.
+  await inDay(p, '2027-02-08', 'Skiing').first().locator('[title="Confirmed and paid"]').waitFor();
   r.confirmedBadges = await cards(p, 'Skiing').locator('[title="Confirmed and paid"]').count();
   r.pricesAfterConfirm = await cards(p, 'Skiing').filter({ hasText: '$504' }).count();
   if (label === 'phone') await p.getByRole('tab', { name: /Money/ }).click();
