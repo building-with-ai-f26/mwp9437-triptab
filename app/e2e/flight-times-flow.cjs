@@ -70,10 +70,13 @@ const itinerary = async (p, label) => {
   if (label === 'phone') await p.getByRole('tab', { name: /Itinerary/ }).click().catch(() => {});
 };
 
-/** Which slots a plan's cards sit in, as day|part, in page order. */
+/** Which slots a plan's cards cover, as day|part, in page order: a card in a slot, or one card over several (T5). */
 const slotsOf = (p, title) =>
-  p.locator('[data-slot]').evaluateAll(
-    (els, t) => els.filter((el) => [...el.querySelectorAll('.item-card')].some((c) => c.innerText.includes(t))).map((el) => el.getAttribute('data-slot')),
+  p.locator('[data-slot], [data-slots]').evaluateAll(
+    (els, t) =>
+      els
+        .filter((el) => [...el.querySelectorAll('.item-card')].some((c) => c.innerText.includes(t)))
+        .flatMap((el) => (el.getAttribute('data-slots') ?? el.getAttribute('data-slot')).split(' ')),
     title,
   );
 

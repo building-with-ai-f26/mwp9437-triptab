@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BedDouble, Bus, Check, ChevronDown, CornerDownRight, MapPin, Palmtree, Plane, Plus, Sparkles, ThumbsUp, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import {
@@ -13,7 +13,7 @@ import {
   type Item,
   type ItemKind,
 } from "../../lib/model";
-import type { Placement, TimelineDay, StayOnDay } from "../../lib/timeline";
+import { dayLayout, type Placement, type Run, type Segment, type TimelineDay, type StayOnDay } from "../../lib/timeline";
 import { canDrag, chipId, foldId, justDropped, slotId, quietPress } from "../../lib/move";
 import type { GoingBadge } from "../../lib/initials";
 
@@ -100,12 +100,12 @@ function DayChip({ day, on, onPick }: { day: TimelineDay; on: boolean; onPick: (
 }
 
 /** A slot a plan runs on into: the same plan, shown lightly, with no price or status of its own. */
-function ContinuedCard({ item, label, actions }: { item: Item; label: string | null; actions: TimelineActions }) {
+function ContinuedCard({ item, label, actions, tall = false }: { item: Item; label: string | null; actions: TimelineActions; tall?: boolean }) {
   const out = actions.isOut?.(item) ?? false;
   return (
     <button
       type="button"
-      className="item-card !py-2"
+      className={`item-card !py-2 ${tall ? "h-full" : ""}`}
       data-kind={item.kind}
       data-status={item.status}
       data-out={out}
@@ -122,18 +122,68 @@ function ContinuedCard({ item, label, actions }: { item: Item; label: string | n
   );
 }
 
-function ItemCard({ item, placed, actions }: { item: Item; placed?: Placement; actions: TimelineActions }) {
+function ItemCard({ item, placed, actions, tall = false }: { item: Item; placed?: Placement; actions: TimelineActions; tall?: boolean }) {
   return actions.onMove && actions.canEdit && canDrag(item) ? (
-    <DraggableCard item={item} placed={placed} actions={actions} />
+    <DraggableCard item={item} placed={placed} actions={actions} tall={tall} />
   ) : (
-    <CardButton item={item} placed={placed} actions={actions} />
+    <CardButton item={item} placed={placed} actions={actions} tall={tall} />
+  );
+}
+
+/** One plan's run of parts on a day (T5): the card where it starts, a slim line where it runs on. */
+function RunView({ run, actions, tall = false }: { run: Run; actions: TimelineActions; tall?: boolean }) {
+  return run.first ? (
+    <ItemCard item={run.item} placed={{ first: true, label: run.label }} actions={actions} tall={tall} />
+  ) : (
+    <ContinuedCard item={run.item} label={run.label} actions={actions} tall={tall} />
+  );
+}
+
+/**
+ * Parts held together by plans that run across them (T5): one block over those rows. Each run is
+ * one card (or line) as tall as the parts it covers; overlapping runs sit side by side, and a plan
+ * in one part inside the block gets a column of its own. Each part keeps its own drop target.
+ */
+function SegmentBlock({ day, seg, actions }: { day: string; seg: Segment; actions: TimelineActions }) {
+  const rows = PARTS.slice(seg.from, seg.to + 1);
+  const singles = rows.some((p) => (seg.singles[p] ?? []).length > 0);
+  const cols = seg.lanes.length + (singles ? 1 : 0);
+  return (
+    <div
+      className="grid min-w-0 gap-x-2"
+      data-segment={`${PARTS[seg.from]}-${PARTS[seg.to]}`}
+      style={{ gridColumn: 2, gridRow: `${seg.from + 1} / ${seg.to + 2}`, gridTemplateRows: "subgrid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    >
+      {rows.map((part, r) => (
+        <Slot key={part} day={day} part={part} style={{ gridRow: r + 1, gridColumn: singles ? cols : "1 / -1" }}>
+          {(seg.singles[part] ?? []).map((run) => (
+            <RunView key={run.item.id} run={run} actions={actions} />
+          ))}
+        </Slot>
+      ))}
+      {seg.lanes.map((lane, li) =>
+        lane.map((run) => (
+          <div
+            key={run.item.id}
+            className="relative z-10 min-w-0"
+            data-span={`${PARTS[run.from]}-${PARTS[run.to]}`}
+            data-slots={PARTS.slice(run.from, run.to + 1)
+              .map((p) => slotId(day, p))
+              .join(" ")}
+            style={{ gridColumn: li + 1, gridRow: `${run.from - seg.from + 1} / ${run.to - seg.from + 2}` }}
+          >
+            <RunView run={run} actions={actions} tall />
+          </div>
+        )),
+      )}
+    </div>
   );
 }
 
 /** A plan an Owner can drag: press and hold on a phone, or drag a few pixels with a mouse. */
-function DraggableCard({ item, placed, actions }: { item: Item; placed?: Placement; actions: TimelineActions }) {
+function DraggableCard({ item, placed, actions, tall }: { item: Item; placed?: Placement; actions: TimelineActions; tall?: boolean }) {
   const { setNodeRef, listeners, isDragging } = useDraggable({ id: item.id, data: { item } });
-  return <CardButton item={item} placed={placed} actions={actions} drag={{ ref: setNodeRef, listeners, isDragging }} />;
+  return <CardButton item={item} placed={placed} actions={actions} tall={tall} drag={{ ref: setNodeRef, listeners, isDragging }} />;
 }
 
 interface Drag {
@@ -183,7 +233,7 @@ function GoingFaces({ badge }: { badge: GoingBadge }) {
   );
 }
 
-function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Placement; actions: TimelineActions; drag?: Drag }) {
+function CardButton({ item, placed, actions, drag, tall = false }: { item: Item; placed?: Placement; actions: TimelineActions; drag?: Drag; tall?: boolean }) {
   const Icon = item.status === "suggested" ? Sparkles : KIND_ICON[item.kind];
   const price = priceLabel(item, actions.exactCents?.(item));
   const out = actions.isOut?.(item) ?? false;
@@ -204,7 +254,7 @@ function CardButton({ item, placed, actions, drag }: { item: Item; placed?: Plac
             }
           : undefined
       }
-      className={`item-card ${drag ? "draggable-card" : ""} ${drag?.isDragging ? "opacity-40" : ""}`}
+      className={`item-card ${tall ? "h-full" : ""} ${drag ? "draggable-card" : ""} ${drag?.isDragging ? "opacity-40" : ""}`}
       data-kind={item.kind}
       data-status={item.status}
       data-out={out}
@@ -330,14 +380,15 @@ function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 /** A part of a day, as a drop target while a plan is dragged. */
-function Slot({ day, part, children }: { day: string; part: DayPart; children: ReactNode }) {
+function Slot({ day, part, children, style, className = "" }: { day: string; part: DayPart; children?: ReactNode; style?: CSSProperties; className?: string }) {
   const { setNodeRef, isOver } = useDroppable({ id: slotId(day, part) });
   return (
     <div
       ref={setNodeRef}
       data-slot={slotId(day, part)}
       data-over={isOver || undefined}
-      className={`min-w-0 space-y-2 rounded-2xl transition-colors ${isOver ? "bg-primary/15 outline-2 outline-offset-4 outline-dashed outline-primary" : ""}`}
+      style={style}
+      className={`min-w-0 space-y-2 rounded-2xl transition-colors ${isOver ? "bg-primary/15 outline-2 outline-offset-4 outline-dashed outline-primary" : ""} ${className}`}
     >
       {children}
     </div>
@@ -410,6 +461,7 @@ export function DayBlock({
 }) {
   const nights = day.stays.filter((s) => !s.checkout);
   const covered = nightCovered(day.overnight, actions);
+  const layout = dayLayout(day);
   const [open, setOpen] = useState(startOpen);
   const empty = PARTS.every((p) => day.parts[p].length === 0) && day.stays.length === 0 && day.overnight.length === 0;
   const folded = foldEmpty && empty && !open;
@@ -436,33 +488,31 @@ export function DayBlock({
         )}
       </header>
 
-      <div className="relative sm:ml-14">
+      {/* One row per part of the day. A plan running across parts is one card over those rows (T5). */}
+      <div className="relative grid grid-cols-[60px_minmax(0,1fr)] gap-x-4 gap-y-2 py-1 sm:ml-14">
         <div className="absolute bottom-0 left-[68px] top-0 w-px bg-foreground/10" aria-hidden />
-        {PARTS.map((part) => {
-          const items = day.parts[part];
+        {PARTS.map((part, i) => (
+          // A faint light backing: on darker photos the bare label fell just under 4.5:1.
+          <div key={`label-${part}`} className="pt-3" style={{ gridColumn: 1, gridRow: i + 1 }}>
+            <span className="label-luxury -ml-1.5 inline-block rounded-md bg-background/45 px-1.5 py-0.5 text-foreground">{PART_LABEL[part]}</span>
+          </div>
+        ))}
+        {PARTS.map((part, i) => {
+          const seg = layout.segments.find((g) => g.from <= i && i <= g.to);
+          if (seg) return seg.from === i ? <SegmentBlock key={`seg-${part}`} day={day.date} seg={seg} actions={actions} /> : null;
+          const runs = layout.parts[part] ?? [];
           return (
-            <div key={part} className="grid grid-cols-[60px_1fr] gap-4 py-1">
-              {/* A faint light backing: on darker photos the bare label fell just under 4.5:1. */}
-              <div className="pt-3">
-                <span className="label-luxury -ml-1.5 inline-block rounded-md bg-background/45 px-1.5 py-0.5 text-foreground">{PART_LABEL[part]}</span>
-              </div>
-              <Slot day={day.date} part={part}>
-                {items.map((item) => {
-                  const placed = day.placed[part][item.id];
-                  return placed && !placed.first ? (
-                    <ContinuedCard key={item.id} item={item} label={placed.label} actions={actions} />
-                  ) : (
-                    <ItemCard key={item.id} item={item} placed={placed} actions={actions} />
-                  );
-                })}
-                {items.length === 0 &&
-                  (actions.canEdit ? (
-                    <EmptySlot label={`Add to ${PART_LABEL[part].toLowerCase()}`} onClick={() => actions.onAdd(day.date, part)} />
-                  ) : (
-                    <p className="py-3 text-xs italic text-muted-foreground/70">Nothing planned</p>
-                  ))}
-              </Slot>
-            </div>
+            <Slot key={part} day={day.date} part={part} style={{ gridColumn: 2, gridRow: i + 1 }}>
+              {runs.map((run) => (
+                <RunView key={run.item.id} run={run} actions={actions} />
+              ))}
+              {runs.length === 0 &&
+                (actions.canEdit ? (
+                  <EmptySlot label={`Add to ${PART_LABEL[part].toLowerCase()}`} onClick={() => actions.onAdd(day.date, part)} />
+                ) : (
+                  <p className="py-3 text-xs italic text-muted-foreground/70">Nothing planned</p>
+                ))}
+            </Slot>
           );
         })}
       </div>

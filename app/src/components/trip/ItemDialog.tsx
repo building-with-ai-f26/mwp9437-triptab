@@ -18,6 +18,7 @@ import {
   STATUS_LABEL,
   togglePart,
   tripDays,
+  dayChip,
   validateItem,
   widenTrip,
   type CostType,
@@ -35,6 +36,7 @@ import { CurrencySelect } from "./Currency";
 import { useUsdRate } from "../../lib/useUsdRate";
 import type { ItemInput } from "../../lib/api";
 import { whenText } from "../../lib/timeline";
+import { repeatable, repeatOnDays, splitDays, type RepeatCost } from "../../lib/repeat";
 import { PlaceInput } from "../PlaceInput";
 import { searchAddresses, type AddressPlace } from "../../lib/places";
 
@@ -84,6 +86,8 @@ export function ItemDialog({
   onClose,
   onSave,
   onDelete,
+  onAddMany,
+  onSplit,
 }: {
   state: ItemDialogState | null;
   trip: Trip;
@@ -111,6 +115,10 @@ export function ItemDialog({
   /** `patch`, on an existing plan: only the fields changed since it was last saved. */
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
   onDelete: (item: Item) => Promise<void>;
+  /** T6: a new plan on several days, saved as one plan per day. */
+  onAddMany?: (plans: { input: ItemInput; paid: PaidNow | undefined }[]) => Promise<void>;
+  /** T6: an existing activity or meal over several days, split into one plan per day. */
+  onSplit?: (item: Item) => Promise<void>;
 }) {
   // Closing (Done, the X, Escape or a tap outside) asks the form first: it saves what's pending,
   // or keeps the dialog open once to show what needs fixing.
@@ -127,7 +135,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onConfirmCost, onClose, onSave, onDelete }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onConfirmCost, onClose, onSave, onDelete, onAddMany, onSplit }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -149,6 +157,8 @@ function ItemForm({
   onClose,
   onSave,
   onDelete,
+  onAddMany,
+  onSplit,
   onRequestClose,
   registerClose,
   goingExtras,
@@ -167,6 +177,10 @@ function ItemForm({
   onClose: () => void;
   onSave: (input: ItemInput, existing: Item | null, paid?: PaidNow, patch?: Partial<ItemInput>) => Promise<void>;
   onDelete: (item: Item) => Promise<void>;
+  /** T6: a new plan on several days, saved as one plan per day. */
+  onAddMany?: (plans: { input: ItemInput; paid: PaidNow | undefined }[]) => Promise<void>;
+  /** T6: an existing activity or meal over several days, split into one plan per day. */
+  onSplit?: (item: Item) => Promise<void>;
   onRequestClose: () => void;
   registerClose: (fn: (() => Promise<boolean>) | null) => void;
   /** An existing plan's who's in and Add to calendar (PlanPanel, going): in view, under status. */
@@ -217,6 +231,9 @@ function ItemForm({
   // Times and more days fold away too, until a plan has them (Mike's 11/19 review: the card was
   // overwhelming; lead with what, when and status, and disclose the rest on a tap).
   const [timesOpen, setTimesOpen] = useState(Boolean(it?.start_time || it?.end_time || (it && it.kind !== "stay" && it.end_day && it.end_day > it.day)));
+  // T6: a new activity or meal on more days, as one plan per day; and how a typed cost is shared.
+  const [moreDays, setMoreDays] = useState<string[]>([]);
+  const [repeatCost, setRepeatCost] = useState<RepeatCost>("each");
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,11 +253,26 @@ function ItemForm({
   const isStay = kind === "stay";
   const travel = kind === "flight" || kind === "transport";
   const flight = kind === "flight";
-  const spanLastDay = !isStay && lastDay > day ? lastDay : null;
+  const spanLastDay = !isStay && lastDay > day && !(!it && (kind === "activity" || kind === "meal")) ? lastDay : null;
   // The last part only matters when it differs from where the plan starts, or it ends on another day.
   const spanEndPart = isStay || !endPart || (!spanLastDay && endPart === part) ? null : endPart;
   // A flight or transfer may arrive the day after the trip ends; an activity stays inside it.
   const lastDays = tripDays(addDays(day, 1), travel ? addDays(tripNow.end_date, 1) : tripNow.end_date).slice(0, travel ? 3 : 60);
+  // T6 (11/23 and 11/24): adding an activity or meal picks any set of days; each day is its own plan.
+  const repeating = !it && repeatable(kind);
+  const pickDays = tripDays(tripNow.start_date, tripNow.end_date);
+  const extraDays = repeating ? moreDays.filter((d) => d !== day && pickDays.includes(d)) : [];
+  // A stop's days, for "Every day in Chamonix".
+  const stopRuns = stopOn
+    ? pickDays.reduce<{ name: string; days: string[] }[]>((runs, d) => {
+        const name = stopOn(d);
+        if (!name) return runs;
+        const run = runs.find((r) => r.name === name);
+        if (run) run.days.push(d);
+        else runs.push({ name, days: [d] });
+        return runs;
+      }, [])
+    : [];
   const paidNow = !it && paid;
   // Paid with no amount typed is fine: the amount comes later, as a to-do (C27, Mike's call 11/21).
   const amountLater = paidNow && paidAmount.trim() === "" && !(payMode === "own" && points);
@@ -374,7 +406,8 @@ function ItemForm({
     setError(null);
     adding.current = (async () => {
       try {
-        await onSave(input, null, paidInput);
+        if (extraDays.length && onAddMany) await onAddMany(repeatOnDays(input, paidInput, [day, ...extraDays], repeatCost));
+        else await onSave(input, null, paidInput);
         closed.current = true;
         if (closeAfter) onClose();
         return true;
@@ -397,6 +430,7 @@ function ItemForm({
     [
       startTime && endTime ? `${startTime} to ${endTime}` : startTime ? `from ${startTime}` : endTime ? `until ${endTime}` : "",
       spanLastDay ? (travel ? `arrives ${longDay(spanLastDay)}` : `every day through ${longDay(spanLastDay)}`) : "",
+      extraDays.length ? `on ${extraDays.length + 1} days, one plan each` : "",
     ]
       .filter(Boolean)
       .join(" · ") || (travel ? "Leaves and arrives the same day" : "Just this day, no set times");
@@ -737,25 +771,119 @@ function ItemForm({
                   }}
                 />
               </DarkField>
-              <div className="col-span-2">
-                <DarkField label="Every day through">
-                  <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
-                    <option value="">Just {longDay(day)}</option>
-                    {lastDays.map((d) => (
-                      <option key={d} value={d}>
-                        {longDay(d)}
-                      </option>
-                    ))}
-                  </select>
-                </DarkField>
-              </div>
+              {repeating ? (
+                <div className="col-span-2">
+                  <DarkField
+                    label="More days"
+                    group
+                    hint="Tick any other days. Each day gets its own plan with these details, to change or delete on its own."
+                  >
+                    <div role="group" aria-label="More days" className="flex flex-wrap gap-1.5" data-testid="more-days">
+                      {pickDays.map((d) => {
+                        const chip = dayChip(d);
+                        const base = d === day;
+                        const on = base || extraDays.includes(d);
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            aria-pressed={on}
+                            aria-label={longDay(d)}
+                            disabled={base}
+                            onClick={() => setMoreDays((all) => (all.includes(d) ? all.filter((x) => x !== d) : [...all, d]))}
+                            className={`flex min-h-11 min-w-11 flex-col items-center justify-center rounded-xl px-1.5 text-[11px] leading-tight transition-colors ${
+                              on ? "bg-primary font-semibold text-white" : "border border-white/15 bg-white/5 text-white/80 hover:bg-white/15"
+                            } ${base ? "opacity-90" : ""}`}
+                          >
+                            <span>{chip.weekday}</span>
+                            <span>{chip.date}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {stopRuns.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {stopRuns.map((r) => (
+                          <button
+                            key={r.name}
+                            type="button"
+                            onClick={() => setMoreDays((all) => [...new Set([...all, ...r.days])])}
+                            className="min-h-9 rounded-full border border-white/20 bg-white/5 px-3 text-xs text-white hover:bg-white/15"
+                          >
+                            Every day in {r.name}
+                          </button>
+                        ))}
+                        {extraDays.length > 0 && (
+                          <button type="button" onClick={() => setMoreDays([])} className="min-h-9 rounded-full px-3 text-xs text-white/70 underline underline-offset-4">
+                            Just {longDay(day)}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </DarkField>
+                  {extraDays.length > 0 && (estCents != null || paidNow) && (
+                    <DarkField label={`The cost, on ${extraDays.length + 1} days`} group>
+                      <Segmented
+                        label="How the cost is shared across the days"
+                        value={repeatCost}
+                        onChange={setRepeatCost}
+                        options={[
+                          { value: "each", label: "Each day" },
+                          { value: "total", label: "One total, shared" },
+                        ]}
+                      />
+                    </DarkField>
+                  )}
+                </div>
+              ) : (
+                (spanLastDay || !it) && (
+                  <div className="col-span-2">
+                    <DarkField label="Every day through">
+                      <select className="field-dark" value={spanLastDay ?? ""} onChange={(e) => setLastDay(e.target.value)}>
+                        <option value="">Just {longDay(day)}</option>
+                        {lastDays.map((d) => (
+                          <option key={d} value={d}>
+                            {longDay(d)}
+                          </option>
+                        ))}
+                      </select>
+                    </DarkField>
+                    {it && onSplit && splitDays(it).length > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="light"
+                        className="-mt-1 mb-2"
+                        disabled={busy || hasCost}
+                        onClick={async () => {
+                          setBusy(true);
+                          setError(null);
+                          try {
+                            await onSplit(it);
+                            closed.current = true;
+                            onClose();
+                          } catch (e) {
+                            setError((e as Error).message);
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        Split into separate days
+                      </Button>
+                    )}
+                    {it && onSplit && splitDays(it).length > 0 && hasCost && (
+                      <p className="-mt-1 mb-2 text-xs text-white/60">Its cost is in: undo the confirmation to split it into separate days.</p>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           )}
           {(spanLastDay || spanEndPart) && (
             <p className="-mt-1 mb-3 text-xs text-white/60">
               {travel
                 ? "It shows in every part of the day from leaving to arriving."
-                : "One plan with one cost, shown in every slot it covers. Use this for skiing every day of a stop, not a plan per day."}
+                : "One plan with one cost, shown in every slot it covers. Split it to change one day on its own."}
             </p>
           )}
             </div>

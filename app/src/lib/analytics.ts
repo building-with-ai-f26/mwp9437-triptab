@@ -141,6 +141,8 @@ export type EventName =
   | "pdf opened"
   | "calendar downloaded"
   | "trip settings opened"
+  | "plans repeated"
+  | "plan split"
   | "group link copied"
   | "group link texted"
   | "group link shared"

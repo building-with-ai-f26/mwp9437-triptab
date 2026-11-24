@@ -87,6 +87,8 @@ From `Dashboard.tsx` (the "Left: Itinerary" column).
 
 **Rebuild:** the vision replaces clock times with four named parts of the day. Morning, Day, Evening and Night run down the left of each day as small uppercase `tracking-luxury` labels, and each part holds that part's items, so the day reads without timestamps. An empty part shows a faint dashed "+ Add" slot in the spring placeholder style. The stay row closes each day as in spring. Item times are optional.
 
+**Spans (T5, 11/24, C58):** a plan that runs across parts of one day is one card as tall as those rows (spring's "height scales with duration"), not a card plus "continues" rows; the labels on the left stay where they are, and the parts it covers have no "+ Add" slot. Two plans that overlap sit side by side, and a plan in one part inside a span gets a column beside it. A flight across midnight is one card on the day it leaves, through Night; on the arrival day a single slim line ("Lands 7:25 AM": the white card without its shadow, text at 75%) covers Morning through the part it lands in. The week view draws the same.
+
 ## 7. Status styling
 
 From `Dashboard.tsx` (the item card and the stay row) and `EditablePrice.tsx`.

@@ -46,7 +46,8 @@ async function run(browser, label, opts, result) {
   await d.getByLabel('Starts at (optional)').fill('09:00');
   await d.getByLabel('Ends at (optional)').fill('16:00');
   r.timesPickParts = await pressed(d);
-  await d.getByLabel('Every day through').selectOption('2027-02-08');
+  // Three days, as three plans (T6, 11/24): Sat plus Sun and Mon ticked in More days.
+  for (const m of ['Sun, Feb 7', 'Mon, Feb 8']) await d.getByRole('group', { name: 'More days' }).getByRole('button', { name: m }).click();
   await cost.click();
   await d.getByLabel(/Estimated/).fill('60');
   await d.getByRole('radio', { name: 'Per person' }).click();
@@ -112,9 +113,10 @@ async function run(browser, label, opts, result) {
         r.start === 'Morning' && r.fillsTheGap === 'Morning, Day, Evening, Night' && r.dropsAnEnd === 'Day, Evening, Night' &&
         r.middleStartsOver === 'Evening' && r.costFolded && r.costSummary.includes('none yet') && r.estimateHidden &&
         r.timesPickParts === 'Morning, Day' && r.costSummaryOpen.includes('about $60 a person') &&
-        r.satCards.some((t) => t.includes('Day 1 of 3 · 9:00 AM to 4:00 PM')) && r.slots === 6 &&
+        // One card per day (T5), each its own plan with the hours (T6).
+        r.satCards.length === 1 && r.satCards[0].includes('9:00 AM to 4:00 PM') && r.slots === 3 &&
         r.reopened.join('|') === 'Morning, Day|09:00|16:00' && r.endBeforeStart.includes('It has to end after it starts.') &&
-        r.saveNote === 'Saved' && r.notSavedNote.startsWith('Not saved yet') && r.renamedOnCard === 2 && r.keptTimes === '09:00-16:00' &&
+        r.saveNote === 'Saved' && r.notSavedNote.startsWith('Not saved yet') && r.renamedOnCard === 1 && r.keptTimes === '09:00-16:00' &&
         r.keptOnClose && r.discarded && r.overflow <= 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }

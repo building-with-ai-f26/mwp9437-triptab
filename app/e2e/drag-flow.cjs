@@ -5,12 +5,15 @@
 // - a plan moves to another slot, keeping its time when only the day changes;
 // - moving it to another part clears its time and says so; Undo puts it back; a reload keeps it;
 // - dropping it on a day chip moves it to that day, keeping its part;
-// - a tap or click still opens it, and a quick swipe (a scroll) moves nothing.
+// - a tap or click still opens it, and a quick swipe (a scroll) moves nothing;
+// - a plan running Morning to Day is one card (T5), and dragging it moves the whole span.
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 
 const slot = (p, day, part) => p.locator(`[data-slot="${day}|${part}"]`);
 const card = (p, day, part, title) => slot(p, day, part).locator('[data-draggable="true"]').filter({ hasText: title });
+/** A plan drawn as one card over several parts of a day (T5): found by the slots it covers. */
+const spanCard = (p, day, from, to, title) => p.locator(`[data-slots="${day}|${from} ${day}|${to}"] [data-draggable="true"]`).filter({ hasText: title });
 const center = (b) => ({ x: b.x + b.width / 2, y: b.y + Math.min(b.height / 2, 22) });
 const note = (p) => p.getByTestId('move-note');
 /** The note for a finished move (a move shows "Moving..." until it has saved). */
@@ -36,6 +39,19 @@ async function addTimedPlan(p, day, slotLabel, title, kind, time) {
 }
 
 /** Scrolls so a block sits just under the sticky bars, so it and what follows are on screen. */
+/** Ski school, Morning to Day on one day: one card over two rows (T5). */
+async function addSpan(p, day) {
+  await h.showDay(p, day);
+  await p.locator(`#day-${day}`).getByRole('button', { name: 'Add to morning' }).click();
+  const d = h.dlg(p);
+  await d.getByLabel('What').fill('Ski school');
+  await d.getByRole('radio', { name: 'Planned' }).click();
+  await d.getByRole('group', { name: 'Part of the day' }).getByRole('button', { name: 'Day', exact: true }).click();
+  await d.getByRole('button', { name: 'Add to trip' }).click();
+  await p.locator('dialog[open]').waitFor({ state: 'detached' });
+  await spanCard(p, day, 'morning', 'day', 'Ski school').waitFor();
+}
+
 async function bringUp(p, locator, offset = 190) {
   await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
@@ -134,6 +150,15 @@ async function desktop(browser, result) {
   await mouseDrag(p, card(p, '2027-02-07', 'evening', 'Fondue'), chip9);
   await card(p, '2027-02-09', 'evening', 'Fondue').waitFor();
   r.chipDrop = await moved(p, 'Moved Fondue to Tue, Feb 9');
+
+  // A spanning card (T5): Ski school, Morning to Day, dragged to Wed's morning moves the whole span.
+  await addSpan(p, '2027-02-06');
+  await bringUp(p, slot(p, '2027-02-06', 'morning'));
+  await mouseDrag(p, spanCard(p, '2027-02-06', 'morning', 'day', 'Ski school'), slot(p, '2027-02-10', 'morning'));
+  await spanCard(p, '2027-02-10', 'morning', 'day', 'Ski school').waitFor();
+  r.spanNote = await moved(p, 'Moved Ski school to Wed, Feb 10, morning');
+  r.spanMoved = (await spanCard(p, '2027-02-06', 'morning', 'day', 'Ski school').count()) === 0;
+  await h.shot(p, 'drag-desktop-span-moved');
   r.overflow = await h.overflowX(p);
 }
 
@@ -218,6 +243,17 @@ async function phone(browser, result) {
   await p.waitForTimeout(500);
   await card(p, day, part, 'Fondue').tap();
   r.tapOpens = await h.dlg(p).isVisible();
+  await p.keyboard.press('Escape');
+  await p.locator('dialog[open]').waitFor({ state: 'detached' });
+
+  // A spanning card (T5): press and hold Ski school, Morning to Day, and drop it on Thu's chip.
+  await addSpan(p, '2027-02-07');
+  await bringUp(p, slot(p, '2027-02-07', 'morning'), 300);
+  await p.waitForTimeout(500);
+  await touchDrag(p, spanCard(p, '2027-02-07', 'morning', 'day', 'Ski school'), p.locator('nav[aria-label="Days"] [data-day="2027-02-11"]'));
+  await spanCard(p, '2027-02-11', 'morning', 'day', 'Ski school').waitFor();
+  r.spanNote = await moved(p, 'Moved Ski school to Thu, Feb 11');
+  r.spanMoved = (await spanCard(p, '2027-02-07', 'morning', 'day', 'Ski school').count()) === 0;
   r.overflow = await h.overflowX(p);
 }
 
@@ -233,7 +269,7 @@ const result = {};
   const m = result.phone;
   const ok =
     d.clickOpens && d.cancelLeftItAlone && d.timeKept && /Moved Fondue to Sun, Feb 7, evening/.test(d.noteSameDay) && /7:00 PM time was cleared/.test(d.noteOtherPart) &&
-    d.undoneToEvening && d.afterReload && /Tue, Feb 9, evening/.test(d.chipDrop) && d.overflow <= 0 &&
+    d.undoneToEvening && d.afterReload && /Tue, Feb 9, evening/.test(d.chipDrop) && d.overflow <= 0 && d.spanMoved && m.spanMoved &&
     m.swipeMovedNothing && m.cancelLeftItAlone && /Moved Fondue to Sat, Feb 6, morning/.test(m.note) && /Mon, Feb 8, morning/.test(m.chipDrop) && m.scrolledBehind > 150 && m.droppedAfterScroll > '2027-02-08|morning' && m.tapOpens && m.overflow <= 0 &&
     result.errors.length === 0;
   if (!ok) process.exit(1);
