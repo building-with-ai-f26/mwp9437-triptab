@@ -1,7 +1,7 @@
 // Mike's 11/23 review, at 1280 and 390 wide. Desktop: a banner of tabs under the header (Overview,
 // Itinerary, Money, To do, People), each showing its own section. Phone: the legend is one row and
 // so are the buttons under it. Both: Stops and dates opens from Travel and lodging (the header's
-// gear is gone), and the profile formats a phone number as it's typed and holds Also forward from.
+// gear came back with C62, 11/24), and the profile formats a phone number as it's typed and holds Also forward from.
 // Run with `npm run dev` going.
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
@@ -31,7 +31,8 @@ async function run(browser, label, opts, result) {
   r.actionButtons = await p.locator('[data-testid="itinerary-actions"] button').count();
   r.minTap = await p.locator('[data-testid="itinerary-actions"] button').evaluateAll((els) => Math.min(...els.map((e) => Math.round(e.getBoundingClientRect().height))));
   r.overflow = await h.overflowX(p);
-  r.gearGone = (await p.getByRole('button', { name: 'Trip settings' }).count()) === 0;
+  // The header's Trip settings button is back (Mike's C62, 11/24, reversing his 11/23 removal).
+  r.gearBack = (await p.getByRole('button', { name: 'Trip settings', exact: true }).count()) === 1;
   await h.shot(p, `sections-itinerary-${label}`);
 
   // ---------- Desktop: the banner of tabs ----------
@@ -101,7 +102,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const phone = label === 'phone';
-      const ok = r.legendRows === 1 && r.actionRows === 1 && r.actionButtons === 4 && (!phone || r.minTap >= 36) && r.overflow <= 0 && r.gearGone &&
+      const ok = r.legendRows === 1 && r.actionRows === 1 && r.actionButtons === 4 && (!phone || r.minTap >= 36) && r.overflow <= 0 && r.gearBack &&
         (phone
           ? r.topTabsHidden
           : r.tabs === 'Overview|Itinerary|Money|To do|People 1' && r.overview === 'itinerary,money,todo,people' && r.itinerary === 'itinerary' && r.money === 'money' &&
