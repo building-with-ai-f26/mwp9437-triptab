@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CalendarPlus, Check, CircleDollarSign, Pencil, Sparkles, ThumbsUp } from "lucide-react";
 import { Button, Segmented } from "../ui";
 import type { ExpenseRow, ItemPerson, OwnMark } from "../../lib/api";
-import { bookedLabel, isGoing, myShareOf, ownLineOf, ownProgress } from "../../lib/ledger";
+import { bookedLabel, isGoing, myShareOf, ownLineOf, ownProgress, statusFor } from "../../lib/ledger";
 import { dollars, PAY_MODE_LABEL, STATUS_LABEL, type Item, type PayMode, type Traveler } from "../../lib/model";
 import { parseDollars, toCents } from "../../lib/money";
 import { downloadIcs, icsForItems } from "../../lib/ics";
@@ -166,7 +166,11 @@ export function PlanPanel({
                 Confirmed: everyone going has booked
               </>
             ) : (
-              `${STATUS_LABEL[item.status]}, ${bookedLabel(progress)}`
+              // Your own status (T2): Confirmed once you've booked, beside the group's booked count.
+              (() => {
+                const mine = statusFor(item, meId, itemPeople, ownMarks);
+                return `${STATUS_LABEL[mine]}${mine === "confirmed" ? " for you" : ""}, ${bookedLabel(progress)}`;
+              })()
             )}
           </p>
 
@@ -191,7 +195,8 @@ export function PlanPanel({
                     {has ? (
                       <span className="inline-flex items-center gap-1 text-green-200">
                         <Check className="size-3.5" strokeWidth={3} /> Booked
-                        {line && (
+                        {/* Booked with no price (T2): just Booked, never a $0.00. */}
+                        {line && (line.total_cents > 0 || line.with_points) && (
                           <span className="text-white">
                             {" · "}
                             {line.with_points ? (
@@ -368,10 +373,12 @@ function OwnLineForm({
   onClear?: () => void;
   onCancel: () => void;
 }) {
-  const [price, setPrice] = useState(line ? String(line.total_cents / 100) : estCents ? String(estCents / 100) : "");
+  // Starts blank (T2): the plan's estimate is a hint, never logged as your price unless you type it.
+  const [price, setPrice] = useState(line && line.total_cents > 0 ? String(line.total_cents / 100) : "");
   const [points, setPoints] = useState(line?.with_points ?? false);
   const [tried, setTried] = useState(false);
-  const typed = price.trim() === "" ? (points ? 0 : NaN) : parseDollars(price);
+  // Blank is fine (T2, 11/24): you're booked, and your price can come later or never.
+  const typed = price.trim() === "" ? 0 : parseDollars(price);
   const bad = Number.isNaN(typed) || typed < 0;
 
   const submit = () => {
@@ -386,14 +393,14 @@ function OwnLineForm({
     <div role="group" aria-label={who === "you" ? "Log what you paid" : `Log what ${who} paid`} className="mt-2 space-y-2 pb-1">
       <label className="block">
         <span className="label-luxury mb-1 block text-white/80">
-          {points ? "Cash value or fees (optional)" : who === "you" ? "What you paid" : `What ${who} paid`}
+          {points ? "Cash value or fees (optional)" : who === "you" ? "What you paid (optional)" : `What ${who} paid (optional)`}
         </span>
         <input
           className="field-dark"
           inputMode="decimal"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="$"
+          placeholder={estCents ? `$ (about ${dollars(estCents)})` : "$"}
           autoFocus
           aria-label={who === "you" ? "Your own cost" : `${who}'s own cost`}
           onKeyDown={(e) => {

@@ -93,7 +93,8 @@ const status = (page) => h.dlg(page).getByTestId('own-status');
   await panel(o).getByRole('button', { name: 'Log for Priya' }).click();
   await panel(o).getByLabel("Priya's own cost").fill('90');
   await panel(o).getByRole('button', { name: 'Mark as booked' }).click();
-  await status(o).getByText('Planned, Each pays their own · 2 of 3 booked').waitFor();
+  // The status you see is your own (T2, 11/24): the owner has booked, so it's Confirmed for them.
+  await status(o).getByText('Confirmed for you, Each pays their own · 2 of 3 booked').waitFor();
   result.ownerStatus = await status(o).innerText();
   await h.shot(o, 'who-pays-own-lines-desktop');
   await h.dlg(o).getByRole('button', { name: 'Close' }).click();
