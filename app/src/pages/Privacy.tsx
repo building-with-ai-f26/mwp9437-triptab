@@ -7,7 +7,7 @@ import { LANDING_PHOTO } from "../lib/photos";
  * TripTab's privacy page (Build 3), linked from the landing page, sign-in and Google's consent
  * screen. Every line describes what the code does today: change it with the code it describes.
  */
-const UPDATED = "November 23, 2026";
+const UPDATED = "November 24, 2026";
 const CONTACT = "privacy@triptab.org";
 
 const SECTIONS: { title: string; body: ReactNode }[] = [
@@ -115,7 +115,8 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
         </li>
         <li>
           <b>Anthropic (Claude)</b> reads what you give the AI buttons, such as a pasted booking email, a PDF or a
-          screenshot, along with the trip's name, dates, stops and plans (and, for Give me ideas, how many people on the trip picked
+          screenshot (a booking, or a screenshot of your group chat, whose messages and names it reads only to find the plans talked
+          about; plans from a chat come in as Suggested and keep no names), along with the trip's name, dates, stops and plans (and, for Ask AI, how many people on the trip picked
           each cuisine and activity on their profiles, with no names), and suggests plans back. It may search the
           web to check things like a flight's times. On Start a trip, "Set it up" sends it the description you typed
           and today's date, and nothing else. An email forwarded to a trip's address goes to it the same way. Nothing goes to it unless you tap one of

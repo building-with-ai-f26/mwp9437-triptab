@@ -33,13 +33,18 @@ async function run(browser, label, opts, result) {
         : route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: 'ok' }),
     );
   }
-  // One AI button, two choices (Mike's 11/18 call).
-  await p.getByRole('button', { name: 'AI help' }).click();
-  await h.dlg(p).getByRole('button', { name: /^Give me ideas/ }).waitFor();
-  r.choices = (await h.dlg(p).locator('button span.font-display').allInnerTexts()).map((t) => t.trim());
+  // Three ways to add (T9, Mike's C59 on 11/24): buttons on a laptop, the + sheet on a phone.
+  if (label === 'phone') {
+    await p.getByRole('button', { name: 'Add to the trip' }).click();
+    await h.dlg(p).getByTestId('add-choices').waitFor();
+    r.choices = (await h.dlg(p).getByTestId('add-choices').locator('button span.font-display').allInnerTexts()).map((t) => t.trim());
+  } else {
+    r.choices = (await p.locator('[data-tour="add"] button').allInnerTexts()).map((t) => t.trim());
+  }
   r.choicesOverflow = await h.overflowX(p);
   await h.shot(p, `ai-help-choices-${label}`);
-  await h.dlg(p).getByRole('button', { name: /^Give me ideas/ }).click();
+  if (label === 'phone') await h.dlg(p).getByTestId('add-choices').getByRole('button', { name: /^Ask AI/ }).click();
+  else await p.locator('[data-tour="add"]').getByRole('button', { name: 'Ask AI', exact: true }).click();
   await h.dlg(p).getByLabel(/What would the group like/).fill('A nice dinner in Chamonix, and something for the non-skiers on Sunday.');
   await h.shot(p, `${SHOTS}-ask-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Find ideas' }).click();
@@ -48,6 +53,13 @@ async function run(browser, label, opts, result) {
   r.ideas = await cards.count();
   r.titles = (await cards.allInnerTexts()).map((t) => t.split('\n')[0]);
   r.sources = await cards.locator('a').count();
+  // T12: each card's first link is the place on Google Maps, above Found on.
+  r.mapsFirst = await cards.evaluateAll((els) =>
+    els.every((el) => {
+      const links = [...el.querySelectorAll('a')];
+      return links.length === 2 && links[0].href.startsWith('https://www.google.com/maps/search/?api=1&query=') && /Found on/.test(links[1].innerText);
+    }),
+  );
   // The AI cost is logged but never shown to people (Mike's 11/19 review).
   r.costShown = await h.dlg(p).getByTestId('plan-ai-cost').count();
   await h.shot(p, `${SHOTS}-review-${label}`);
@@ -80,6 +92,8 @@ async function run(browser, label, opts, result) {
     // The why and the source are in the plan's notes.
     await added.first().click();
     r.notes = (await h.dlg(p).getByLabel(/Notes/).inputValue()).replace(/\s+/g, ' ');
+    // T12: an added idea's Link is its Google Maps link.
+    r.planLink = await h.dlg(p).getByLabel('Link').inputValue().catch(() => null);
     await h.dlg(p).getByRole('button', { name: 'Close' }).click().catch(() => p.keyboard.press('Escape'));
     await added.first().scrollIntoViewIfNeeded();
     await h.shot(p, `${SHOTS}-added-${label}`);
@@ -97,7 +111,7 @@ async function run(browser, label, opts, result) {
     for (const [label, r] of Object.entries(result)) {
       if (label === 'errors') continue;
       const ok =
-        r.choices.join('|') === 'I have bookings|Give me ideas' && r.choicesOverflow <= 0 && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
+        r.choices.join('|') === 'Import|Add|Ask AI' && r.choicesOverflow <= 0 && r.mapsFirst && /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/.test(r.planLink ?? '') && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
         /^ai idea, kept by you$/i.test(r.suggestedBy) && r.movedPlaced && r.overflow <= 0 && r.costShown === 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }

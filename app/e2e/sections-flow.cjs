@@ -102,7 +102,7 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const phone = label === 'phone';
-      const ok = r.legendRows === 1 && r.actionRows === 1 && r.actionButtons === 4 && (!phone || r.minTap >= 36) && r.overflow <= 0 && r.gearBack &&
+      const ok = r.legendRows === 1 && r.actionRows === 1 && r.actionButtons === (phone ? 2 : 5) && (!phone || r.minTap >= 36) && r.overflow <= 0 && r.gearBack &&
         (phone
           ? r.topTabsHidden
           : r.tabs === 'Overview|Itinerary|Money|To do|People 1' && r.overview === 'itinerary,money,todo,people' && r.itinerary === 'itinerary' && r.money === 'money' &&

@@ -81,6 +81,11 @@ function decode(req) {
   await page.locator('dialog[open]').getByLabel('What').fill('Ski school');
   await page.locator('dialog[open]').getByRole('button', { name: 'Add to trip' }).click();
   await page.locator('#day-2027-02-06').getByText('Ski school').waitFor();
+  // T9: the three ways to add are tracked by name (Add, from the laptop's buttons).
+  await page.locator('[data-tour="add"]').getByRole('button', { name: 'Add', exact: true }).click();
+  await page.locator('dialog[open]').getByLabel('What').waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('dialog[open]').waitFor({ state: 'detached' }).catch(() => {});
   await page.locator('section[aria-labelledby="people-title"]').getByRole('button', { name: 'Add', exact: true }).click();
   await page.locator('dialog[open]').getByLabel('Name').fill('Vic');
   await page.locator('dialog[open]').getByRole('button', { name: 'Add to trip' }).click();
@@ -96,7 +101,7 @@ function decode(req) {
 
   const counts = events.reduce((m, e) => ({ ...m, [e]: (m[e] ?? 0) + 1 }), {});
   console.log(JSON.stringify(counts, null, 2));
-  const need = ['trip created', 'person added', 'plan added', '$pageview'];
+  const need = ['trip created', 'person added', 'plan added', 'add picked', '$pageview'];
   const missing = need.filter((e) => !counts[e]);
   console.log(missing.length ? `MISSING: ${missing.join(', ')}` : 'All Build 2 events sent.');
   const sent = JSON.stringify(exceptions);

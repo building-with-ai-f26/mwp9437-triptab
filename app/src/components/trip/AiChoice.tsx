@@ -1,32 +1,41 @@
-import { ClipboardPaste, Wand2, type LucideIcon } from "lucide-react";
+import { ClipboardPaste, PenLine, Wand2, type LucideIcon } from "lucide-react";
 import { Dialog } from "../ui";
 
-export type AiChoice = "bookings" | "ideas";
+/** T9 (Mike's C59, 11/24): three ways to add a plan. "ideas" is Ask AI. */
+export type AiChoice = "bookings" | "hand" | "ideas";
 
 const CHOICES: { key: AiChoice; title: string; body: string; Icon: LucideIcon }[] = [
   {
     key: "bookings",
-    title: "I have bookings",
-    body: "Paste a confirmation email or a few lines, or add a PDF or screenshot. TripTab turns it into plans for you to check.",
+    title: "Import",
+    body: "A confirmation email, a few lines, a PDF or a screenshot, or forward it to the trip's address. TripTab turns it into plans for you to check.",
     Icon: ClipboardPaste,
   },
   {
+    key: "hand",
+    title: "Add",
+    body: "Type it in yourself: what, when, where and the cost.",
+    Icon: PenLine,
+  },
+  {
     key: "ideas",
-    title: "Give me ideas",
+    title: "Ask AI",
     body: "Real places for the slots that are still empty, each with where it was found. They come in as Suggested.",
     Icon: Wand2,
   },
 ];
 
 /**
- * The trip's one AI button (Mike's 11/18 call): two clear choices instead of two buttons. Under each,
- * the same Import and Plan with AI as before, with their own prompts, caps and evals.
+ * The three ways to add a plan (T9, Mike's C59 on 11/24; it replaces the 11/18 one AI button with two
+ * choices): Import, Add, Ask AI. On a phone the bottom bar's + opens this sheet; a laptop has the three
+ * as buttons over the itinerary. Ask AI opens the ideas for empty slots while the Ask AI chat waits
+ * (Mike, 11/24).
  */
 export function AiChoiceDialog({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (choice: AiChoice) => void }) {
   return (
-    <Dialog open={open} onClose={onClose} title="AI help">
+    <Dialog open={open} onClose={onClose} title="Add to the trip">
       {open && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-testid="add-choices">
           {CHOICES.map(({ key, title, body, Icon }) => (
             <button
               key={key}
@@ -43,7 +52,7 @@ export function AiChoiceDialog({ open, onClose, onPick }: { open: boolean; onClo
               </span>
             </button>
           ))}
-          <p className="pt-1 text-xs text-white/70">Nothing is added until you review it. Each request costs TripTab a cent or two and is logged.</p>
+          <p className="pt-1 text-xs text-white/70">Nothing from Import or Ask AI is added until you review it. Each AI request costs TripTab a cent or two and is logged.</p>
         </div>
       )}
     </Dialog>

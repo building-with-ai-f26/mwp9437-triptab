@@ -29,6 +29,12 @@ export interface Proposal {
   link?: string | null;
   /** A listing's headline or description as written: it goes in Notes, not Where (C32). */
   details?: string | null;
+  /** Paid wholly or partly with miles or points (T8): the cost is only the cash part. */
+  with_points?: boolean;
+  /** The price paid in parts, as the booking shows it (T7), in the price's currency. */
+  payment_schedule?: { amount_cents: number; due_day: string | null; paid: boolean }[];
+  /** Talked about in a group chat, not booked (T11): saved as Suggested. */
+  from_chat?: boolean;
 }
 
 export interface ImportUsage {
@@ -153,6 +159,7 @@ export function notesFor(p: Proposal): string {
     lines.push(p.times_from === "lookup" ? `${times} (looked up, check against your booking: ${p.source_url})` : times);
   }
   if (p.confirmation_code) lines.push(`Confirmation: ${p.confirmation_code}`);
+  if (p.from_chat) lines.push("From the group chat: talked about, not booked.");
   return lines.join("\n");
 }
 

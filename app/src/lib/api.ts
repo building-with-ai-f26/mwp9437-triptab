@@ -2,6 +2,7 @@
  * Every read and write the app makes. Each call goes to Supabase with the signed-in person's
  * token, and row-level security decides what it can see or change (supabase/migrations).
  */
+import type { PlanPayment } from "./schedule";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { CostType, DayPart, GroupLink, Item, ItemKind, ItemStatus, PayMode, Role, Stop, StopDraft, Traveler, Trip } from "./model";
@@ -198,10 +199,12 @@ export interface TripBundle {
    * Owners only (everyone else gets none). Null when this database doesn't have email-in yet.
    */
   inbox: InboxItem[] | null;
+  /** Payment schedules on plans (T7), in order. Null when this database doesn't have them yet. */
+  planPayments: PlanPayment[] | null;
 }
 
 export async function loadTrip(id: string): Promise<TripBundle | null> {
-  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay, inbox, votes] = await Promise.all([
+  const [trip, stops, travelers, items, link, expenses, people, actions, contacts, marks, payments, venmo, pay, inbox, votes, planPayments] = await Promise.all([
     supabase.from("trips").select("*").eq("id", id).maybeSingle(),
     supabase.from("stops").select("*").eq("trip_id", id).order("position"),
     supabase.from("travelers").select(TRAVELER_COLUMNS).eq("trip_id", id).order("created_at"),
@@ -220,6 +223,8 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     supabase.from("inbox_items").select("*").eq("trip_id", id).in("status", ["new", "failed", "held"]).order("received_at", { ascending: false }),
     // Asked apart as well, so a database without votes yet still loads the trip.
     supabase.from("item_votes").select("item_id, traveler_id, items!inner(trip_id)").eq("items.trip_id", id),
+    // And payment schedules (T7), so a database without them yet still loads the trip.
+    supabase.from("plan_payments").select("*").eq("trip_id", id).order("position").order("created_at"),
   ]);
   if (trip.error) throw new Error(friendly(trip.error));
   if (!trip.data) return null;
@@ -253,6 +258,7 @@ export async function loadTrip(id: string): Promise<TripBundle | null> {
     actions: must(actions.data, actions.error) as ActionItem[],
     payments: payments.error ? null : (payments.data as Payment[]),
     inbox: inbox.error ? null : (inbox.data as InboxItem[]),
+    planPayments: planPayments.error ? null : (planPayments.data as PlanPayment[]),
   };
 }
 
@@ -757,10 +763,33 @@ export async function setGoing(itemId: string, travelerId: string, going: boolea
 
 // ---------- Action items (Build 4) ----------
 
-export async function addAction(tripId: string, title: string, assignee: string | null, dueDay: string | null) {
-  const { error } = await supabase
+export async function addAction(tripId: string, title: string, assignee: string | null, dueDay: string | null): Promise<string | null> {
+  const { data, error } = await supabase
     .from("action_items")
-    .insert({ trip_id: tripId, title: title.trim(), assignee, due_day: dueDay });
+    .insert({ trip_id: tripId, title: title.trim(), assignee, due_day: dueDay })
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(friendly(error));
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+// ---------- Payment schedules (T7) ----------
+
+export type PlanPaymentInput = Pick<PlanPayment, "position" | "amount_cents" | "currency" | "foreign_cents" | "due_day" | "paid" | "paid_on" | "paid_by" | "action_id">;
+
+export async function addPlanPayment(tripId: string, itemId: string, input: PlanPaymentInput): Promise<PlanPayment> {
+  const { data, error } = await supabase.from("plan_payments").insert({ trip_id: tripId, item_id: itemId, ...input }).select("*").single();
+  return must(data as PlanPayment | null, error);
+}
+
+export async function updatePlanPayment(id: string, patch: Partial<PlanPaymentInput>): Promise<void> {
+  const { data, error } = await supabase.from("plan_payments").update(patch).eq("id", id).select("id");
+  must(data, error);
+  if (!data?.length) throw new Error("Only the trip's owners can do that.");
+}
+
+export async function deletePlanPayment(id: string): Promise<void> {
+  const { error } = await supabase.from("plan_payments").delete().eq("id", id);
   if (error) throw new Error(friendly(error));
 }
 

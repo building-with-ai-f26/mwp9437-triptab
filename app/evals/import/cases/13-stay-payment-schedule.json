@@ -1,0 +1,35 @@
+{
+  "id": "13-stay-payment-schedule",
+  "group": "normal",
+  "what": "T7: a made-up chalet booking paid in two parts, the deposit taken and the balance due later. The whole price stays the cost; the schedule lists both payments.",
+  "text": "Booking confirmed: Chalet Les Mélèzes, 12 Route des Praz, Chamonix\nCheck-in Friday 5 February 2027, check-out Friday 12 February 2027 (7 nights, 6 guests)\nTotal price: 3,000.00 EUR\nPayment schedule:\n- Deposit 1,000.00 EUR, paid 18 November 2026\n- Balance 2,000.00 EUR, due 11 December 2026\nReference CH-58821",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "stay"
+        ],
+        "day": "2027-02-05",
+        "end_day": "2027-02-12",
+        "cost_cents": 300000,
+        "currency": "EUR",
+        "who_pays": [
+          "split"
+        ],
+        "with_points": false,
+        "schedule": [
+          {
+            "amount_cents": 100000,
+            "paid": true,
+            "due_day": "2026-11-18"
+          },
+          {
+            "amount_cents": 200000,
+            "paid": false,
+            "due_day": "2026-12-11"
+          }
+        ]
+      }
+    ]
+  }
+}

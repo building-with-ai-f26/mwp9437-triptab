@@ -1,0 +1,32 @@
+{
+  "id": "12-award-ticket",
+  "group": "normal",
+  "what": "T8: a made-up award ticket paid with miles plus cash taxes. The cost is the cash part, marked with points, never a cash value of the miles.",
+  "text": "Your award trip is confirmed!\nConfirmation code: ZQ7M4T\nFlight ZZ 233, Geneva (GVA) to Newark (EWR)\nTuesday 16 February 2027, departs 11:00, arrives 14:15\nPassenger: Mike\nPaid: 60,000 miles + 42.39 USD taxes and carrier fees (charged to your Visa ending 4417)\nApproximate retail value of this ticket: 1,184.00 USD",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "flight"
+        ],
+        "day": "2027-02-16",
+        "cost_cents": 4239,
+        "currency": "USD",
+        "who_pays": [
+          "own"
+        ],
+        "paid": true,
+        "with_points": true,
+        "depart_time": "11:00",
+        "arrive_time": "14:15",
+        "title_has": [
+          "233"
+        ]
+      }
+    ],
+    "forbidden_cents": [
+      118400,
+      6000000
+    ]
+  }
+}

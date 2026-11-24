@@ -19,7 +19,7 @@ async function run(browser, label, opts, result) {
   const p = h.watch(await (await h.context(browser, opts)).newPage(), label);
   await h.startSkiTrip(p, `sheet-${label}`);
 
-  await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
+  await h.addByHand(p); // T9: Add (a laptop's button, or the phone's + sheet)
   let d = h.dlg(p);
   const add = d.getByRole('button', { name: 'Add to trip' });
   await d.getByLabel('What').waitFor();

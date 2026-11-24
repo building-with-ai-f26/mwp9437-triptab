@@ -124,11 +124,25 @@ async function joinTrip(page) {
   return false;
 }
 
-/** The trip's one AI button (Mike's 11/18 call), then a choice: 'I have bookings' or 'Give me ideas'. */
-async function openAi(page, choice) {
-  await page.getByRole('button', { name: 'AI help' }).click();
-  await dlg(page).getByRole('button', { name: new RegExp(`^${choice}`) }).click();
+/**
+ * Three ways to add (T9, Mike's C59, 11/24): on a laptop, Import, Add and Ask AI buttons over the
+ * itinerary; on a phone, the bottom bar's + opens a sheet with the three. The old choices still map:
+ * 'I have bookings' is Import, 'Give me ideas' is Ask AI.
+ */
+async function pickAdd(page, name) {
+  const buttons = page.locator('[data-tour="add"]');
+  if (await buttons.isVisible().catch(() => false)) {
+    await buttons.getByRole('button', { name, exact: true }).click();
+  } else {
+    await page.getByRole('button', { name: 'Add to the trip' }).click();
+    await dlg(page).getByTestId('add-choices').getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  }
 }
+async function openAi(page, choice) {
+  await pickAdd(page, /^I have bookings/.test(choice) ? 'Import' : /^Give me ideas/.test(choice) ? 'Ask AI' : choice);
+}
+/** Add a plan by hand (T9's Add): the plan dialog. */
+const addByHand = (page) => pickAdd(page, 'Add');
 
 async function signIn(page, who) {
   await withEmail(page);
@@ -138,4 +152,4 @@ async function signIn(page, who) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
-module.exports = { showDay, openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };
+module.exports = { addByHand, pickAdd, showDay, openCost, openTimes, run, PW, signIn, joinTrip, withEmail, openAi, OUT, BASE, DESKTOP, PHONE, errors, context, watch, shot, dlg, overflowX, signUp, startSkiTrip, addPlan };

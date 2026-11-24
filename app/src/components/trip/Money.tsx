@@ -376,6 +376,7 @@ export function MoneyCard({
   meId,
   canEdit,
   payments,
+  comingUpCents = 0,
   lineCount,
   onShowAll,
   onAdd,
@@ -389,6 +390,8 @@ export function MoneyCard({
   canEdit: boolean;
   /** Null on a database without payments yet. */
   payments: Payment[] | null;
+  /** Payments still to make on plans' payment schedules (T7): coming up, in no balance yet. */
+  comingUpCents?: number;
   /** How many lines the full list has. */
   lineCount: number;
   /** Desktop's Overview only: open the Money tab, where the full list is. Left out where the list is already on the page. */
@@ -425,6 +428,11 @@ export function MoneyCard({
         <p className="mt-1 text-xs text-muted-foreground">
           Trip spend {dollars(mine.tripTotal)} · your share {dollars(mine.share)} · you paid {dollars(mine.paid)}
         </p>
+        {comingUpCents > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground" data-testid="coming-up">
+            Coming up {dollars(comingUpCents)}: payments still to make on a schedule, in no balance until they're paid.
+          </p>
+        )}
         {mine.own > 0 && (
           <p className="mt-1 text-xs text-muted-foreground" data-testid="own-spend">
             Includes {dollars(mine.own)} you paid on your own (flights and the like). Own costs are never split and never in Settle up.

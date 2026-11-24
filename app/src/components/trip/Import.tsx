@@ -430,6 +430,14 @@ export function ImportDialog({
                       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" /> <span>{w}</span>
                     </p>
                   ))}
+                  {(d.source.with_points || (d.source.payment_schedule?.length ?? 0) >= 2) && (
+                    <p className="mb-2 rounded-xl bg-white/10 px-3 py-2 text-xs text-white/85" data-testid="pay-note">
+                      {d.source.with_points ? "Paid with points: the cost is the cash part (taxes and fees). " : ""}
+                      {(d.source.payment_schedule?.length ?? 0) >= 2
+                        ? `Paid in ${d.source.payment_schedule!.length} parts (${d.source.payment_schedule!.filter((x) => x.paid).length} paid so far): saved as its payment schedule${d.payMode === "own" ? " once it's one bill, split" : ""}.`
+                        : ""}
+                    </p>
+                  )}
                   {d.extendTo && onExtend && (
                     <Button size="sm" variant="light" className="mb-2" disabled={busy} onClick={() => extend(d.extendTo!)}>
                       <CalendarPlus /> Add {longDay(d.extendTo)} to the trip

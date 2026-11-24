@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, CircleDollarSign, ExternalLink, FileUp, Trash2 } from "lucide-react";
+import { ChevronDown, CircleDollarSign, ExternalLink, FileUp, Sparkles, Trash2 } from "lucide-react";
 import { Button, DarkField, Dialog, Segmented } from "../ui";
 import {
   addDays,
@@ -82,6 +82,7 @@ export function ItemDialog({
   hasCost = false,
   confirmsItself = false,
   onImport,
+  onAskAi,
   onConfirmCost,
   onClose,
   onSave,
@@ -106,6 +107,8 @@ export function ItemDialog({
   confirmsItself?: boolean;
   /** A new plan: read it from a confirmation instead (a screenshot, a PDF or pasted text; C22). */
   onImport?: () => void;
+  /** T9: an empty slot's Add offers "or Ask AI about this slot". */
+  onAskAi?: (day: string, part: DayPart) => void;
   /**
    * A Planned plan on one bill, with no cost in yet: confirming it with what it cost is the main
    * thing to do, so it's the button at the top of the sheet (11/23 review, item 6).
@@ -135,7 +138,7 @@ export function ItemDialog({
       {state && (
         <ItemForm
           key={state.item?.id ?? `${state.day}-${state.part}-${state.kind}`}
-          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onConfirmCost, onClose, onSave, onDelete, onAddMany, onSplit }}
+          {...{ state, trip, travelers, meId, canEdit, stopOn, hasCost, confirmsItself, onImport, onAskAi, onConfirmCost, onClose, onSave, onDelete, onAddMany, onSplit }}
           goingExtras={state.item ? extras : undefined}
           costExtras={state.item ? costExtras : undefined}
           onRequestClose={requestClose}
@@ -167,6 +170,7 @@ function ItemForm({
   hasCost = false,
   confirmsItself = false,
   onImport,
+  onAskAi,
   onConfirmCost,
 }: {
   state: ItemDialogState;
@@ -191,6 +195,8 @@ function ItemForm({
   hasCost?: boolean;
   confirmsItself?: boolean;
   onImport?: () => void;
+  /** T9: an empty slot's Add offers "or Ask AI about this slot". */
+  onAskAi?: (day: string, part: DayPart) => void;
   onConfirmCost?: () => void;
 }) {
   const it = state.item;
@@ -533,6 +539,22 @@ function ItemForm({
           <span>
             Have a confirmation? <span className="font-semibold text-white underline underline-offset-4">Upload a screenshot or PDF</span>, or paste
             it, and TripTab fills the plan in.
+          </span>
+        </button>
+      )}
+
+      {!it && onAskAi && (
+        <button
+          type="button"
+          onClick={() => {
+            closed.current = true;
+            onAskAi(day, part);
+          }}
+          className="-mt-1 mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl px-1 text-left text-sm text-white/85 hover:text-white"
+        >
+          <Sparkles className="size-4 shrink-0" />
+          <span>
+            Or <span className="font-semibold text-white underline underline-offset-4">Ask AI about this slot</span>: ideas for {longDay(day)}, {PART_LABEL[part].toLowerCase()}.
           </span>
         </button>
       )}

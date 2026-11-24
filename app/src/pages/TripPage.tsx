@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Pencil, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, FileUp, LayoutDashboard, ListChecks, Pencil, Plus, Settings, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -27,17 +27,23 @@ import { goingBadge } from "../lib/initials";
 import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
-import { AiChoiceDialog } from "../components/trip/AiChoice";
+import { AiChoiceDialog, type AiChoice } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
 import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
 import { atEstimate, costToCome, draftCents, draftPlacement, mergePatch, type Draft } from "../lib/importPlans";
 import { splitDays } from "../lib/repeat";
-import { foreignLabel } from "../lib/rates";
+import { mapsLink } from "../lib/maps";
+import { foreignLabel, toUsdCents, usdRate } from "../lib/rates";
+import { evenShares, paymentTodoTitle, scheduleLabel, summarize, type PlanPayment } from "../lib/schedule";
+import { PaymentSchedule, type NewPayment } from "../components/trip/PaymentSchedule";
 import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
 import {
   addItem,
+  addPlanPayment,
+  updatePlanPayment,
+  deletePlanPayment,
   addAction,
   describedKey,
   addTraveler,
@@ -88,6 +94,7 @@ import {
   canEdit,
   clock,
   dateRange,
+  dueDayOk,
   cleanLink,
   dollars,
   longDay,
@@ -163,6 +170,8 @@ export default function TripPage() {
   // Email-in (11/20): the email whose plans are open on import's review.
   const [reviewingInbox, setReviewingInbox] = useState<InboxItem | null>(null);
   const [planning, setPlanning] = useState(false);
+  // Ask AI from an empty slot (T9): the ideas dialog opens with that slot written in.
+  const [askSlot, setAskSlot] = useState<{ day: string; part: DayPart } | null>(null);
   // One AI button, two choices (Mike's 11/18 call): I have bookings (Import) or Give me ideas (Plan with AI).
   const [choosingAi, setChoosingAi] = useState(false);
   // Describe your trip: what Start a trip found, picked up once when this new trip first loads.
@@ -290,7 +299,9 @@ export default function TripPage() {
     );
   }
 
-  const { trip, stops, travelers, link, expenses, itemPeople, ownMarks, items, actions: todos, payments, votes } = bundle;
+  const { trip, stops, travelers, link, expenses, itemPeople, ownMarks, items, actions: todos, payments, votes, planPayments } = bundle;
+  /** A plan's payment schedule (T7), in order; empty when it has none or the database has none yet. */
+  const scheduleOf = (itemId: string) => (planPayments ?? []).filter((r) => r.item_id === itemId);
   const me = travelers.find((t) => t.user_id === user?.id) ?? null;
   const meId = me?.id ?? null;
   const editable = canEdit(me?.role);
@@ -307,6 +318,36 @@ export default function TripPage() {
   const { balances, transfers } = settle(expenses, travelers, payments ?? []);
   const openItem = dialog?.item ? (items.find((i) => i.id === dialog.item!.id) ?? dialog.item) : null;
 
+  /**
+   * T7: a booking's payment schedule, from import, as the plan's payments: each in dollars at today's
+   * rate when it's in another currency, an unpaid one with a date on the payer's To do list, and the
+   * plan's bill set to what's been paid. The payer is whoever saved the review.
+   */
+  const saveImportedSchedule = async (item: Item, schedule: { amount_cents: number; due_day: string | null; paid: boolean }[], currency: string, payer: string) => {
+    const rate = currency === "USD" ? 1 : ((await usdRate(currency))?.rate ?? null);
+    const rows: PlanPayment[] = [];
+    for (const [position, p] of schedule.entries()) {
+      const usd = rate == null ? p.amount_cents : toUsdCents(p.amount_cents, rate);
+      const action =
+        !p.paid && p.due_day ? await addAction(trip.id, paymentTodoTitle(item.title, position), payer, dueDayOk(p.due_day, trip.end_date) ? p.due_day : null) : null;
+      rows.push(
+        await addPlanPayment(trip.id, item.id, {
+          position,
+          amount_cents: usd,
+          currency: currency === "USD" ? null : currency,
+          foreign_cents: currency === "USD" ? null : p.amount_cents,
+          due_day: p.paid ? null : p.due_day,
+          paid: p.paid,
+          paid_on: p.paid ? p.due_day : null,
+          paid_by: payer,
+          action_id: action,
+        }),
+      );
+    }
+    await syncScheduleBill(item, rows);
+    track("payment scheduled", { paid: rows.some((r) => r.paid), has_due: rows.some((r) => r.due_day), foreign: currency !== "USD", payments: rows.length, via: "import" });
+  };
+
   /** Saves the plans kept on import's review (an import, or a trip's description), with what was paid. */
   const saveImported = async (kept: Draft[], via: "import" | "description" | "email" = "import") => {
     for (const d of kept) {
@@ -317,10 +358,14 @@ export default function TripPage() {
       const later = costToCome(d);
       const onFare = d.fareOn != null;
       const pending = atEstimate(d);
+      // A payment schedule on the booking (T7): saved as the plan's payments instead of one paid bill.
+      const schedule = d.source.payment_schedule ?? [];
+      const scheduled = planPayments != null && d.payMode === "split" && schedule.length >= 2 && !d.mergeInto;
       const paid: PaidNow | undefined =
-        !onFare && d.paid && cents != null && meId
+        !scheduled && !onFare && d.paid && cents != null && meId
           ? d.payMode === "own"
-            ? { mode: "own", cents, withPoints: false }
+            ? // An award ticket (T8): the cash part, marked with points.
+              { mode: "own", cents, withPoints: d.source.with_points === true }
             : {
                 mode: "split",
                 totalCents: d.perPerson && !stay ? cents * travelers.length : cents,
@@ -349,7 +394,8 @@ export default function TripPage() {
         link: cleanLink(d.link).value,
         notes: notes.join("\n") || null,
         // Booked: Confirmed now, its cost to come (C21 lets a plan be Confirmed without one).
-        status: later || (onFare && d.paid) ? "confirmed" : "planned",
+        // From the group chat (T11): talked about, not booked, so Suggested.
+        status: d.source.from_chat ? "suggested" : later || (onFare && d.paid) ? "confirmed" : "planned",
         est_cents: paid || onFare ? null : cents,
         cost_type: d.perPerson && !stay ? "per_person" : "total",
         pay_mode: d.payMode,
@@ -367,7 +413,8 @@ export default function TripPage() {
         // A general name ("Airbnb") takes the booking's (C34); the to-dos below use whichever it ends up with.
         title = patch.title ?? existing.title;
       } else {
-        await createPlan(input, paid, via);
+        const added = await createPlan(input, paid, via);
+        if (scheduled && meId) await saveImportedSchedule(added, schedule, d.foreign?.currency ?? "USD", meId);
       }
       if (later && meId) {
         await addAction(trip.id, todoTitle("Add what you paid for ", title, ""), meId, null);
@@ -438,6 +485,9 @@ export default function TripPage() {
     onAdd: (day, part, kind = "activity") => setDialog({ item: null, day, part, kind }),
     onOpen: (item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind }),
     exactCents: (item) => {
+      // A payment schedule (T7): the whole price, paid and to come.
+      const sched = scheduleOf(item.id);
+      if (item.pay_mode !== "own" && sched.length) return summarize(sched).totalCents;
       if (item.pay_mode !== "own") return expenseByItem.get(item.id)?.total_cents ?? null;
       // Booked with no price (T2) has no price to show: never "$0".
       const line = ownLineOf(expenses, item.id, meId);
@@ -446,6 +496,9 @@ export default function TripPage() {
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
     // The green "$ ✓": on own-pay plans, your own cost is in (T2); a split bill, the group's bill is.
     paid: (item) => {
+      // A payment schedule (T7): the green "$ ✓" only once every payment is paid.
+      const sched = scheduleOf(item.id);
+      if (item.pay_mode !== "own" && sched.length) return summarize(sched).allPaid;
       if (item.pay_mode !== "own" || !meId || !isGoing(item, meId, itemPeople)) return costIsIn(item);
       const mine = ownLineOf(expenses, item.id, meId);
       return Boolean(mine && (mine.total_cents > 0 || mine.with_points));
@@ -455,19 +508,24 @@ export default function TripPage() {
       const on = goingList(item, travelers, itemPeople);
       return { names: on.map((t) => (t.id === meId ? "you" : t.name)), everyone: on.length === travelers.length && travelers.length > 0 };
     },
+    schedule: (item) => (item.pay_mode !== "own" ? scheduleLabel(scheduleOf(item.id)) : null),
     note: (item) => {
+      // "1 of 2 paid · next due Dec 11" (T7).
+      const sched = item.pay_mode !== "own" ? scheduleLabel(scheduleOf(item.id)) : null;
+      if (sched) return sched;
       if (item.pay_mode === "own") {
         // Everyone pays their own: "Planned, 2 of 5 booked" until everyone going has logged theirs.
         const p = ownProgress(item, travelers, itemPeople, ownMarks);
         const line = ownLineOf(expenses, item.id, meId);
         // Booked with no price (T2) shows no "yours $0.00".
         const mine = line && (line.total_cents > 0 || line.with_points) ? line : undefined;
-        if (p.complete) return mine ? "Your own price · everyone's booked" : "Everyone's booked";
+        if (p.complete) return mine ? `Your own price${mine.with_points ? ": points + " + dollars(mine.total_cents) : ""} · everyone's booked` : "Everyone's booked";
         // A booked count only means something once there's a price to book (Mike's 11/19 review:
         // "0 of 1 booked" on a drive with no cost was confusing): someone has booked, the plan has
         // an estimate, or it's a flight.
         if (p.booked.size > 0 || (item.status === "planned" && (item.est_cents != null || item.kind === "flight"))) {
-          return `${bookedLabel(p)}${mine ? ` · yours ${dollars(mine.total_cents)}` : ""}`;
+          // An award ticket (T8): "points + $42.39".
+          return `${bookedLabel(p)}${mine ? ` · yours ${mine.with_points ? "points + " : ""}${dollars(mine.total_cents)}` : ""}`;
         }
       }
       const share = myShareOf(expenseByItem.get(item.id), meId);
@@ -484,6 +542,75 @@ export default function TripPage() {
       const on = votes.filter((v) => v.item_id === item.id);
       return { count: on.length, mine: on.some((v) => v.traveler_id === meId) };
     },
+  };
+
+  /**
+   * T7: keeps a plan's one bill equal to what's been paid on its schedule, split evenly among who's
+   * in (as its bill was, or everyone going). Nothing paid yet: no bill.
+   */
+  const syncScheduleBill = async (item: Item, rows: PlanPayment[]) => {
+    const paidRows = rows.filter((r) => r.paid);
+    const total = paidRows.reduce((n, r) => n + r.amount_cents, 0);
+    const bill = expenseByItem.get(item.id);
+    if (total === 0) {
+      if (bill) await unconfirmItem(item.id);
+      return;
+    }
+    const ids = bill ? bill.expense_shares.map((x) => x.traveler_id) : goingList(item, travelers, itemPeople).map((t) => t.id);
+    const inIds = ids.length ? ids : travelers.map((t) => t.id);
+    await confirmItem(item.id, total, paidRows[0].paid_by, "even", evenShares(total, inIds), travelers.map((t) => t.id));
+  };
+
+  /** Dollars for a payment: as typed, or another currency at today's rate (the day it's marked paid). */
+  const paymentDollars = async (cents: number, currency: string): Promise<number> => {
+    if (currency === "USD") return cents;
+    const rate = await usdRate(currency);
+    if (!rate) throw new Error(`Couldn't get today's rate for ${currency}. Try again, or enter it in USD.`);
+    return toUsdCents(cents, rate.rate);
+  };
+
+  const addPayment = async (item: Item, p: NewPayment) => {
+    const rows = scheduleOf(item.id);
+    const position = rows.length ? Math.max(...rows.map((r) => r.position)) + 1 : 0;
+    const usd = await paymentDollars(p.amount, p.currency);
+    // An unpaid payment with a date goes on its payer's To do list, due that day.
+    const action =
+      !p.paid && p.due_day
+        ? await addAction(trip.id, paymentTodoTitle(item.title, position), p.paid_by, dueDayOk(p.due_day, trip.end_date) ? p.due_day : null)
+        : null;
+    const row = await addPlanPayment(trip.id, item.id, {
+      position,
+      amount_cents: usd,
+      currency: p.currency === "USD" ? null : p.currency,
+      foreign_cents: p.currency === "USD" ? null : p.amount,
+      due_day: p.paid ? null : p.due_day,
+      paid: p.paid,
+      paid_on: p.paid ? (p.due_day ?? new Date().toISOString().slice(0, 10)) : null,
+      paid_by: p.paid_by,
+      action_id: action,
+    });
+    if (p.paid) await syncScheduleBill(item, [...rows, row]);
+    track("payment scheduled", { paid: p.paid, has_due: Boolean(p.due_day), foreign: p.currency !== "USD", payments: rows.length + 1 });
+    await reload();
+  };
+
+  /** Marks a payment paid or not; its to-do follows (unless the to-do is what was just ticked). */
+  const setPaymentPaid = async (item: Item, row: PlanPayment, paid: boolean, fromTodo = false) => {
+    const usd = paid && row.currency && row.foreign_cents != null ? await paymentDollars(row.foreign_cents, row.currency) : row.amount_cents;
+    const patch = { paid, paid_on: paid ? new Date().toISOString().slice(0, 10) : null, amount_cents: usd };
+    await updatePlanPayment(row.id, patch);
+    if (row.action_id && !fromTodo) await setActionDone(row.action_id, paid);
+    await syncScheduleBill(item, scheduleOf(item.id).map((r) => (r.id === row.id ? { ...r, ...patch } : r)));
+    track("payment marked", { paid, from: fromTodo ? "todo" : "schedule" });
+    await reload();
+  };
+
+  const removePayment = async (item: Item, row: PlanPayment) => {
+    await deletePlanPayment(row.id);
+    const todo = row.action_id ? todos.find((a) => a.id === row.action_id) : undefined;
+    if (todo && !todo.done) await deleteAction(todo.id);
+    if (row.paid) await syncScheduleBill(item, scheduleOf(item.id).filter((r) => r.id !== row.id));
+    await reload();
   };
 
   /**
@@ -576,6 +703,17 @@ export default function TripPage() {
     }
   };
 
+  /** T9: Import, Add or Ask AI, from the laptop's buttons, the phone's + sheet, or an empty slot. */
+  const pickAdd = (choice: AiChoice, from: "buttons" | "sheet" | "slot", slot?: { day: string; part: DayPart }) => {
+    track("add picked", { choice, from });
+    if (choice === "bookings") setImporting(true);
+    else if (choice === "hand") setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" });
+    else {
+      setAskSlot(slot ?? null);
+      setPlanning(true);
+    }
+  };
+
   const openPlan = (item: Item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind });
   /** Its cost is in: one bill logged, or everyone going has logged their own (the $ check, C21). */
   function costIsIn(item: Item): boolean {
@@ -624,8 +762,11 @@ export default function TripPage() {
             id: "add",
             tab: "itinerary" as Tab,
             title: "Add plans",
-            body: "Add a plan here, or tap any empty part of a day. AI help turns a pasted booking into plans, or finds ideas for the empty spots. It also has this trip's own email address: forward a booking there.",
-            target: () => document.querySelector('[data-tour="add"]'),
+            body: wide
+              ? "Three ways to add a plan: Import turns a booking (an email, a PDF, a screenshot) into plans, Add is by hand, and Ask AI finds ideas for the empty spots. Or tap any empty part of a day. Import also has this trip's own email address: forward a booking there."
+              : "The + at the bottom adds a plan three ways: Import a booking (an email, a PDF, a screenshot), Add one by hand, or Ask AI for ideas for the empty spots. Or tap any empty part of a day.",
+            // T9: the three buttons on a laptop, the bottom bar's + on a phone.
+            target: () => document.querySelector(wide ? '[data-tour="add"]' : '[data-tour="add-phone"]'),
           },
         ]
       : []),
@@ -955,13 +1096,17 @@ export default function TripPage() {
                   ]}
                 />
                 </div>
-                {editable && (
-                  <div className="flex shrink-0 gap-1.5 sm:gap-2" data-tour="add">
-                    <Button size="sm" variant="glass" className="!bg-white/60 font-semibold max-sm:!px-2.5" onClick={() => setChoosingAi(true)}>
-                      <Sparkles /> AI help
+                {/* T9 (Mike's C59, 11/24): three ways to add, on a laptop. A phone has them under the bottom bar's +. */}
+                {editable && wide && (
+                  <div className="flex shrink-0 gap-2" data-tour="add">
+                    <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => pickAdd("bookings", "buttons")}>
+                      <FileUp /> Import
                     </Button>
-                    <Button size="sm" className="max-sm:!px-2.5" onClick={() => setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" })}>
-                      <Plus /> Add a plan
+                    <Button size="sm" onClick={() => pickAdd("hand", "buttons")}>
+                      <Plus /> Add
+                    </Button>
+                    <Button size="sm" variant="glass" className="!bg-white/60 font-semibold" onClick={() => pickAdd("ideas", "buttons")}>
+                      <Sparkles /> Ask AI
                     </Button>
                   </div>
                 )}
@@ -1007,7 +1152,11 @@ export default function TripPage() {
                 onDone={async (a, done) => {
                   await setActionDone(a.id, done);
                   if (done) track("action item done", { own: a.assignee === meId });
-                  await reload();
+                  // A "Pay <plan>: payment 2" to-do ticked by an Owner marks that payment paid (T7).
+                  const row = editable ? (planPayments ?? []).find((r) => r.action_id === a.id) : undefined;
+                  const plan = row ? items.find((i) => i.id === row.item_id) : undefined;
+                  if (row && plan && row.paid !== done) await setPaymentPaid(plan, row, done, true);
+                  else await reload();
                 }}
                 onAssign={async (a, assignee) => {
                   await updateAction(a.id, { assignee });
@@ -1028,6 +1177,7 @@ export default function TripPage() {
                 meId={meId}
                 canEdit={editable}
                 payments={payments}
+                comingUpCents={(planPayments ?? []).filter((r) => !r.paid).reduce((n, r) => n + r.amount_cents, 0)}
                 lineCount={lineCount}
                 onShowAll={overview ? () => {
                   pickTab("money");
@@ -1088,7 +1238,48 @@ export default function TripPage() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-foreground/10 bg-[#f4f0ea] pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(24,18,12,0.08)] lg:hidden"
       >
         <div className="mx-auto flex max-w-md" role="tablist">
-          {sections.map(([key, label, Icon]) => (
+          {sections.slice(0, 2).map(([key, label, Icon]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              aria-label={key === "people" ? `People (${travelers.length})` : undefined}
+              onClick={() => pickTab(key)}
+              className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pb-1 pt-1.5 text-foreground"
+            >
+              <span className={`relative grid h-7 w-14 place-items-center rounded-full transition-colors ${tab === key ? "bg-primary text-primary-foreground shadow-md" : ""}`}>
+                <Icon className="size-5" />
+                {/* The head count, drawn from an attribute so the tab's text stays just "People". */}
+                {key === "people" && (
+                  <span
+                    aria-hidden
+                    data-count={travelers.length}
+                    className={`absolute -top-1 right-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4 after:content-[attr(data-count)] ${tab === key ? "bg-white text-foreground" : "bg-foreground text-white"}`}
+                  />
+                )}
+              </span>
+              <span className={`font-display text-[11px] ${tab === key ? "font-bold" : "font-semibold"}`}>{label}</span>
+            </button>
+          ))}
+          {/* T9: the + adds a plan three ways (Import, Add, Ask AI), for Owners. */}
+          {editable && (
+            <button
+              type="button"
+              data-tour="add-phone"
+              aria-label="Add to the trip"
+              onClick={() => {
+                setChoosingAi(true);
+                track("add opened", { from: "bottom bar" });
+              }}
+              className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pb-1 pt-1.5 text-foreground"
+            >
+              <span className="grid h-7 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-md">
+                <Plus className="size-5" />
+              </span>
+              <span className="font-display text-[11px] font-semibold">Add</span>
+            </button>
+          )}
+          {sections.slice(2).map(([key, label, Icon]) => (
             <button
               key={key}
               role="tab"
@@ -1147,6 +1338,14 @@ export default function TripPage() {
         travelers={travelers}
         meId={meId}
         canEdit={editable}
+        onAskAi={
+          editable
+            ? (day, part) => {
+                setDialog(null);
+                pickAdd("ideas", "slot", { day, part });
+              }
+            : undefined
+        }
         onImport={
           editable
             ? () => {
@@ -1217,6 +1416,7 @@ export default function TripPage() {
         }
         costExtras={
           openItem && (
+            <>
             <PlanPanel
               section="cost"
               tripName={trip.name}
@@ -1255,6 +1455,20 @@ export default function TripPage() {
                 setDialog(null);
               }}
             />
+            {/* A payment schedule (T7): one bill, paid in parts. */}
+            {planPayments && openItem.pay_mode === "split" && (
+              <PaymentSchedule
+                item={openItem}
+                rows={scheduleOf(openItem.id)}
+                travelers={travelers}
+                meId={meId}
+                canEdit={editable}
+                onAdd={(p) => addPayment(openItem, p)}
+                onPaid={(row, paid) => setPaymentPaid(openItem, row, paid)}
+                onRemove={(row) => removePayment(openItem, row)}
+              />
+            )}
+            </>
           )
         }
         onClose={() => {
@@ -1381,9 +1595,7 @@ export default function TripPage() {
           onClose={() => setChoosingAi(false)}
           onPick={(choice) => {
             setChoosingAi(false);
-            track("ai help opened", { choice });
-            if (choice === "bookings") setImporting(true);
-            else setPlanning(true);
+            pickAdd(choice, "sheet");
           }}
         />
       )}
@@ -1444,9 +1656,10 @@ export default function TripPage() {
       )}
       {editable && (
         <PlanWithAiDialog
-          key={`plan-${parkNonce}`}
+          key={`plan-${parkNonce}-${askSlot ? `${askSlot.day}-${askSlot.part}` : ""}`}
           open={planning}
           trip={trip}
+          initialRequest={askSlot ? `Ideas for ${longDay(askSlot.day)}, ${PART_LABEL[askSlot.part].toLowerCase()}: ` : undefined}
           onClose={() => setPlanning(false)}
           onPark={(n) => setParked((p) => ({ ...p, ideas: n }))}
           onSave={async (kept) => {
@@ -1460,6 +1673,8 @@ export default function TripPage() {
                   part: idea.part,
                   end_day: null,
                   location: idea.location,
+                  // T12: the plan's Link is the place on Google Maps; where it was found stays in the notes.
+                  link: mapsLink(idea.title, idea.location),
                   notes: [idea.why, `Found on: ${idea.source_url}`].filter(Boolean).join("\n"),
                   status: "suggested",
                   est_cents: idea.est_cents,

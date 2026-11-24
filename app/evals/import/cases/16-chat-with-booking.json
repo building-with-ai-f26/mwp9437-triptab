@@ -1,0 +1,37 @@
+{
+  "id": "16-chat-with-booking",
+  "group": "messy",
+  "what": "T11: a made-up chat that holds a booked transfer (with its confirmation) and talk of a welcome dinner. The transfer is a booking (not from the chat, paid); the dinner is from the chat and Suggested.",
+  "file": "fixtures/16-chat-with-booking.png",
+  "media_type": "image/png",
+  "source_text": "Alps crew 2027 Today Booked the transfer Confirmation AX-7731 Geneva Airport to Chamonix Friday 5 Feb 2027, pickup 09:30 Total paid: 180.00 EUR Priya amazing thank you!! Jordan should we do a welcome dinner friday night when we arrive? Priya yes, welcome dinner friday evening, somewhere in town",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "transport"
+        ],
+        "day": "2027-02-05",
+        "part": [
+          "morning"
+        ],
+        "cost_cents": 18000,
+        "currency": "EUR",
+        "paid": true,
+        "from_chat": false
+      },
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": "2027-02-05",
+        "part": [
+          "evening"
+        ],
+        "cost_cents": null,
+        "paid": false,
+        "from_chat": true
+      }
+    ]
+  }
+}

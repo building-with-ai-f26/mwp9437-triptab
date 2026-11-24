@@ -25,6 +25,12 @@ export interface ExpectedPlan {
   currency?: string;
   who_pays?: string[];
   paid?: boolean;
+  /** Paid with miles or points (T8). */
+  with_points?: boolean;
+  /** Talked about in a group chat, not booked (T11): it comes in as Suggested. */
+  from_chat?: boolean;
+  /** The payment schedule as the booking shows it (T7): amounts in cents, in order, and which are paid. */
+  schedule?: { amount_cents: number; paid: boolean; due_day?: string }[];
   depart_time?: string;
   arrive_time?: string;
   depart_time_in?: (string | null)[];
@@ -122,6 +128,7 @@ export function scoreCase(c: EvalCase, plans: Proposal[]): CaseScore {
     const [p] = left.splice(i, 1);
     if (e.part && !(p.part && e.part.includes(p.part))) fail("shape", `"${p.title}" is in the ${p.part ?? "no part"}, expected ${e.part.join(" or ")}`);
     if (e.end_day && p.end_day !== e.end_day) fail("shape", `"${p.title}" ends ${p.end_day ?? "nowhere"}, expected ${e.end_day}`);
+    if (e.from_chat !== undefined && (p.from_chat ?? false) !== e.from_chat) fail("shape", `"${p.title}" from the chat ${p.from_chat ?? false}, expected ${e.from_chat}`);
     if (e.title_has && !e.title_has.every((t) => p.title.toLowerCase().includes(t.toLowerCase()))) fail("shape", `"${p.title}" should mention ${e.title_has.join(", ")}`);
     if (e.depart_time && p.depart_time !== e.depart_time) fail("shape", `"${p.title}" departs ${p.depart_time ?? "blank"}, expected ${e.depart_time}`);
     if (e.arrive_time && p.arrive_time !== e.arrive_time) fail("shape", `"${p.title}" arrives ${p.arrive_time ?? "blank"}, expected ${e.arrive_time}`);
@@ -135,6 +142,13 @@ export function scoreCase(c: EvalCase, plans: Proposal[]): CaseScore {
     if (e.currency && p.cost_cents != null && p.currency !== e.currency) fail("money", `"${p.title}" currency ${p.currency ?? "blank"}, expected ${e.currency}`);
     if (e.who_pays && !e.who_pays.includes(p.who_pays)) fail("money", `"${p.title}" who pays ${p.who_pays}, expected ${e.who_pays.join(" or ")}`);
     if (e.paid !== undefined && p.paid !== e.paid) fail("money", `"${p.title}" paid ${p.paid}, expected ${e.paid}`);
+    if (e.with_points !== undefined && (p.with_points ?? false) !== e.with_points) fail("money", `"${p.title}" with points ${p.with_points ?? false}, expected ${e.with_points}`);
+    if (e.schedule) {
+      const sched = e.schedule;
+      const got = (p.payment_schedule ?? []).map((x) => `${x.amount_cents}:${x.paid}${sched.some((w) => w.due_day) ? `:${x.due_day}` : ""}`).join(",");
+      const want = sched.map((x) => `${x.amount_cents}:${x.paid}${x.due_day ? `:${x.due_day}` : ""}`).join(",");
+      if (got !== want) fail("money", `"${p.title}" schedule ${got || "none"}, expected ${want}`);
+    }
     const where = (p.location ?? "").toLowerCase();
     if (e.location_has && !e.location_has.every((w) => where.includes(w.toLowerCase()))) fail("place", `"${p.title}" Where is "${p.location ?? ""}", expected it to hold ${e.location_has.join(", ")}`);
     if (e.location_not?.some((w) => where.includes(w.toLowerCase()))) fail("place", `"${p.title}" Where holds the headline: "${p.location}"`);
