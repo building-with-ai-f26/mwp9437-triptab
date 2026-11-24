@@ -121,6 +121,8 @@ export interface Proposal {
   with_points?: boolean;
   /** The price paid in parts, as the booking shows it (T7): a deposit, then the rest by a date. Import only. */
   payment_schedule?: { amount_cents: number; due_day: string | null; paid: boolean }[];
+  /** Talked about in a group chat, not booked (T11): it comes in as Suggested. Import only. */
+  from_chat?: boolean;
 }
 
 const str = { type: ["string", "null"] };
@@ -173,13 +175,14 @@ export const PROPOSE_TOOL = {
         items: {
           type: "object",
           additionalProperties: false,
-          required: [...PLAN_REQUIRED, "link", "details", "with_points", "payment_schedule"],
+          required: [...PLAN_REQUIRED, "link", "details", "with_points", "payment_schedule", "from_chat"],
           properties: {
             ...PLAN_PROPERTIES,
             title: { type: "string", description: "Short name, like 'UA 57 Newark to Geneva', 'Chalet des Aiguilles' or 'Chamonix Airbnb': the place's own name, without a listing's selling words." },
             location: { ...str, description: "The street address when the input gives one, else the place's name, only as written. Never a listing's headline or selling words." },
             link: { ...str, description: "The web address of this booking's or listing's page (the rental or hotel page, the reservation), exactly as written in the input. Null if none." },
             details: { ...str, description: "A listing's headline or a short description as written (\"4*, central, hot tub\"), when it says more than the name. Null otherwise." },
+            from_chat: { type: "boolean", description: "True when this plan is only talked about in a group chat (a screenshot of messages), not a booking shown in the input." },
             with_points: { type: "boolean", description: "True when the booking was paid, wholly or partly, with miles or points (an award ticket). cost_cents is then only the cash part, such as taxes and fees." },
             payment_schedule: {
               type: "array",
@@ -208,6 +211,7 @@ The traveler's input (pasted text, an email, a receipt, a PDF or a photo) arrive
 
 What to propose:
 - One plan per booking: a flight, a stay, a rental or transfer (transport), a meal, or an activity. A round trip is two flights. A forwarded thread can hold several bookings.
+- The input can also be a screenshot of the group's chat, where plans are talked about. Propose a plan for each one the chat proposes or agrees on (a dinner, a hike, a day trip), with from_chat true: talked about is not booked, so paid is false. Take its day, part and place only where the chat says them; leave them null otherwise. A booking shown inside the chat (a pasted confirmation) is a booking, with from_chat false. Who said what is not part of a plan.
 - Only travel plans for this trip. If the input is not a travel booking or plan at all, propose nothing and say so in note.
 
 Never invent anything. Every date, time, price, address and confirmation code must be written in the input, with one exception below. If the input doesn't give a field, leave it null. Do not fill a field from memory or from what is typical.
@@ -356,11 +360,13 @@ export function checkProposals(raw: unknown, searchUrls: string[], inputText = "
       currency,
       cost_is_per_person: p.cost_is_per_person === true,
       who_pays: p.who_pays === "own" ? "own" : "split",
-      paid: p.paid === true && cents != null,
+      // Talked about in a chat is never paid (T11).
+      paid: p.paid === true && cents != null && p.from_chat !== true,
       unsure: [...unsure],
       link: cleanBookingLink(p.link, inputText),
       details: inInput(text(p.details, 200)) ? text(p.details, 200) : null,
       with_points: p.with_points === true,
+      from_chat: p.from_chat === true,
       payment_schedule: scheduleOf(p.payment_schedule),
     });
   }

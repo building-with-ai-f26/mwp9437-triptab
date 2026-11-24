@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, ExternalLink, Wand2 } from "lucide-react";
+import { Check, ExternalLink, MapPin, Wand2 } from "lucide-react";
+import { mapsLink } from "../../lib/maps";
 import { Button, DarkField, Dialog } from "../ui";
 import { planWithAi, type PlanAiResult, type PlanIdea } from "../../lib/api";
 import { dollars, longDay, PART_LABEL, PARTS, tripDays, type DayPart, type Trip } from "../../lib/model";
@@ -165,11 +166,22 @@ export function PlanWithAiDialog({
                     <span className="block font-semibold">{idea.title}</span>
                     {idea.est_cents != null && <span className="block text-xs text-white/80">About {dollars(idea.est_cents)} a person</span>}
                     {idea.why && <span className="mt-1 block text-xs text-white/85">{idea.why}</span>}
+                    {/* T12: the place on Google Maps first; where it was found stays as its source. */}
+                    <a
+                      href={mapsLink(idea.title, idea.location)}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-testid="maps-link"
+                      className="mt-1 flex max-w-full items-center gap-1 text-sm font-semibold text-white underline underline-offset-2"
+                    >
+                      <MapPin className="size-3.5 shrink-0" />
+                      <span className="truncate">Open in Google Maps</span>
+                    </a>
                     <a
                       href={idea.source_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 inline-flex max-w-full items-center gap-1 text-xs text-amber-200 underline underline-offset-2"
+                      className="mt-0.5 inline-flex max-w-full items-center gap-1 text-xs text-amber-200 underline underline-offset-2"
                     >
                       <ExternalLink className="size-3 shrink-0" />
                       <span className="truncate">Found on {hostOf(idea.source_url)}</span>

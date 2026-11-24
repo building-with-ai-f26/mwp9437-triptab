@@ -33,6 +33,7 @@ import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
 import { atEstimate, costToCome, draftCents, draftPlacement, mergePatch, type Draft } from "../lib/importPlans";
 import { splitDays } from "../lib/repeat";
+import { mapsLink } from "../lib/maps";
 import { foreignLabel, toUsdCents, usdRate } from "../lib/rates";
 import { evenShares, paymentTodoTitle, scheduleLabel, summarize, type PlanPayment } from "../lib/schedule";
 import { PaymentSchedule, type NewPayment } from "../components/trip/PaymentSchedule";
@@ -393,7 +394,8 @@ export default function TripPage() {
         link: cleanLink(d.link).value,
         notes: notes.join("\n") || null,
         // Booked: Confirmed now, its cost to come (C21 lets a plan be Confirmed without one).
-        status: later || (onFare && d.paid) ? "confirmed" : "planned",
+        // From the group chat (T11): talked about, not booked, so Suggested.
+        status: d.source.from_chat ? "suggested" : later || (onFare && d.paid) ? "confirmed" : "planned",
         est_cents: paid || onFare ? null : cents,
         cost_type: d.perPerson && !stay ? "per_person" : "total",
         pay_mode: d.payMode,
@@ -1670,6 +1672,8 @@ export default function TripPage() {
                   part: idea.part,
                   end_day: null,
                   location: idea.location,
+                  // T12: the plan's Link is the place on Google Maps; where it was found stays in the notes.
+                  link: mapsLink(idea.title, idea.location),
                   notes: [idea.why, `Found on: ${idea.source_url}`].filter(Boolean).join("\n"),
                   status: "suggested",
                   est_cents: idea.est_cents,

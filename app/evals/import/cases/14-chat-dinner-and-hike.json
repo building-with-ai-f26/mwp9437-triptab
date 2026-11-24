@@ -1,0 +1,33 @@
+{
+  "id": "14-chat-dinner-and-hike",
+  "group": "messy",
+  "what": "T11: a made-up group chat screenshot that agrees a fondue dinner on Sat 6 Feb and a Lac Blanc hike on Mon 8 Feb morning. Both come in as from the chat (Suggested), with no invented time, price or address.",
+  "file": "fixtures/14-chat-dinner-and-hike.png",
+  "media_type": "image/png",
+  "source_text": "Alps crew 2027 Today Priya ok so for Chamonix, fondue night on Saturday 6 Feb? I heard La Petite Marmite is good Jordan yes!! saturday dinner fondue, I'm in Works for me. And the non-skiers wanted a hike, how about Lac Blanc on Monday 8 Feb morning? Sam Lac Blanc monday morning Priya someone should book the fondue place",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "meal"
+        ],
+        "day": "2027-02-06",
+        "cost_cents": null,
+        "paid": false,
+        "from_chat": true
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": "2027-02-08",
+        "part": [
+          "morning"
+        ],
+        "cost_cents": null,
+        "paid": false,
+        "from_chat": true
+      }
+    ]
+  }
+}

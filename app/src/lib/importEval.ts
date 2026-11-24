@@ -27,6 +27,8 @@ export interface ExpectedPlan {
   paid?: boolean;
   /** Paid with miles or points (T8). */
   with_points?: boolean;
+  /** Talked about in a group chat, not booked (T11): it comes in as Suggested. */
+  from_chat?: boolean;
   /** The payment schedule as the booking shows it (T7): amounts in cents, in order, and which are paid. */
   schedule?: { amount_cents: number; paid: boolean; due_day?: string }[];
   depart_time?: string;
@@ -126,6 +128,7 @@ export function scoreCase(c: EvalCase, plans: Proposal[]): CaseScore {
     const [p] = left.splice(i, 1);
     if (e.part && !(p.part && e.part.includes(p.part))) fail("shape", `"${p.title}" is in the ${p.part ?? "no part"}, expected ${e.part.join(" or ")}`);
     if (e.end_day && p.end_day !== e.end_day) fail("shape", `"${p.title}" ends ${p.end_day ?? "nowhere"}, expected ${e.end_day}`);
+    if (e.from_chat !== undefined && (p.from_chat ?? false) !== e.from_chat) fail("shape", `"${p.title}" from the chat ${p.from_chat ?? false}, expected ${e.from_chat}`);
     if (e.title_has && !e.title_has.every((t) => p.title.toLowerCase().includes(t.toLowerCase()))) fail("shape", `"${p.title}" should mention ${e.title_has.join(", ")}`);
     if (e.depart_time && p.depart_time !== e.depart_time) fail("shape", `"${p.title}" departs ${p.depart_time ?? "blank"}, expected ${e.depart_time}`);
     if (e.arrive_time && p.arrive_time !== e.arrive_time) fail("shape", `"${p.title}" arrives ${p.arrive_time ?? "blank"}, expected ${e.arrive_time}`);

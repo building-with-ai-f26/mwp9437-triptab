@@ -53,6 +53,13 @@ async function run(browser, label, opts, result) {
   r.ideas = await cards.count();
   r.titles = (await cards.allInnerTexts()).map((t) => t.split('\n')[0]);
   r.sources = await cards.locator('a').count();
+  // T12: each card's first link is the place on Google Maps, above Found on.
+  r.mapsFirst = await cards.evaluateAll((els) =>
+    els.every((el) => {
+      const links = [...el.querySelectorAll('a')];
+      return links.length === 2 && links[0].href.startsWith('https://www.google.com/maps/search/?api=1&query=') && /Found on/.test(links[1].innerText);
+    }),
+  );
   // The AI cost is logged but never shown to people (Mike's 11/19 review).
   r.costShown = await h.dlg(p).getByTestId('plan-ai-cost').count();
   await h.shot(p, `${SHOTS}-review-${label}`);
@@ -85,6 +92,8 @@ async function run(browser, label, opts, result) {
     // The why and the source are in the plan's notes.
     await added.first().click();
     r.notes = (await h.dlg(p).getByLabel(/Notes/).inputValue()).replace(/\s+/g, ' ');
+    // T12: an added idea's Link is its Google Maps link.
+    r.planLink = await h.dlg(p).getByLabel('Link').inputValue().catch(() => null);
     await h.dlg(p).getByRole('button', { name: 'Close' }).click().catch(() => p.keyboard.press('Escape'));
     await added.first().scrollIntoViewIfNeeded();
     await h.shot(p, `${SHOTS}-added-${label}`);
@@ -102,7 +111,7 @@ async function run(browser, label, opts, result) {
     for (const [label, r] of Object.entries(result)) {
       if (label === 'errors') continue;
       const ok =
-        r.choices.join('|') === 'Import|Add|Ask AI' && r.choicesOverflow <= 0 && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
+        r.choices.join('|') === 'Import|Add|Ask AI' && r.choicesOverflow <= 0 && r.mapsFirst && /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/.test(r.planLink ?? '') && r.ideas === 3 && r.addedAsSuggested === 2 && r.uncheckedLeftOut && r.untickedHidesPickers &&
         /^ai idea, kept by you$/i.test(r.suggestedBy) && r.movedPlaced && r.overflow <= 0 && r.costShown === 0;
       if (!ok) result.failure = `${label}: a check failed`;
     }

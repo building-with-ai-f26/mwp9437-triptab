@@ -1,0 +1,29 @@
+{
+  "id": "15-chat-maybe-day-trip",
+  "group": "messy",
+  "what": "T11: a made-up chat with two ideas and no days: an Annecy day trip and a spa. Both come in from the chat with no day (the review asks for one), nothing paid.",
+  "file": "fixtures/15-chat-maybe-day-trip.png",
+  "media_type": "image/png",
+  "source_text": "Alps crew 2027 Yesterday Sam thinking we could do a day trip to Annecy at some point? Jordan Annecy would be fun, no idea which day though Let's say Annecy day trip, we pick the day later Sam cool. also spa at QC Terme sometime? like 60 euros each I think",
+  "expect": {
+    "plans": [
+      {
+        "kind": [
+          "activity",
+          "transport"
+        ],
+        "day": null,
+        "paid": false,
+        "from_chat": true
+      },
+      {
+        "kind": [
+          "activity"
+        ],
+        "day": null,
+        "paid": false,
+        "from_chat": true
+      }
+    ]
+  }
+}
