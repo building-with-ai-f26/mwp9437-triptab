@@ -117,13 +117,19 @@ function probe(page, req) {
     ['payments', `/rest/v1/payments?trip_id=eq.${trip}`],
     ['action_items', `/rest/v1/action_items?trip_id=eq.${trip}`],
     ['item_people', `/rest/v1/item_people?select=item_id,items!inner(trip_id)&items.trip_id=eq.${trip}`],
+    ['plan_payments', `/rest/v1/plan_payments?trip_id=eq.${trip}`],
+    // T10 (C60): A's Ask AI turn, seeded just below, is A's alone.
+    ['ask_turns', `/rest/v1/ask_turns?trip_id=eq.${trip}`],
   ];
+  // A keeps one Ask AI turn on the trip, so B's empty read above means something.
+  const seeded = await probe(a, { method: 'POST', path: '/rest/v1/ask_turns', token: A.token, body: { trip_id: trip, thread_id: '0b1c2d3e-4f50-4617-8293-a4b5c6d7e8f9', request: 'RLS test: a fondue dinner', options: [] } });
+  check('A keeps an Ask AI turn', seeded.status === 201, said(seeded));
   for (const [name, path] of reads) {
     const r = await probe(b, { path, token: t });
     check(`B reads ${name}`, r.status === 200 && Array.isArray(r.body) && r.body.length === 0, said(r));
   }
   // Every table, unfiltered: B, on no trip, sees none of anyone else's rows.
-  const tables = ['trips', 'stops', 'travelers', 'items', 'item_people', 'trip_links', 'expenses', 'expense_shares', 'payments', 'action_items', 'ai_calls', 'invite_emails', 'account_events', 'email_checks', 'inbox_items', 'forward_addresses', 'trip_inboxes', 'inbox_held'];
+  const tables = ['trips', 'stops', 'travelers', 'items', 'item_people', 'trip_links', 'expenses', 'expense_shares', 'payments', 'action_items', 'ai_calls', 'invite_emails', 'account_events', 'email_checks', 'inbox_items', 'forward_addresses', 'trip_inboxes', 'inbox_held', 'plan_payments', 'ask_turns'];
   for (const table of tables) {
     const r = await probe(b, { path: `/rest/v1/${table}?select=*&limit=50`, token: t });
     const rows = Array.isArray(r.body) ? r.body : [];

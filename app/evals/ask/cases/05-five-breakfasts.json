@@ -1,0 +1,15 @@
+{
+ "id": "05-five-breakfasts",
+ "group": "normal",
+ "what": "Five options when asked for five: breakfast in Chamonix.",
+ "request": "Five breakfast spots in Chamonix",
+ "count": 5,
+ "expect": {
+  "count": 5,
+  "city": "Chamonix",
+  "kinds": [
+   "meal"
+  ],
+  "reservation": false
+ }
+}

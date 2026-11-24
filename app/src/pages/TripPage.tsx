@@ -28,6 +28,7 @@ import { RecordPaymentDialog, SettleDialog } from "../components/trip/Payments";
 import { PayInfoDialog, VenmoForDialog } from "../components/trip/PayInfo";
 import { PlanPanel } from "../components/trip/PlanPanel";
 import { AiChoiceDialog, type AiChoice } from "../components/trip/AiChoice";
+import { AskAiDialog } from "../components/trip/AskAi";
 import { ImportDialog } from "../components/trip/Import";
 import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
@@ -100,6 +101,7 @@ import {
   longDay,
   nightsBetween,
   PART_LABEL,
+  PARTS,
   plansOutside,
   ROLE_LABEL,
   suggestedBy,
@@ -172,6 +174,8 @@ export default function TripPage() {
   const [planning, setPlanning] = useState(false);
   // Ask AI from an empty slot (T9): the ideas dialog opens with that slot written in.
   const [askSlot, setAskSlot] = useState<{ day: string; part: DayPart } | null>(null);
+  // Ask AI (T10): three option cards and Refine your request.
+  const [asking, setAsking] = useState(false);
   // One AI button, two choices (Mike's 11/18 call): I have bookings (Import) or Give me ideas (Plan with AI).
   const [choosingAi, setChoosingAi] = useState(false);
   // Describe your trip: what Start a trip found, picked up once when this new trip first loads.
@@ -709,8 +713,9 @@ export default function TripPage() {
     if (choice === "bookings") setImporting(true);
     else if (choice === "hand") setDialog({ item: null, day: active ?? trip.start_date, part: "day", kind: "activity" });
     else {
+      // T10: Ask AI, with the slot written in when it came from one.
       setAskSlot(slot ?? null);
-      setPlanning(true);
+      setAsking(true);
     }
   };
 
@@ -1586,6 +1591,52 @@ export default function TripPage() {
             Promise.all(parked.map((q) => addAction(trip.id, q, meId, null)))
               .then(reload)
               .catch((e: Error) => setError(e.message));
+          }}
+        />
+      )}
+      {editable && (
+        <AskAiDialog
+          key={`ask-${askSlot ? `${askSlot.day}-${askSlot.part}` : ""}`}
+          open={asking}
+          trip={trip}
+          travelers={travelers}
+          meId={meId}
+          emptySlots={days.flatMap((d) => PARTS.filter((p) => d.parts[p].length === 0).map((p) => `${d.date} ${p}`))}
+          initialRequest={askSlot ? `Ideas for ${longDay(askSlot.day)}, ${PART_LABEL[askSlot.part].toLowerCase()}: ` : undefined}
+          onClose={() => setAsking(false)}
+          onFillSlots={() => {
+            setAsking(false);
+            setPlanning(true);
+          }}
+          onAdd={async ({ option, day, part, reservation }) => {
+            await createPlan(
+              {
+                kind: option.kind,
+                title: option.title,
+                day,
+                part,
+                end_day: null,
+                location: option.location,
+                // The place on Google Maps (T12); its description, why, best time and source in the notes.
+                link: mapsLink(option.title, option.location),
+                notes: [
+                  option.description,
+                  option.why && `Why: ${option.why}`,
+                  [option.price_level, option.best_time && `best at ${option.best_time}`, option.needs_reservation && "book ahead"].filter(Boolean).join(" · "),
+                  `Found on: ${option.source_url}`,
+                ]
+                  .filter(Boolean)
+                  .join("\n"),
+                status: "suggested",
+                est_cents: null,
+                cost_type: "total",
+              },
+              undefined,
+              "ai plan",
+            );
+            if (reservation) await addAction(trip.id, todoTitle("Book ", option.title, ""), reservation.assignee, reservation.due);
+            track("ask option added", { kind: option.kind, price_level: option.price_level, reservation: Boolean(reservation) });
+            await reload();
           }}
         />
       )}

@@ -1,0 +1,14 @@
+{
+ "id": "01-fondue-chamonix",
+ "group": "normal",
+ "what": "A fondue dinner in Chamonix: three sit-down restaurants, each needing a booking.",
+ "request": "A fondue dinner for the group in Chamonix",
+ "expect": {
+  "count": 3,
+  "city": "Chamonix",
+  "kinds": [
+   "meal"
+  ],
+  "reservation": true
+ }
+}

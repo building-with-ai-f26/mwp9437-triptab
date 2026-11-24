@@ -45,6 +45,8 @@ async function run(browser, label, opts, result) {
   await h.shot(p, `ai-help-choices-${label}`);
   if (label === 'phone') await h.dlg(p).getByTestId('add-choices').getByRole('button', { name: /^Ask AI/ }).click();
   else await p.locator('[data-tour="add"]').getByRole('button', { name: 'Ask AI', exact: true }).click();
+  // Ask AI is the three-card panel since T10; ideas for every empty slot at once are a link inside it.
+  await h.dlg(p).getByRole('button', { name: /fill every empty slot/ }).click();
   await h.dlg(p).getByLabel(/What would the group like/).fill('A nice dinner in Chamonix, and something for the non-skiers on Sunday.');
   await h.shot(p, `${SHOTS}-ask-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Find ideas' }).click();

@@ -121,7 +121,9 @@ const SECTIONS: { title: string; body: ReactNode }[] = [
           web to check things like a flight's times. On Start a trip, "Set it up" sends it the description you typed
           and today's date, and nothing else. An email forwarded to a trip's address goes to it the same way. Nothing goes to it unless you tap one of
           these buttons or forward an email, and under
-          Anthropic's terms for businesses it isn't used to train its models. Nothing is saved until you review it.
+          Anthropic's terms for businesses it isn't used to train its models. Nothing is saved until you review it. Ask AI
+          keeps what you asked and the options it showed you, for you alone (nobody else on the trip can see them, an Owner
+          included), until you start a new ask; what you add from it goes on the trip as Suggested, for everyone.
         </li>
         <li>
           <b>Resend</b> delivers TripTab's emails: the link to confirm your email, password resets, and invites an

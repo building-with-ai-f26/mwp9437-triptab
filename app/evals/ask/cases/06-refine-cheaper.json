@@ -1,0 +1,22 @@
+{
+ "id": "06-refine-cheaper",
+ "group": "refine",
+ "what": "A refinement: cheaper than the three high-end dinners shown.",
+ "request": "Dinner in Chamonix",
+ "refinements": [
+  "cheaper"
+ ],
+ "shown": [
+  "Le Cap Horn ($$$$)",
+  "Albert 1er ($$$$)",
+  "La Maison Carrier ($$$)"
+ ],
+ "expect": {
+  "count": 3,
+  "city": "Chamonix",
+  "kinds": [
+   "meal"
+  ],
+  "direction": "cheaper"
+ }
+}
