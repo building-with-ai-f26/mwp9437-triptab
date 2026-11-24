@@ -1,8 +1,8 @@
 // T3 (Mike's 11/23 ski trip test, journal/pm-review/spec-11-23.md): rename and delete a trip where
 // you'd look. At 1280 and 390 wide, against TripTab dev. From Overview, an Owner taps the trip's
 // name (one tap), renames it in Trip settings and sees the new name in the header and on My trips;
-// the same dialog holds Delete trip (with its confirm), which works. There's no header gear (Mike's
-// 11/23 review took it out). A Viewer, joined by the group link, has no name button. All made up.
+// the header's Trip settings button (back since Mike's C62, 11/24) opens the same dialog, which
+// holds Delete trip (with its confirm). A Viewer, joined by the group link, has neither. All made up.
 const { chromium } = require('playwright');
 const h = require('./helpers.cjs');
 
@@ -23,7 +23,7 @@ async function run(browser, label, opts, result) {
   if (!phone) await o.getByRole('tab', { name: 'Overview' }).click();
   else await o.getByRole('tab', { name: /Itinerary/ }).click();
 
-  // The header shows the whole of "Euro ski trip" (a fourth button on a phone had cut it to "Euro ski ...").
+  // Recorded, not checked: with Trip settings back (C62) a phone's header can shorten the name.
   r.nameTruncated = await o.getByTestId('trip-name').locator('span.truncate').evaluate((el) => el.scrollWidth > el.clientWidth);
   // One tap on the name opens Trip settings with the name field.
   let taps = 0;
@@ -42,9 +42,8 @@ async function run(browser, label, opts, result) {
   r.headerOverflow = await h.overflowX(o);
   await h.shot(o, `rename-header-${label}`);
 
-  // The same dialog holds Delete trip; no header gear came back.
-  r.noGear = (await o.getByRole('button', { name: 'Trip settings' }).count()) === 0;
-  await o.getByTestId('trip-name').click();
+  // The header's Trip settings button opens the same dialog, with Delete trip (C62).
+  await o.getByRole('button', { name: 'Trip settings', exact: true }).click();
   r.settingsButtonOpens = await h.dlg(o).getByRole('heading', { name: 'Trip settings' }).isVisible();
   r.hasDelete = await h.dlg(o).getByRole('button', { name: 'Delete trip' }).isVisible();
   await h.dlg(o).getByRole('button', { name: 'Cancel' }).click();
@@ -75,7 +74,7 @@ async function run(browser, label, opts, result) {
     confirmed = x.message();
     x.accept();
   });
-  await o.getByTestId('trip-name').click();
+  await o.getByRole('button', { name: 'Trip settings', exact: true }).click();
   await h.dlg(o).getByRole('button', { name: 'Delete trip' }).click();
   await o.waitForURL(/\/trips$/);
   await o.getByText('No trips yet').waitFor();
@@ -91,8 +90,8 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const ok =
-        r.tapsToName <= 2 && r.nameFieldFocusable && r.header === 'Euro Ski Trip 2027' && r.headerOverflow <= 0 && r.noGear && r.settingsButtonOpens && r.hasDelete &&
-        r.onTripsList && r.viewerSeesName === 'Euro Ski Trip 2027' && r.viewerNameButton === 0 && r.viewerSettings === 0 && !r.nameTruncated && Boolean(r.deleteConfirm) && r.deleted;
+        r.tapsToName <= 2 && r.nameFieldFocusable && r.header === 'Euro Ski Trip 2027' && r.headerOverflow <= 0 && r.settingsButtonOpens && r.hasDelete &&
+        r.onTripsList && r.viewerSeesName === 'Euro Ski Trip 2027' && r.viewerNameButton === 0 && r.viewerSettings === 0 && Boolean(r.deleteConfirm) && r.deleted;
       if (!ok) result.failure = `${result.failure ? `${result.failure} | ` : ''}${label}: a check failed`;
     }
   } catch (e) {
