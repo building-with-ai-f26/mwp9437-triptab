@@ -312,13 +312,14 @@ You see a real gap in the market and would keep TripTab running after the course
 - Several payment rows on a plan, such as a lodging paid in two installments with one still due (T7).
 - Import, Add and Ask AI as three ways in, with Ask AI a chat that offers a few options and puts a needed reservation on the to-do list; decided 11/24 (C59, C60): yes to the three, and the chat is private to whoever asked; what they pick lands on the trip as Suggested (T9, T10).
 
-**Raised 11/24, pod test** (your notes from class; in the build checklist as T10 to T12, with C64 open)
+**Raised 11/24, pod test** (your notes from class; in the build checklist as T10 to T13, with C65 open)
 
 - Import a screenshot of the group chat, not only booking confirmations, to build plans. They come in as Suggested, since talked about isn't booked (T11).
 - AI ideas: three by default, each with a Google Maps link, a short description, why it was suggested and a price range from `$` to `$$$$`, then a Refine your request box to pivot (another cuisine, higher or lower end). Asking for three spots on 11/23 worked much better than one (T10).
-- Today's AI idea links don't work: the fondue idea saved no link, only the blog it was found on. Ideas get a Google Maps link built from the name and address, no API key and no cost (T12).
+- The "Found on" links on the idea cards don't always work (yelp.com did, chamonix-vibes.com didn't), and an added idea saves no link. Each card leads with Open in Google Maps, built from the name and address with no API key and no cost, and Found on stays as a second link (T12).
 - Try this inside the chat: each answer is three option cards with Add on a picked day and part, and Refine is the chat box. If that proves unreliable, keep the cards and Refine without the chat (T10).
-- Group preferences already reach the AI once 3 people answer (C53); make it a Consider group preferences toggle. Its default is C64 (T10).
+- Group preferences already reach the AI once 3 people answer (C53); make it a Consider group preferences toggle. Decided 11/24 (C64): it starts on, showing how many have answered (T10).
+- Idea cards should show Google's star ratings. They have to come from Google's Places API, not the AI, which costs money past a free tier, so it's C65 (T13).
 
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
