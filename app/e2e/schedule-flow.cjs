@@ -12,7 +12,8 @@ const card = (p) => p.locator('#day-2027-02-05 .item-card').filter({ hasText: 'C
 const sched = (p) => h.dlg(p).getByTestId('payment-schedule');
 
 async function openChalet(p, phone) {
-  if (phone) await p.getByRole('tab', { name: /Itinerary/ }).click();
+  // Back to the itinerary from Money or To do (a laptop's Overview holds it).
+  await p.getByRole('tab', { name: phone ? /Itinerary/ : 'Overview' }).click();
   await h.showDay(p, '2027-02-05');
   await card(p).click();
   await h.openCost(h.dlg(p));
@@ -43,7 +44,7 @@ async function run(browser, label, opts, result) {
   await h.addPlan(p, '2027-02-05', "Add where everyone's staying", { title: 'Chalet', kind: 'Stay', checkout: '2027-02-12', status: 'Planned' });
 
   // 1,000 EUR paid on 11/18, then 2,000 EUR due 12/11.
-  await openChalet(p, false);
+  await openChalet(p, phone);
   await addPayment(p, '1000', 'EUR', '2026-11-18', true);
   await addPayment(p, '2000', 'EUR', '2026-12-11', false);
   r.scheduleRows = (await sched(p).getByTestId('schedule-rows').innerText()).replace(/\s+/g, ' ');
@@ -72,7 +73,7 @@ async function run(browser, label, opts, result) {
 
   // Payment 2 marked paid: the "$ ✓", and its to-do ticked.
   await openChalet(p, phone);
-  await sched(p).getByLabel('Payment 2 paid').check();
+  await sched(p).getByLabel('Payment 2 paid').click();
   await sched(p).getByTestId('schedule-summary').filter({ hasText: 'all 2 paid' }).waitFor();
   await close(p);
   await card(p).locator('[title="Confirmed and paid"]').waitFor();

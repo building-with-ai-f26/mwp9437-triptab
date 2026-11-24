@@ -64,8 +64,9 @@ async function run(browser, label, opts, result) {
     await run(browser, 'phone', h.PHONE, result);
     for (const [label, r] of Object.entries(result)) {
       const fail = [];
-      if (!r.cards.some((t) => /Welcome dinner/.test(t) && /From the group chat/.test(t))) fail.push('review note');
-      if (r.cards.some((t) => /Transfer/.test(t) && /From the group chat/.test(t))) fail.push('booking marked as chat');
+      // Titles sit in inputs (not in the card's text): card 2 is the dinner, card 1 the transfer.
+      if (!/From the group chat/.test(r.cards[1] ?? '')) fail.push('review note');
+      if (/From the group chat/.test(r.cards[0] ?? '') || !/Confirmation: AX-7731/.test(r.cards[0] ?? '')) fail.push('booking marked as chat');
       if (r.dinnerStatus !== 'suggested') fail.push(`dinner ${r.dinnerStatus}`);
       if (r.transferStatus === 'suggested') fail.push('transfer suggested');
       if (r.overflow > 0) fail.push('overflow');

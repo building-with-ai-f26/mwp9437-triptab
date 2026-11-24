@@ -27,6 +27,8 @@ export const KIND_ICON: Record<ItemKind, LucideIcon> = {
 
 export interface TimelineActions {
   canEdit: boolean;
+  /** T7: a plan's payment schedule, "1 of 2 paid · next due Dec 11", for the stay row (other cards use note). */
+  schedule?: (item: Item) => string | null;
   onAdd: (day: string, part: DayPart, kind?: ItemKind) => void;
   onOpen: (item: Item) => void;
   /** Exact price for a confirmed item, when it has one (Build 3). */
@@ -325,6 +327,11 @@ function StayRow({ stay, actions }: { stay: StayOnDay; actions: TimelineActions 
           {item.location && (
             <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
               <MapPin className="size-3 shrink-0" /> {item.location}
+            </p>
+          )}
+          {!stay.checkout && actions.schedule?.(item) && (
+            <p className="text-[11px] text-foreground/75" data-testid="schedule-note">
+              {actions.schedule(item)}
             </p>
           )}
         </div>

@@ -203,3 +203,11 @@ Email-in (Mike's call, 11/20) sends a forwarded confirmation through the same im
 - Cost, from dev's `ai_calls` (feature `import_email`, test runs, 15:17:30 to 15:19:00 UTC): 10 calls, **$0.0207** at list price, one web search (case 05's bare flight number). Covered by the Max plan's API credit.
 - 3 to 9 seconds an email; nothing is waiting on that, since the result lands on the trip.
 - Ten cases is a small set, and they're the import eval's: what this shows is that the email path (HTML to text, attachments, the subject) hands import what pasting does.
+
+## Import with points, payment schedules and group chat screenshots (T7, T8, T11, 11/24)
+
+The 11/23 ski trip spec changed import's prompt and schema three ways: a booking paid with miles or points is marked `with_points` and costs only its cash part (T8); a booking paid in parts lists its `payment_schedule` (T7); and a screenshot of the group chat proposes the plans talked about, marked `from_chat` and saved as Suggested, never paid (T11). Five made-up cases joined the ten (and case 11): an award ticket (12), a chalet with a deposit and a balance (13), and three chat screenshots rendered from made-up text (14 to 16; 16 holds a pasted transfer confirmation beside chat talk, which stays a booking).
+
+- Run `import-t7-t8-t11-20261124-1641` on TripTab dev: **16 of 16** cases pass all five rules. No drop on the eleven earlier cases.
+- Cost, from the run's replies: **$0.0285** at list price, 16 calls, one web search (case 05). Covered by the Max plan's API credit.
+- What it doesn't show: three chat screenshots is a small set, and they are clean renders, not real phone screenshots with crops, reactions or replies.

@@ -508,6 +508,7 @@ export default function TripPage() {
       const on = goingList(item, travelers, itemPeople);
       return { names: on.map((t) => (t.id === meId ? "you" : t.name)), everyone: on.length === travelers.length && travelers.length > 0 };
     },
+    schedule: (item) => (item.pay_mode !== "own" ? scheduleLabel(scheduleOf(item.id)) : null),
     note: (item) => {
       // "1 of 2 paid · next due Dec 11" (T7).
       const sched = item.pay_mode !== "own" ? scheduleLabel(scheduleOf(item.id)) : null;
