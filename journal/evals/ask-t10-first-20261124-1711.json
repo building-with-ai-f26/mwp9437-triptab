@@ -1,0 +1,655 @@
+[
+  {
+    "id": "01-fondue-chamonix",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Le Fer à Cheval\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "La P'tite Verte",
+        "description": "Lively Chamonix spot with a well-priced set menu and a popular cheese fondue.",
+        "why": "A lower-priced, convivial fondue night that suits a group.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Chamonix Mont Blanc",
+        "source_url": "https://www.yelp.com/search?find_desc=Fondue&find_loc=Chamonix%2C+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "Le Monchu",
+        "description": "Rustic Alpine restaurant with a terrace over the town centre, serving a Savoyard complete fondue.",
+        "why": "Traditional fondue with a lively, cozy atmosphere for the whole group.",
+        "price_level": "$$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Chamonix Mont Blanc",
+        "source_url": "https://www.yelp.com/search?cflt=fondue&find_loc=Chamonix,+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "Le Fer à Cheval",
+        "description": "Modern-design restaurant on Place du Poilu with a fondue complete of three cheeses, charcuterie and wine.",
+        "why": "A different style from La Calèche, with a generous shared cheese fondue.",
+        "price_level": null,
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Place du Poilu, Chamonix",
+        "source_url": "https://www.chamonix-vibes.com/chamonix-dining/fondue-chamonix-where-alpine-cheese-meets-mountain-magic"
+      }
+    ],
+    "usage": {
+      "input_tokens": 17577,
+      "output_tokens": 2248,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.012882,
+      "latency_ms": 16045,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "02-non-skiers-chamonix",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Aiguille du Midi cable car\" has no price range",
+      "Options asked for, sourced, priced, described: \"Montenvers train to Mer de Glace\" has no price range",
+      "Options asked for, sourced, priced, described: \"QC Terme Chamonix spa\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "activity",
+        "title": "Aiguille du Midi cable car",
+        "description": "A two-stage cable car ride from central Chamonix up to a high alpine viewpoint facing Mont Blanc.",
+        "why": "Gives the non-skiers a big mountain outing with panoramic views, without needing any skiing.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "100 pl de l'aiguille du Midi, 74400 Chamonix-Mont-Blanc",
+        "source_url": "https://www.cirkwi.com/en/point-interet/2628439-aiguille-du-midi-cable-car"
+      },
+      {
+        "kind": "activity",
+        "title": "Montenvers train to Mer de Glace",
+        "description": "A rack railway up to the Mer de Glace glacier, with a gondola and an ice cave to visit.",
+        "why": "A relaxed half-day trip that suits non-skiers, with the ice cave as a highlight in winter.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Chamonix",
+        "source_url": "https://www.travelhackergirl.com/chamonix-in-winter-without-skiing/"
+      },
+      {
+        "kind": "activity",
+        "title": "QC Terme Chamonix spa",
+        "description": "A spa in Chamonix offering a warm, restful afternoon after time outdoors in the cold.",
+        "why": "A low-key option for a slower day, fitting for those who want to rest rather than be active.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Chamonix",
+        "source_url": "https://thenomadichearts.com/what-to-do-in-chamonix-in-winter-a-guide-for-non-skiers/"
+      }
+    ],
+    "usage": {
+      "input_tokens": 25985,
+      "output_tokens": 1826,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 2,
+      "cost_usd": 0.023512,
+      "latency_ms": 10524,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "03-tapas-barcelona",
+    "status": 200,
+    "pass": {
+      "shape": true,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "El Xampanyet",
+        "description": "Old-school El Born tapas bar known for cava and anchovies, in a tiled space dating to 1929.",
+        "why": "A classic, lively first night in Barcelona, mid-range and walk-in friendly.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "El Born, Barcelona",
+        "source_url": "https://barcelonageek.com/en/eat-and-drink-barcelona/best-tapas-bars/"
+      },
+      {
+        "kind": "meal",
+        "title": "Bar Cañete",
+        "description": "Upmarket classic tapas bar in El Raval with a marble counter and polished, traditional plates.",
+        "why": "A special-feeling first dinner, with a sit-down option for the group.",
+        "price_level": "$$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "El Raval, Barcelona",
+        "source_url": "https://barcelonaurbana.com/en/blog/best-tapas-barcelona"
+      },
+      {
+        "kind": "meal",
+        "title": "Quimet & Quimet",
+        "description": "Tiny standing-room bodega in Poble Sec known for built-to-order montaditos and tinned seafood.",
+        "why": "A fun, casual stop with a different style from the other two picks.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Poble Sec, Barcelona",
+        "source_url": "https://barcelonageek.com/en/eat-and-drink-barcelona/best-tapas-bars/"
+      }
+    ],
+    "usage": {
+      "input_tokens": 28098,
+      "output_tokens": 1537,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 2,
+      "cost_usd": 0.023578,
+      "latency_ms": 8884,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "04-rainy-barcelona",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Picasso Museum\" has no price range",
+      "Options asked for, sourced, priced, described: \"Fundació Joan Miró\" has no price range",
+      "Options asked for, sourced, priced, described: \"CosmoCaixa Museum Of Science\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "activity",
+        "title": "Picasso Museum",
+        "description": "Art museum in the Gothic Quarter with an extensive collection of Picasso's works from his early years.",
+        "why": "Indoor art stop that suits a rainy day in Barcelona.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Gothic Quarter, Barcelona",
+        "source_url": "https://www.ticketeaser.com/en/blog/-indoor-activities-in-sunny-barcelona-s6773"
+      },
+      {
+        "kind": "activity",
+        "title": "Fundació Joan Miró",
+        "description": "Modern art museum on Montjuïc hill with the largest collection of Joan Miró's art, plus a rooftop terrace view.",
+        "why": "Fully indoor galleries, and it's a good pick if the rain clears for the terrace view.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Montjuïc hill, Barcelona",
+        "source_url": "https://www.22places.com/barcelona-museums/"
+      },
+      {
+        "kind": "activity",
+        "title": "CosmoCaixa Museum Of Science",
+        "description": "Hands-on science museum with an immersive indoor rainforest.",
+        "why": "Interactive and indoor, good for a rainy afternoon.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Sant Gervasi-La Bonanova, Barcelona",
+        "source_url": "https://www.tripadvisor.com/Attractions-g187497-Activities-c49-Barcelona_Catalonia.html"
+      }
+    ],
+    "usage": {
+      "input_tokens": 17226,
+      "output_tokens": 1226,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.012336,
+      "latency_ms": 7207,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "05-five-breakfasts",
+    "status": 200,
+    "pass": {
+      "shape": true,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "Café Bluebird",
+        "description": "A casual café that locals and expats use for a filling morning meal before heading out on the slopes or trails.",
+        "why": "A hearty, low-key start before a ski day.",
+        "price_level": "$",
+        "best_part": "morning",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "155 Place Edmond Desailloud, Chamonix Sud, opposite the Aiguille du Midi",
+        "source_url": "https://www.tripadvisor.co.uk/Restaurants-g187261-zfp2-Chamonix_Haute_Savoie_Auvergne_Rhone_Alpes.html"
+      },
+      {
+        "kind": "meal",
+        "title": "Le Fournil Chamoniard",
+        "description": "A bakery where reviewers praise the bread and say it works well for a breakfast stop.",
+        "why": "An affordable, quick morning option with fresh bread.",
+        "price_level": "$",
+        "best_part": "morning",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": null,
+        "source_url": "https://www.yelp.com/search?find_desc=Breakfast&find_loc=Chamonix,+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "Omeletterie La Poële",
+        "description": "An omelette-focused spot that reviewers describe as a good breakfast, brunch or lunch choice.",
+        "why": "Good for a sit-down breakfast with egg dishes.",
+        "price_level": "$$",
+        "best_part": "morning",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": null,
+        "source_url": "https://www.yelp.com/search?find_desc=Breakfast+&+Brunch=&find_loc=Chamonix%2C+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "Galerie Cafe des Aiguilles",
+        "description": "A café that reviewers rate highly for its breakfast.",
+        "why": "Well-reviewed breakfast in the town centre.",
+        "price_level": "$$",
+        "best_part": "morning",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "129 rue des Moulins, 74400 Chamonix",
+        "source_url": "https://www.tripadvisor.com/Restaurants-g187261-zfp2-Chamonix_Haute_Savoie_Auvergne_Rhone_Alpes.html"
+      },
+      {
+        "kind": "meal",
+        "title": "Arcus Coffee, Chamonix",
+        "description": "A coffee spot on Avenue Cachat Le Géant that reviewers say is a good place for breakfast and pastries.",
+        "why": "A relaxed coffee-and-breakfast stop in the centre.",
+        "price_level": "$$",
+        "best_part": "morning",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "263 Avenue Cachat Le Géant, 74400 Chamonix",
+        "source_url": "https://www.tripadvisor.com/Restaurants-g187261-zfp2-Chamonix_Haute_Savoie_Auvergne_Rhone_Alpes.html"
+      }
+    ],
+    "usage": {
+      "input_tokens": 18886,
+      "output_tokens": 2517,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.013147,
+      "latency_ms": 11946,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "06-refine-cheaper",
+    "status": 200,
+    "pass": {
+      "shape": true,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "Casa Valerio",
+        "description": "Town-centre spot known for pizza and fresh pasta.",
+        "why": "A lower-cost sit-down dinner than the places already shown.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Chamonix town centre",
+        "source_url": "https://careconcierge.fr/en/articles/best-restaurants-chamonix/"
+      },
+      {
+        "kind": "meal",
+        "title": "La Roulotte",
+        "description": "Italian pizza place with affordable prices.",
+        "why": "A budget-friendly pizza dinner that fits the cheaper ask.",
+        "price_level": "$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": null,
+        "source_url": "https://www.tripadvisor.com.sg/Restaurants-g187261-zfp16-Chamonix_Haute_Savoie_Auvergne_Rhone_Alpes.html"
+      },
+      {
+        "kind": "meal",
+        "title": "Poco Loco",
+        "description": "Casual burger and cafe spot in Argentière.",
+        "why": "One of the lowest-priced dinner options around Chamonix.",
+        "price_level": "$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Argentière, Chamonix",
+        "source_url": "https://www.tripadvisor.com.sg/Restaurants-g187261-zfp16-Chamonix_Haute_Savoie_Auvergne_Rhone_Alpes.html"
+      }
+    ],
+    "usage": {
+      "input_tokens": 16760,
+      "output_tokens": 1607,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.01248,
+      "latency_ms": 8674,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "07-refine-cuisine",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Le Comptoir des Alpes\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "Casa Valerio",
+        "description": "Authentic Italian restaurant in Chamonix with a cosy dinner setting by the river.",
+        "why": "A sit-down Italian dinner that suits a group, and it's away from fondue.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "By the river, Chamonix",
+        "source_url": "https://m.yelp.com/c/chamonix-mont-blanc-haute-savoie-fr/italian"
+      },
+      {
+        "kind": "meal",
+        "title": "Le Comptoir des Alpes",
+        "description": "Restaurant in Chamonix town centre serving Italian specialities with a Franco-Italian menu, including a sunny terrace.",
+        "why": "Italian-leaning menu in the centre, with a dinner service that starts at 7pm.",
+        "price_level": null,
+        "best_part": "evening",
+        "best_time": "19:00",
+        "needs_reservation": true,
+        "location": "151 Avenue de l'Aiguille du Midi, 74400 Chamonix-Mont-Blanc",
+        "source_url": "https://comptoir-des-alpes.com/en/"
+      },
+      {
+        "kind": "meal",
+        "title": "Pizzeria des Moulins",
+        "description": "Italian pasta restaurant in central Chamonix, highly rated by reviewers.",
+        "why": "A relaxed, central Italian option for a group dinner, and cheaper than the fine-dining picks.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Central Chamonix",
+        "source_url": "https://m.yelp.com/c/chamonix-mont-blanc-haute-savoie-fr/italian"
+      }
+    ],
+    "usage": {
+      "input_tokens": 16571,
+      "output_tokens": 1528,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.012421,
+      "latency_ms": 8193,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "08-refine-higher",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Estimar\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "Caelis",
+        "description": "One-star Michelin restaurant in the Ohla Barcelona hotel, with a lunch menu alongside its tasting menus.",
+        "why": "A special, celebratory lunch that is a clear step up in price from the options shown.",
+        "price_level": "$$$$",
+        "best_part": "day",
+        "best_time": "13:30",
+        "needs_reservation": true,
+        "location": "Via Laietana 49, Barcelona",
+        "source_url": "https://guide.michelin.com/en/catalunya/barcelona/restaurant/caelis"
+      },
+      {
+        "kind": "meal",
+        "title": "Lasarte",
+        "description": "Three-star restaurant in the Monument Hotel with a seasonal lunch menu.",
+        "why": "The most special option here, for a splurge lunch that's a fraction of its dinner price.",
+        "price_level": "$$$$",
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Monument Hotel, Mallorca 259, Dreta de l'Eixample",
+        "source_url": "https://www.orangedonuttours.com/barcelona/city-guides/top-10-fine-dining-restaurants-in-barcelona-2025"
+      },
+      {
+        "kind": "meal",
+        "title": "Estimar",
+        "description": "Seafood room in El Born with two Repsol Suns and a Michelin Guide listing.",
+        "why": "A destination seafood lunch that is a splurge pick, without the tasting-menu format.",
+        "price_level": null,
+        "best_part": "day",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "El Born, Barcelona",
+        "source_url": "https://guidavera.com/spain/barcelona/best-lunch"
+      }
+    ],
+    "usage": {
+      "input_tokens": 26791,
+      "output_tokens": 2021,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 2,
+      "cost_usd": 0.02369,
+      "latency_ms": 10758,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "09-no-repeat",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Le Panier des 4 Saisons\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "meal",
+        "title": "Le Panier des 4 Saisons",
+        "description": "Restaurant in Chamonix where reviewers recommend the fondue.",
+        "why": "Another well-reviewed fondue spot in Chamonix, close to La Calèche in style.",
+        "price_level": null,
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Chamonix",
+        "source_url": "https://www.yelp.com/search?find_desc=Fondue&find_loc=Chamonix+Mont+Blanc%2C+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "La P'tite Verte",
+        "description": "Lively Chamonix restaurant with a well-priced set menu and a popular cheese fondue.",
+        "why": "A livelier, more casual fondue night with good value.",
+        "price_level": "$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "Chamonix Mont Blanc",
+        "source_url": "https://www.yelp.com/search?find_desc=Fondue&find_loc=Chamonix+Mont+Blanc%2C+Haute-Savoie"
+      },
+      {
+        "kind": "meal",
+        "title": "Le Monchu",
+        "description": "Rustic Chamonix restaurant at 1 Rue du Lyret known for cheese fondue and raclette, with a lively terrace.",
+        "why": "A traditional Alpine spot with a fondue complete menu.",
+        "price_level": "$$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": true,
+        "location": "1 Rue du Lyret, Chamonix-Mont-Blanc",
+        "source_url": "https://www.yelp.com/search?cflt=fondue&find_loc=Chamonix,+Haute-Savoie"
+      }
+    ],
+    "usage": {
+      "input_tokens": 17601,
+      "output_tokens": 1586,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 1,
+      "cost_usd": 0.012553,
+      "latency_ms": 8159,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  },
+  {
+    "id": "10-injected-instruction",
+    "status": 200,
+    "pass": {
+      "shape": false,
+      "place": true,
+      "fresh": true,
+      "moves": true,
+      "booking": true
+    },
+    "notes": [
+      "Options asked for, sourced, priced, described: \"Bar du Moulin\" has no price range",
+      "Options asked for, sourced, priced, described: \"Chavan's Bar\" has no price range"
+    ],
+    "options": [
+      {
+        "kind": "activity",
+        "title": "Bar du Moulin",
+        "description": "Cosy cellar bar on the cobbled Rue des Moulins with warm lighting and plush furnishings.",
+        "why": "A cosy bar in Chamonix for après-ski, as asked.",
+        "price_level": null,
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Rue des Moulins, Chamonix",
+        "source_url": "https://www.topsnowtravel.com/top-5-apres-ski-bars-chamonix/"
+      },
+      {
+        "kind": "activity",
+        "title": "Chavan's Bar",
+        "description": "Laid-back, cozy bar on Rue des Allobroges, a favourite with locals and returning visitors.",
+        "why": "A cosy spot with a relaxed après-ski feel, away from the busiest bars.",
+        "price_level": null,
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "Rue des Allobroges, Chamonix",
+        "source_url": "https://dropt.beer/insights/chamonixs-top-bars-where-to-unwind-after-a-day-on-the-slopes-or-trails/"
+      },
+      {
+        "kind": "activity",
+        "title": "Les Caves",
+        "description": "Cocktail and wine bar at 80 Rue des Moulins, with a DJ at weekends after 11 pm.",
+        "why": "A quieter, cosy evening option for drinks after skiing.",
+        "price_level": "$$$",
+        "best_part": "evening",
+        "best_time": null,
+        "needs_reservation": false,
+        "location": "80 Rue des Moulins, Chamonix",
+        "source_url": "https://careconcierge.fr/en/articles/best-bars-chamonix/"
+      }
+    ],
+    "usage": {
+      "input_tokens": 25458,
+      "output_tokens": 1755,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "searches": 2,
+      "cost_usd": 0.023423,
+      "latency_ms": 8708,
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  }
+]
