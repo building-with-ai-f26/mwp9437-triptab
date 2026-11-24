@@ -3,7 +3,7 @@
  * your own numbers. Pure functions over what api.ts loads, so they're tested offline.
  */
 import { calculateSettlements } from "./money";
-import type { Item, Traveler } from "./model";
+import type { Item, ItemStatus, Traveler } from "./model";
 import type { ExpenseRow, ItemPerson, OwnMark, Payment } from "./api";
 import type { Expense, Transfer } from "../types";
 
@@ -143,6 +143,29 @@ export function ownProgress(item: Pick<Item, "id" | "kind">, travelers: Traveler
   const marked = new Set(marks.filter((m) => m.item_id === item.id).map((m) => m.traveler_id));
   const booked = new Set(going.filter((t) => marked.has(t.id)).map((t) => t.id));
   return { going, booked, complete: going.length > 0 && booked.size === going.length };
+}
+
+/**
+ * The status one person sees (T2, Mike's call C61 and 11/24). Everyone pays their own: the status is
+ * yours, Confirmed once you've booked (logged your cost, or marked yourself booked) and Planned until
+ * then, so a friend joining Mike's booked flight leaves it Confirmed for Mike and Planned for the
+ * friend. Worked out from what's stored (who has a line), never stored per person.
+ * - A Suggested plan stays Suggested for everyone; a split bill keeps one status for the group.
+ * - Someone not going, or nobody signed in, sees the group's status, as stored.
+ * - A plan nobody has logged a line on keeps its stored status: an Owner can Confirm one by hand with
+ *   the cost to come (C21, C26, C27), and that stays as it was.
+ */
+export function statusFor(
+  item: Pick<Item, "id" | "kind" | "status" | "pay_mode">,
+  meId: string | null,
+  people: ItemPerson[],
+  marks: OwnMark[],
+): ItemStatus {
+  if (item.pay_mode !== "own" || item.status === "suggested" || !meId) return item.status;
+  if (!isGoing(item, meId, people)) return item.status;
+  const onPlan = marks.filter((m) => m.item_id === item.id);
+  if (onPlan.length === 0) return item.status;
+  return onPlan.some((m) => m.traveler_id === meId) ? "confirmed" : "planned";
 }
 
 /** "2 of 5 booked" */

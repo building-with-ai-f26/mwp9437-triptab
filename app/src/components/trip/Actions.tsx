@@ -3,10 +3,12 @@ import { CalendarDays, ListChecks, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui";
 import type { ActionItem } from "../../lib/api";
 import { dueDayOk, dueWindow, longDay, type Traveler, type Trip } from "../../lib/model";
+import { filterTodos, loadView, saveView, sortTodos, type TodoFilter, type TodoSort, type TodoView } from "../../lib/todos";
 
 /**
  * Action items (vision, "Help along the way"): what still needs booking or deciding and who's on
- * it. Yours come first. Owners add and hand them out; whoever has one can tick it off.
+ * it. Owners add and hand them out; whoever has one can tick it off. Filter by who has it and sort
+ * by due date (the default), owner or newest (T4, 11/24); the choice is remembered on the device.
  */
 export function ActionsCard({
   trip,
@@ -38,12 +40,19 @@ export function ActionsCard({
   const dueRange = dueWindow(trip.end_date);
   const name = (id: string | null) => (id ? (travelers.find((t) => t.id === id)?.name ?? "?") : null);
   const open = actions.filter((a) => !a.done);
-  const done = actions.filter((a) => a.done);
-  // Yours first, then everyone else's by name, then unassigned.
-  const rank = (a: ActionItem) => (a.assignee === meId ? 0 : a.assignee ? 1 : 2);
-  const sorted = [...open].sort(
-    (a, b) => rank(a) - rank(b) || (name(a.assignee) ?? "").localeCompare(name(b.assignee) ?? "") || a.created_at.localeCompare(b.created_at),
-  );
+  const [view, setView] = useState<TodoView>(loadView);
+  // A person filter from another trip, or someone no longer on this one, shows everyone.
+  const filter: TodoFilter =
+    view.filter.startsWith("person:") && !travelers.some((t) => `person:${t.id}` === view.filter) ? "everyone" : view.filter;
+  const pick = (next: Partial<TodoView>) => {
+    const v = { ...view, ...next };
+    setView(v);
+    saveView(v);
+  };
+  const shown = (list: ActionItem[]) => sortTodos(filterTodos(list, filter, meId), view.sort, name);
+  const sorted = shown(open);
+  // Done items follow the same filter and sort.
+  const done = shown(actions.filter((a) => a.done));
 
   const run = async (fn: () => Promise<void>) => {
     setError(null);
@@ -180,12 +189,56 @@ export function ActionsCard({
         </form>
       )}
 
-      {sorted.length > 0 && <ul className="divide-y divide-foreground/10">{sorted.map(row)}</ul>}
-      {sorted.length === 0 && !canEdit && <p className="text-sm text-muted-foreground">Nothing to do right now.</p>}
+      {actions.length > 1 && (
+        <div className="mb-1 flex flex-wrap items-center gap-2 text-xs" data-testid="todo-view">
+          <label className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="shrink-0 font-semibold text-foreground">Show</span>
+            <select
+              className="h-9 min-w-0 flex-1 rounded-full border border-white/50 bg-white/40 px-2 text-xs"
+              value={filter}
+              onChange={(e) => pick({ filter: e.target.value as TodoFilter })}
+              aria-label="Show to-dos for"
+            >
+              <option value="everyone">Everyone</option>
+              {meId && <option value="mine">Mine</option>}
+              <option value="nobody">Nobody yet</option>
+              {travelers
+                .filter((t) => t.id !== meId)
+                .map((t) => (
+                  <option key={t.id} value={`person:${t.id}`}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="shrink-0 font-semibold text-foreground">Sort</span>
+            <select
+              className="h-9 min-w-0 flex-1 rounded-full border border-white/50 bg-white/40 px-2 text-xs"
+              value={view.sort}
+              onChange={(e) => pick({ sort: e.target.value as TodoSort })}
+              aria-label="Sort to-dos by"
+            >
+              <option value="due">Due date</option>
+              <option value="owner">Owner</option>
+              <option value="newest">Newest</option>
+            </select>
+          </label>
+        </div>
+      )}
+      {sorted.length > 0 && (
+        <ul className="divide-y divide-foreground/10" data-testid="todo-open">
+          {sorted.map(row)}
+        </ul>
+      )}
+      {sorted.length === 0 && open.length > 0 && <p className="py-2 text-sm text-muted-foreground">None open for this filter.</p>}
+      {sorted.length === 0 && open.length === 0 && !canEdit && <p className="text-sm text-muted-foreground">Nothing to do right now.</p>}
       {done.length > 0 && (
         <details className="mt-2 border-t border-foreground/10 pt-2">
           <summary className="cursor-pointer text-xs text-muted-foreground">{done.length} done</summary>
-          <ul className="divide-y divide-foreground/10">{done.map(row)}</ul>
+          <ul className="divide-y divide-foreground/10" data-testid="todo-done">
+            {done.map(row)}
+          </ul>
         </details>
       )}
       {error && (

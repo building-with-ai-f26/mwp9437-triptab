@@ -57,7 +57,7 @@ async function run(browser, label, opts, result) {
   // ---------- Stops and dates lives in Travel and lodging ----------
   const travel = p.locator('section[aria-labelledby="travel-title"]');
   await travel.getByRole('button', { name: 'Stops and dates' }).click();
-  await h.dlg(p).getByRole('heading', { name: 'Stops and dates' }).waitFor();
+  await h.dlg(p).getByRole('heading', { name: 'Trip settings' }).waitFor();
   r.settingsHasName = (await h.dlg(p).getByLabel('Trip name').inputValue()).length > 0;
   await h.shot(p, `sections-stops-${label}`);
   await h.dlg(p).getByRole('button', { name: 'Cancel' }).click();

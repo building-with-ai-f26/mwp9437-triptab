@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookedLabel, goingList, peopleMatchingBills, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, venmoLink } from "./ledger";
+import { bookedLabel, goingList, peopleMatchingBills, groupExpenses, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, statusFor, venmoLink } from "./ledger";
 import type { ExpenseRow, ItemPerson, Payment } from "./api";
 import type { Traveler } from "./model";
 
@@ -245,5 +245,53 @@ describe("who's in matches the bill (C47)", () => {
     const before = [{ item_id: "hike", traveler_id: "sam", going: false }];
     const rows = peopleMatchingBills(before, [bill(null, ["mike"]), bill("flight", ["mike"], true)], four);
     expect(rows).toEqual(before);
+  });
+});
+
+describe("each person's own status on own-pay plans (T2)", () => {
+  // Mike booked the flight; Vic joined it (flights are opt-in); Priya isn't on it.
+  const flight = { id: "f", kind: "flight" as const, status: "planned" as const, pay_mode: "own" as const };
+  const on = [
+    { item_id: "f", traveler_id: "mike", going: true },
+    { item_id: "f", traveler_id: "vic", going: true },
+  ];
+  const mikeBooked = [{ item_id: "f", traveler_id: "mike" }];
+
+  it("booked gives Confirmed; joined but not booked gives Planned", () => {
+    expect(statusFor(flight, "mike", on, mikeBooked)).toBe("confirmed");
+    expect(statusFor(flight, "vic", on, mikeBooked)).toBe("planned");
+  });
+
+  it("once the friend books, both see Confirmed", () => {
+    const both = [...mikeBooked, { item_id: "f", traveler_id: "vic" }];
+    expect(statusFor({ ...flight, status: "confirmed" }, "mike", on, both)).toBe("confirmed");
+    expect(statusFor({ ...flight, status: "confirmed" }, "vic", on, both)).toBe("confirmed");
+  });
+
+  it("a Suggested plan stays Suggested for both", () => {
+    const idea = { ...flight, status: "suggested" as const };
+    expect(statusFor(idea, "mike", on, mikeBooked)).toBe("suggested");
+    expect(statusFor(idea, "vic", on, mikeBooked)).toBe("suggested");
+  });
+
+  it("a split-bill plan is unchanged: one status for the group", () => {
+    const split = { ...flight, pay_mode: "split" as const };
+    expect(statusFor(split, "mike", on, mikeBooked)).toBe("planned");
+    expect(statusFor({ ...split, status: "confirmed" }, "vic", on, [])).toBe("confirmed");
+  });
+
+  it("someone not going, or signed out, sees the group's status", () => {
+    expect(statusFor(flight, "priya", on, mikeBooked)).toBe("planned");
+    expect(statusFor(flight, null, on, mikeBooked)).toBe("planned");
+  });
+
+  it("a plan Confirmed by hand with no lines yet stays Confirmed (C21, C26, C27)", () => {
+    expect(statusFor({ ...flight, status: "confirmed" }, "vic", on, [])).toBe("confirmed");
+  });
+
+  it("dropping out: only your line goes, and the booker still sees Confirmed", () => {
+    const vicOut = [on[0], { item_id: "f", traveler_id: "vic", going: false }];
+    expect(statusFor(flight, "mike", vicOut, mikeBooked)).toBe("confirmed");
+    expect(statusFor(flight, "vic", vicOut, mikeBooked)).toBe("planned");
   });
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Plus, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, LayoutDashboard, ListChecks, Pencil, Plus, Sparkles, UserPlus, Users, Wallet } from "lucide-react";
 import { PlanWithAiDialog } from "../components/trip/PlanWithAi";
 import { TopBar } from "../components/TopBar";
 import { ConfirmBanner } from "../components/ConfirmBanner";
@@ -100,7 +100,7 @@ import {
   type ItemStatus,
   type Traveler,
 } from "../lib/model";
-import { bookedLabel, goingList, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle } from "../lib/ledger";
+import { bookedLabel, goingList, isGoing, myNumbers, myShareOf, ownLineOf, ownProgress, settle, statusFor } from "../lib/ledger";
 import { buildTimeline } from "../lib/timeline";
 import { downloadIcs, icsForItems } from "../lib/ics";
 import { subscribeToTrip } from "../lib/live";
@@ -256,9 +256,16 @@ export default function TripPage() {
     return () => window.clearInterval(timer);
   }, [loaded]);
 
+  // T2: on plans where everyone pays their own, the status you see is yours (statusFor). Display
+  // only: dialogs and saves always read the stored plan (openItem finds it in bundle.items).
+  const myTravelerId = bundle?.travelers.find((t) => t.user_id === user?.id)?.id ?? null;
+  const shownItems = useMemo(
+    () => (bundle ? bundle.items.map((i) => ({ ...i, status: statusFor(i, myTravelerId, bundle.itemPeople, bundle.ownMarks) })) : []),
+    [bundle, myTravelerId],
+  );
   const days = useMemo(
-    () => (bundle ? buildTimeline(bundle.trip, bundle.stops, bundle.items.map((i) => (moving[i.id] ? { ...i, ...moving[i.id] } : i))) : []),
-    [bundle, moving],
+    () => (bundle ? buildTimeline(bundle.trip, bundle.stops, shownItems.map((i) => (moving[i.id] ? { ...i, ...moving[i.id] } : i))) : []),
+    [bundle, shownItems, moving],
   );
   const [active, jump] = useActiveDay(days.map((d) => d.date));
 
@@ -429,12 +436,19 @@ export default function TripPage() {
     onMove: moveItem,
     onAdd: (day, part, kind = "activity") => setDialog({ item: null, day, part, kind }),
     onOpen: (item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind }),
-    exactCents: (item) =>
-      item.pay_mode === "own"
-        ? (ownLineOf(expenses, item.id, meId)?.total_cents ?? null)
-        : (expenseByItem.get(item.id)?.total_cents ?? null),
+    exactCents: (item) => {
+      if (item.pay_mode !== "own") return expenseByItem.get(item.id)?.total_cents ?? null;
+      // Booked with no price (T2) has no price to show: never "$0".
+      const line = ownLineOf(expenses, item.id, meId);
+      return line && (line.total_cents > 0 || line.with_points) ? line.total_cents : null;
+    },
     isOut: (item) => (meId ? !isGoing(item, meId, itemPeople) : false),
-    paid: (item) => costIsIn(item),
+    // The green "$ ✓": on own-pay plans, your own cost is in (T2); a split bill, the group's bill is.
+    paid: (item) => {
+      if (item.pay_mode !== "own" || !meId || !isGoing(item, meId, itemPeople)) return costIsIn(item);
+      const mine = ownLineOf(expenses, item.id, meId);
+      return Boolean(mine && (mine.total_cents > 0 || mine.with_points));
+    },
     suggestedBy: (item) => suggestedBy(item, travelers, user?.id ?? null),
     aboard: (item) => {
       const on = goingList(item, travelers, itemPeople);
@@ -444,7 +458,9 @@ export default function TripPage() {
       if (item.pay_mode === "own") {
         // Everyone pays their own: "Planned, 2 of 5 booked" until everyone going has logged theirs.
         const p = ownProgress(item, travelers, itemPeople, ownMarks);
-        const mine = ownLineOf(expenses, item.id, meId);
+        const line = ownLineOf(expenses, item.id, meId);
+        // Booked with no price (T2) shows no "yours $0.00".
+        const mine = line && (line.total_cents > 0 || line.with_points) ? line : undefined;
         if (p.complete) return mine ? "Your own price · everyone's booked" : "Everyone's booked";
         // A booked count only means something once there's a price to book (Mike's 11/19 review:
         // "0 of 1 booked" on a drive with no cost was confusing): someone has booked, the plan has
@@ -467,6 +483,18 @@ export default function TripPage() {
       const on = votes.filter((v) => v.item_id === item.id);
       return { count: on.length, mine: on.some((v) => v.traveler_id === meId) };
     },
+  };
+
+  /**
+   * In or out of a plan. Dropping yourself from a plan where everyone pays their own takes your own
+   * line with you (T2, 11/24): only yours, so whoever booked keeps theirs and stays Confirmed. An
+   * Owner taking someone else out leaves that person's line alone.
+   */
+  const changeGoing = async (item: Pick<Item, "id" | "pay_mode">, travelerId: string, going: boolean) => {
+    if (!going && travelerId === meId && item.pay_mode === "own" && ownMarks.some((m) => m.item_id === item.id && m.traveler_id === travelerId)) {
+      await clearOwnLine(item.id, travelerId);
+    }
+    await setGoing(item.id, travelerId, going);
   };
 
   /** PostHog: an own line was logged; and the plan's status, which follows the lines, if it moved. */
@@ -703,7 +731,28 @@ export default function TripPage() {
       <div className="relative z-10">
         <TopBar
           back={{ to: "/trips", label: "My trips" }}
-          title={trip.name}
+          title={
+            // T3 (Mike's 11/23 test): an Owner renames or deletes the trip where they'd look, its name.
+            // No header gear: Mike took it out in his 11/23 review (pull request 95).
+            editable ? (
+              <button
+                type="button"
+                data-testid="trip-name"
+                title="Rename the trip, change its stops and dates, or delete it"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-lg text-left hover:underline hover:underline-offset-4"
+                onClick={() => {
+                  setSettingsOpen(true);
+                  track("trip settings opened", { from: "name" });
+                }}
+              >
+                <span className="truncate">{trip.name}</span>
+                <Pencil className="size-3.5 shrink-0 opacity-60" aria-hidden />
+                <span className="sr-only">: rename, dates or delete</span>
+              </button>
+            ) : (
+              trip.name
+            )
+          }
           subtitle={`${dateRange(trip.start_date, trip.end_date)}${stops.length ? ` · ${stops.map((s) => s.name).join(", ")}` : ""}`}
         >
           <Button
@@ -712,7 +761,7 @@ export default function TripPage() {
             aria-label="Add your plans to your calendar"
             title="Add your plans to your calendar"
             onClick={() => {
-              const mine = items.filter((i) => (meId ? isGoing(i, meId, itemPeople) : true));
+              const mine = shownItems.filter((i) => (meId ? isGoing(i, meId, itemPeople) : true));
               downloadIcs(`${trip.name}.ics`, icsForItems(trip, mine));
               track("calendar downloaded", { scope: "trip", plans: mine.length });
             }}
@@ -784,14 +833,14 @@ export default function TripPage() {
             {!overview && travelCard}
             {meId && travelers.length > 1 && items.length > 0 && (
               <YourPlans
-                items={items}
+                items={shownItems}
                 itemPeople={itemPeople}
                 expenses={expenses}
                 meId={meId}
                 share={myNumbers(expenses, meId, payments ?? []).share}
                 balance={balances[meId] ?? 0}
                 onGoing={async (item, going) => {
-                  await setGoing(item.id, meId, going);
+                  await changeGoing(item, meId, going);
                   track(going ? "opted in" : "opted out", { kind: item.kind, from: "your plans" });
                   await reload();
                 }}
@@ -1139,7 +1188,7 @@ export default function TripPage() {
                 await reload();
               }}
               onGoing={async (travelerId, going) => {
-                await setGoing(openItem.id, travelerId, going);
+                await changeGoing(openItem, travelerId, going);
                 if (travelerId === meId) track(going ? "opted in" : "opted out", { kind: openItem.kind });
                 await reload();
               }}
@@ -1181,7 +1230,7 @@ export default function TripPage() {
                 await reload();
               }}
               onGoing={async (travelerId, going) => {
-                await setGoing(openItem.id, travelerId, going);
+                await changeGoing(openItem, travelerId, going);
                 if (travelerId === meId) track(going ? "opted in" : "opted out", { kind: openItem.kind });
                 await reload();
               }}
