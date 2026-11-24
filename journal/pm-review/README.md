@@ -21,3 +21,7 @@ Each item names its source, and only the first two kinds are evidence:
 | [`pm-ux.md`](./pm-ux.md) | The UX pass: the friend's first minute, the owner's core loop, what to keep. Its screenshots stayed in the session and aren't committed |
 
 The test accounts the UX pass made are on TripTab dev only, labeled `uxtest-...@example.com`.
+
+## 11/24: build spec from Mike's 11/23 ski trip test
+
+[`spec-11-23.md`](./spec-11-23.md) turns Mike's notes from setting up the real ski trip (plus PostHog replays and read-only production queries) into ten items, T1 to T10, each with its evidence, the behavior wanted and checks a build session ticks with evidence. The calls it waits on are C58 to C61 on the runbook.
