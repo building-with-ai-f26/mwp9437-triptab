@@ -6,3 +6,6 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_KEY?: string;
   readonly VITE_POSTHOG_HOST?: string;
 }
+
+/** This build's id (vite.config.ts, buildVersion): compared with version.json to spot an update. */
+declare const __BUILD_ID__: string;

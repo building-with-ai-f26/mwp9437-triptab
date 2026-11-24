@@ -29,3 +29,16 @@ export function reloadOnStaleBuild(): void {
     window.location.reload();
   });
 }
+
+/**
+ * A newer build is live (C57, Mike's call 11/24): version.json names a build other than the one
+ * this tab is running. Anything unreadable counts as no news, so a hiccup never nags.
+ */
+export function isNewBuild(running: string, live: unknown): boolean {
+  const id = (live as { id?: unknown } | null)?.id;
+  return typeof id === "string" && id.length > 0 && id.length <= 64 && id !== running;
+}
+
+/** How often an open tab asks, at most: once a minute when it comes back into view, and every 5 minutes while it's in view. */
+export const CHECK_GAP_MS = 60_000;
+export const CHECK_EVERY_MS = 5 * 60_000;

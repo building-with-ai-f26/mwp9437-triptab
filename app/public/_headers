@@ -17,3 +17,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# Which build is live (C57, 11/24): never kept by a browser or a cache, so an open tab sees an update.
+/version.json
+  Cache-Control: no-store
