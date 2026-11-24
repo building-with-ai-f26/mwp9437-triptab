@@ -117,6 +117,10 @@ export interface Proposal {
   link?: string | null;
   /** A listing's headline or a short description as written ("4*, central, hot tub"): it goes in Notes, not Where (C32). */
   details?: string | null;
+  /** Paid wholly or partly with miles or points (T8): cost_cents is then only the cash part. Import only. */
+  with_points?: boolean;
+  /** The price paid in parts, as the booking shows it (T7): a deposit, then the rest by a date. Import only. */
+  payment_schedule?: { amount_cents: number; due_day: string | null; paid: boolean }[];
 }
 
 const str = { type: ["string", "null"] };
@@ -169,13 +173,28 @@ export const PROPOSE_TOOL = {
         items: {
           type: "object",
           additionalProperties: false,
-          required: [...PLAN_REQUIRED, "link", "details"],
+          required: [...PLAN_REQUIRED, "link", "details", "with_points", "payment_schedule"],
           properties: {
             ...PLAN_PROPERTIES,
             title: { type: "string", description: "Short name, like 'UA 57 Newark to Geneva', 'Chalet des Aiguilles' or 'Chamonix Airbnb': the place's own name, without a listing's selling words." },
             location: { ...str, description: "The street address when the input gives one, else the place's name, only as written. Never a listing's headline or selling words." },
             link: { ...str, description: "The web address of this booking's or listing's page (the rental or hotel page, the reservation), exactly as written in the input. Null if none." },
             details: { ...str, description: "A listing's headline or a short description as written (\"4*, central, hot tub\"), when it says more than the name. Null otherwise." },
+            with_points: { type: "boolean", description: "True when the booking was paid, wholly or partly, with miles or points (an award ticket). cost_cents is then only the cash part, such as taxes and fees." },
+            payment_schedule: {
+              type: "array",
+              description: "When the input shows the price paid in parts (a deposit, then the rest by a date), each payment in order, in the price's currency. Empty otherwise.",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["amount_cents", "due_day", "paid"],
+                properties: {
+                  amount_cents: { type: "integer", description: "This payment's amount in cents, as written." },
+                  due_day: { ...str, description: "YYYY-MM-DD: when it's due, or when it was paid. Null if not written." },
+                  paid: { type: "boolean", description: "True only when the input shows this payment was taken." },
+                },
+              },
+            },
           },
         },
       },
@@ -198,6 +217,8 @@ Never invent anything. Every date, time, price, address and confirmation code mu
 - location: the street address when the input gives one (from the booking or the listing), in its words; otherwise the place's name as written. Never a listing's headline or selling words ("4*, central, hot tub"): put those in details. Do not add airport codes, city names or anything else it doesn't say.
 - link: the web address of the booking's or listing's own page (the rental or hotel listing, the reservation), copied exactly from the input. Not a link to unsubscribe, help, an app, a map or an image. Null when there is none.
 - paid is true only when the input shows payment was taken.
+- with_points: true when the booking was paid with miles or points, wholly or partly (an award ticket). Then cost_cents is only the cash part paid (the taxes and fees), never a cash value of the points.
+- payment_schedule: when the input shows the price paid in parts (a deposit now and the rest later, or a list of installments), list each payment in order with its amount, its due date (or the date it was paid), and paid true only for a payment the input shows was taken. cost_cents stays the whole price. Otherwise an empty list.
 - who_pays: flights and individually bought tickets are own; a stay, a rental car, a group meal or one shared bill is split.
 
 The one exception, flight times: when the input gives a flight number and a date but no times, use web search (at most ${MAX_SEARCHES} searches) to find that flight's scheduled departure and arrival times. Fill the times only from a search result you actually read, set times_from to lookup and source_url to that result's exact URL. If nothing reliable turns up, leave both times null and times_from null. Never give flight times from memory. Do not search for anything else, and never look up booking pages or prices.
@@ -205,6 +226,19 @@ The one exception, flight times: when the input gives a flight number and a date
 Add a field to unsure whenever you had to guess between readings. Finish by calling propose_plans exactly once.`;
 
 // ---------- Checking what the model returned ----------
+/** A payment schedule as returned (T7): two to twelve payments with whole, positive amounts; anything else is none. */
+function scheduleOf(v: unknown): { amount_cents: number; due_day: string | null; paid: boolean }[] {
+  if (!Array.isArray(v)) return [];
+  const rows = v
+    .slice(0, 12)
+    .filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === "object")
+    .map((r) => ({
+      amount_cents: typeof r.amount_cents === "number" && Number.isInteger(r.amount_cents) && r.amount_cents > 0 && r.amount_cents <= 100_000_000 ? r.amount_cents : 0,
+      due_day: realDate(r.due_day),
+      paid: r.paid === true,
+    }));
+  return rows.length >= 2 && rows.every((r) => r.amount_cents > 0) ? rows : [];
+}
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const text = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
@@ -326,6 +360,8 @@ export function checkProposals(raw: unknown, searchUrls: string[], inputText = "
       unsure: [...unsure],
       link: cleanBookingLink(p.link, inputText),
       details: inInput(text(p.details, 200)) ? text(p.details, 200) : null,
+      with_points: p.with_points === true,
+      payment_schedule: scheduleOf(p.payment_schedule),
     });
   }
   return { plans, note: text((raw as { note?: unknown }).note, 300) };

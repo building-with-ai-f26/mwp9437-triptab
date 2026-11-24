@@ -26,7 +26,7 @@ async function run(browser, label, opts, result) {
   r.before = await subtitle();
 
   // 1. Add a plan on the day before the trip: the dialog says it will stretch the trip.
-  await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
+  await h.addByHand(p); // T9: Add (a laptop's button, or the phone's + sheet)
   await h.dlg(p).getByLabel('What').fill('Airport hotel shuttle');
   await h.dlg(p).getByRole('combobox', { name: /^Date/ }).first().selectOption('2027-02-04');
   r.note = (await h.dlg(p).getByTestId('extends-trip').innerText()).trim();

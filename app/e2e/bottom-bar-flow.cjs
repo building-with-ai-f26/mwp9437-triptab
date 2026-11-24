@@ -50,7 +50,7 @@ async function phone(browser, r) {
   r.backToTop = true;
 
   // A dialog opens above the bar: its Add to trip button takes the tap, not the bar.
-  await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
+  await h.addByHand(p); // T9: Add (a laptop's button, or the phone's + sheet)
   const add = h.dlg(p).getByRole('button', { name: 'Add to trip' });
   await add.scrollIntoViewIfNeeded();
   r.dialogOnTop = await add.evaluate((el) => {

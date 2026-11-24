@@ -25,6 +25,10 @@ export interface ExpectedPlan {
   currency?: string;
   who_pays?: string[];
   paid?: boolean;
+  /** Paid with miles or points (T8). */
+  with_points?: boolean;
+  /** The payment schedule as the booking shows it (T7): amounts in cents, in order, and which are paid. */
+  schedule?: { amount_cents: number; paid: boolean; due_day?: string }[];
   depart_time?: string;
   arrive_time?: string;
   depart_time_in?: (string | null)[];
@@ -135,6 +139,13 @@ export function scoreCase(c: EvalCase, plans: Proposal[]): CaseScore {
     if (e.currency && p.cost_cents != null && p.currency !== e.currency) fail("money", `"${p.title}" currency ${p.currency ?? "blank"}, expected ${e.currency}`);
     if (e.who_pays && !e.who_pays.includes(p.who_pays)) fail("money", `"${p.title}" who pays ${p.who_pays}, expected ${e.who_pays.join(" or ")}`);
     if (e.paid !== undefined && p.paid !== e.paid) fail("money", `"${p.title}" paid ${p.paid}, expected ${e.paid}`);
+    if (e.with_points !== undefined && (p.with_points ?? false) !== e.with_points) fail("money", `"${p.title}" with points ${p.with_points ?? false}, expected ${e.with_points}`);
+    if (e.schedule) {
+      const sched = e.schedule;
+      const got = (p.payment_schedule ?? []).map((x) => `${x.amount_cents}:${x.paid}${sched.some((w) => w.due_day) ? `:${x.due_day}` : ""}`).join(",");
+      const want = sched.map((x) => `${x.amount_cents}:${x.paid}${x.due_day ? `:${x.due_day}` : ""}`).join(",");
+      if (got !== want) fail("money", `"${p.title}" schedule ${got || "none"}, expected ${want}`);
+    }
     const where = (p.location ?? "").toLowerCase();
     if (e.location_has && !e.location_has.every((w) => where.includes(w.toLowerCase()))) fail("place", `"${p.title}" Where is "${p.location ?? ""}", expected it to hold ${e.location_has.join(", ")}`);
     if (e.location_not?.some((w) => where.includes(w.toLowerCase()))) fail("place", `"${p.title}" Where holds the headline: "${p.location}"`);

@@ -13,7 +13,7 @@ async function run(browser, label, opts, result) {
   await h.startSkiTrip(p, `link-${label}`);
 
   // Add a plan: the way to a confirmation is at the top, and it opens import's file picker.
-  await p.getByRole('button', { name: 'Add a plan', exact: true }).click();
+  await h.addByHand(p); // T9: Add (a laptop's button, or the phone's + sheet)
   const offer = h.dlg(p).getByRole('button', { name: /Upload a screenshot or PDF/ });
   await offer.waitFor();
   await h.shot(p, `link-upload-offer-${label}`);

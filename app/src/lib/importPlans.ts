@@ -29,6 +29,10 @@ export interface Proposal {
   link?: string | null;
   /** A listing's headline or description as written: it goes in Notes, not Where (C32). */
   details?: string | null;
+  /** Paid wholly or partly with miles or points (T8): the cost is only the cash part. */
+  with_points?: boolean;
+  /** The price paid in parts, as the booking shows it (T7), in the price's currency. */
+  payment_schedule?: { amount_cents: number; due_day: string | null; paid: boolean }[];
 }
 
 export interface ImportUsage {

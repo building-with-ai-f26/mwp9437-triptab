@@ -163,7 +163,7 @@ async function addPlan(page, day, slot, f) {
   await v.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await v.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
   await v.waitForTimeout(800);
-  result.vicCanAdd = await v.getByRole('button', { name: 'Add a plan' }).count();
+  result.vicCanAdd = await v.locator('[data-tour="add"], [data-tour="add-phone"]').count();
   result.vicEmptySlots = await v.getByRole('button', { name: /^Add to / }).count();
   result.vicPhoneOverflow = await overflow(v);
   await v.locator('#day-2027-02-06').scrollIntoViewIfNeeded();
@@ -188,7 +188,7 @@ async function addPlan(page, day, slot, f) {
   await joinTrip(j);
   await j.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await j.getByRole('heading', { name: 'Your Itinerary' }).waitFor();
-  result.julesCanAdd = await j.getByRole('button', { name: 'Add a plan' }).count();
+  result.julesCanAdd = await j.locator('[data-tour="add"], [data-tour="add-phone"]').count();
 
   // ---------- Owner sees both joined ----------
   await o.reload();

@@ -16,6 +16,7 @@ const MAX_REQUEST = 1000;
 export function PlanWithAiDialog({
   open,
   trip,
+  initialRequest,
   onClose,
   onSave,
   onDone,
@@ -23,6 +24,8 @@ export function PlanWithAiDialog({
 }: {
   open: boolean;
   trip: Trip;
+  /** Ask AI from an empty slot (T9): the request starts with that slot. */
+  initialRequest?: string;
   onClose: () => void;
   /** How many unsaved ideas wait in the shut dialog (0 once they're added or discarded). */
   onPark?: (waiting: number) => void;
@@ -31,7 +34,7 @@ export function PlanWithAiDialog({
   /** Called when a review ends, saved or not, for the usage log. */
   onDone: (result: PlanAiResult, kept: number) => void;
 }) {
-  const [request, setRequest] = useState("");
+  const [request, setRequest] = useState(initialRequest ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanAiResult | null>(null);
