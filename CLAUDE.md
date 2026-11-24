@@ -26,7 +26,7 @@ Mike's call (11/11): each weekly build brief is the minimum, not a cap. Build th
 
 ## Current build: Build 4, due Mon 11/30 at noon
 
-Build 3 was submitted 11/23. Build 4 is Track B (Mike's call C55, 11/23): 3 to 5 outside users, the friends on Mike's Euro ski trip, use triptab.org; Claude reads their session replays and the `feedback` table, lists the top three friction points, fixes them, and writes the Build 4 log on the Product Page. The work order is in the runbook's Steps table. Builds are due Mondays at noon, New York time; each can be redone once within 7 days of feedback. Replace this section when the build is submitted.
+Build 3 was submitted 11/23. Build 4 is Track B (Mike's call C55, 11/23): 3 to 5 outside users, the friends on Mike's Euro ski trip, use triptab.org; Claude reads their session replays and the `feedback` table, lists the top three friction points, fixes them, and writes the Build 4 log on the Product Page. The work order is in the runbook's Steps table. Mike's 11/23 ski trip test is a build checklist in [journal/pm-review/spec-11-23.md](./journal/pm-review/spec-11-23.md): build from it in wave order, tick each check with its evidence, and fill its Completion table. Builds are due Mondays at noon, New York time; each can be redone once within 7 days of feedback. Replace this section when the build is submitted.
 
 ## Design
 
