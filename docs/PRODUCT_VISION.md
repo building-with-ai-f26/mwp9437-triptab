@@ -304,11 +304,11 @@ You see a real gap in the market and would keep TripTab running after the course
 **Raised 11/23, the ski trip test** (you set up the real trip on triptab.org that evening and two friends joined; checked against PostHog and production 11/24. The build checklist is `journal/pm-review/spec-11-23.md`; calls C58 to C61, decided 11/24.)
 
 - Flights should keep the times on the confirmation. The AI read them right; the review most likely dropped them when the flight left the day before the trip, and a 7:25 AM landing showed as Night (T1).
-- A friend on the same flight paid a different price. Decided 11/24 (C61): nobody is made to add a price; someone who joins only needs the ability to add theirs and must never get yours. The app already does both, so a test locks it in (T2).
+- A friend on the same flight paid a different price. Decided 11/24 (C61): nobody is made to add a price; someone who joins only needs the ability to add theirs and must never get yours. The app already does both. Also 11/24: on those plans the status is per person, so you see Confirmed once you've booked and a friend who hasn't booked sees Planned (T2).
 - Rename and delete a trip: both exist but sit behind Travel and lodging, where you didn't find them (T3).
 - Sort and filter to-dos by owner and due date (T4).
 - A plan that runs across several parts of the day is one card, not a card plus "continues" rows; decided 11/24 (C58): a flight past midnight is one card on the day it leaves, through Night, and one "Lands" line on the arrival day from Morning through the part it lands in, so a long flight landing in the afternoon covers Day too (T5).
-- **Decided 11/23 (your note):** you can add a plan to several days at once (five ski days in one go), and each day's plan is then its own, editable alone; restated 11/24 (a placeholder ski day now, each day's mountain later). This replaces the 11/17 view that one multi-day plan works well (T6).
+- **Decided 11/23 (your note):** you can add a plan to several days at once (five ski days in one go), any days you pick, not only days in a row, and each day's plan is then its own, editable alone; restated 11/24 (a placeholder ski day now, each day's mountain later). This replaces the 11/17 view that one multi-day plan works well (T6).
 - Several payment rows on a plan, such as a lodging paid in two installments with one still due (T7).
 - Import, Add and Ask AI as three ways in, with Ask AI a chat that offers a few options and puts a needed reservation on the to-do list; decided 11/24 (C59, C60): yes to the three, and the chat is private to whoever asked; what they pick lands on the trip as Suggested (T9, T10).
 
