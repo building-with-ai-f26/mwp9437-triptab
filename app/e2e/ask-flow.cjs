@@ -50,7 +50,7 @@ async function run(browser, label, opts, result) {
   // Refine: cheaper.
   await d.getByLabel('Refine your request').fill('cheaper');
   await d.getByRole('button', { name: 'Refine' }).click();
-  await d.getByText('Bistrot Test').waitFor();
+  await d.getByText('Bistrot Test', { exact: true }).first().waitFor();
   r.afterRefine = await cards.count();
   r.sections = await d.locator('section[aria-label^="Refined"]').count();
   const refineBody = r.bodies[r.bodies.length - 1];
@@ -60,7 +60,7 @@ async function run(browser, label, opts, result) {
 
   // Add the first: Sat evening, Book it on your To do list.
   await cards.first().getByRole('button', { name: 'Add', exact: true }).click();
-  await cards.first().getByLabel('Day for La Fondue Test').selectOption('2027-02-06');
+  await cards.first().getByLabel('Day for La Fondue Test', { exact: true }).selectOption('2027-02-06');
   await cards.first().getByLabel('Part of the day for La Fondue Test').selectOption('evening');
   r.bookTicked = await cards.first().getByLabel(/Add "Book La Fondue Test" to To do/).isChecked();
   await cards.first().getByLabel('Who books it').selectOption({ label: 'Mike (you)' });
@@ -94,7 +94,7 @@ async function run(browser, label, opts, result) {
   // Reopened: your last conversation is there.
   await p.getByRole('tab', { name: phone ? /Itinerary/ : 'Overview' }).click();
   await h.pickAdd(p, 'Ask AI');
-  await h.dlg(p).getByText('Bistrot Test').waitFor({ timeout: 15000 });
+  await h.dlg(p).getByText('Bistrot Test', { exact: true }).first().waitFor({ timeout: 15000 });
   r.restored = await h.dlg(p).getByTestId('ask-option').count();
   r.overflow = await h.overflowX(p);
 }

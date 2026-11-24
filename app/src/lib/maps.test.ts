@@ -8,6 +8,10 @@ describe("Google Maps links for AI ideas (T12)", () => {
     expect(decodeURIComponent(new URL(link).searchParams.get("query") ?? "")).toBe("Le Café Chaleureux, 12 Rue de l'Église, Chamonix");
   });
 
+  it("doesn't repeat a name the address already starts with", () => {
+    expect(mapsLink("La Calèche", "La Calèche, Chamonix")).toBe(mapsLink("La Calèche, Chamonix"));
+  });
+
   it("uses the name alone when there's no address", () => {
     expect(mapsLink("La Calèche", null)).toBe("https://www.google.com/maps/search/?api=1&query=La%20Cal%C3%A8che");
     expect(mapsLink("  La Calèche ", "  ")).toBe(mapsLink("La Calèche"));

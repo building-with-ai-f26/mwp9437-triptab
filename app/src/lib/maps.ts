@@ -4,6 +4,9 @@
  * nothing; "Found on <site>" stays as the idea's source.
  */
 export function mapsLink(name: string, address?: string | null): string {
-  const query = [name.trim(), address?.trim()].filter(Boolean).join(", ");
+  const n = name.trim();
+  const a = address?.trim() ?? "";
+  // An address that already starts with the name ("La Calèche, 18 Rue...") isn't repeated.
+  const query = a && a.toLowerCase().startsWith(n.toLowerCase()) ? a : [n, a].filter(Boolean).join(", ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }

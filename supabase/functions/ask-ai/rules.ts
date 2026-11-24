@@ -59,7 +59,7 @@ export const ASK_TOOL = {
             title: { type: "string", description: "The place's own name, like 'La Calèche' or 'Aiguille du Midi cable car'." },
             description: { type: "string", description: "One short line on what it is." },
             why: { type: "string", description: "One short line on why it fits this ask." },
-            price_level: { anyOf: [{ type: "string", enum: [...PRICE_LEVELS] }, { type: "null" }], description: "$ to $$$$ as the source suggests it. Null if the source gives no sense of price." },
+            price_level: { type: "string", enum: [...PRICE_LEVELS], description: "$ to $$$$: a range, never a price. From the source, or when it doesn't say, from what kind of place it is." },
             best_part: { type: "string", enum: [...PARTS], description: "The part of the day it suits best." },
             best_time: { ...str, description: "A clock time only when the source gives one (opening, a seating). Otherwise null." },
             needs_reservation: { type: "boolean", description: "True when the source says to book or reserve ahead, or it's a sit-down restaurant at a busy time." },
@@ -81,7 +81,7 @@ Rules:
 - Every option must be a real place you found with web search in this conversation (at most ${MAX_SEARCHES} searches), and source_url must be the exact URL of the search result that names it. Never suggest a place from memory.
 - Each option must be at one of the trip's stops (the one the ask names, else where the group is), and never repeat a plan already on the trip or an option already shown.
 - A refinement moves the new options the way it says ("cheaper" means a lower price_level than the options shown; "higher end" a higher one; "Italian instead" another cuisine), while keeping the rest of the ask.
-- price_level is $ to $$$$ as the source suggests; null when it gives no sense of price. Never invent a price, an opening time or an address.
+- price_level is always a range, $ to $$$$, never a price: read it from the source when it gives one, and otherwise from what kind of place it is (a free walk or a museum ticket $, a casual bar or bistro $$, a sit-down restaurant $$ to $$$, fine dining $$$$). Never invent a price, an opening time or an address.
 - needs_reservation is true when the source says to book ahead, or for a sit-down dinner at a popular place.
 - You may also get the group's tastes: how many people picked each cuisine and activity. Where the ask leaves the choice open, lean toward what more of them picked; the ask comes first. Never say or guess who likes what.
 

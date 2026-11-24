@@ -302,7 +302,7 @@ function OptionCard({
         <MapPin className="size-3.5 shrink-0" />
         <span className="truncate">Open in Google Maps</span>
       </a>
-      <a href={o.source_url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 text-xs text-amber-200 underline underline-offset-2">
+      <a href={o.source_url} target="_blank" rel="noreferrer" className="flex w-fit max-w-full items-center gap-1 text-xs text-amber-200 underline underline-offset-2">
         <ExternalLink className="size-3 shrink-0" />
         <span className="truncate">Found on {hostOf(o.source_url)}</span>
       </a>
