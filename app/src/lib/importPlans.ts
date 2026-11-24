@@ -3,7 +3,7 @@
  * draft the Owner reviews, spotting likely duplicates, and saying what still blocks saving one.
  * Pure functions, tested offline. Nothing here saves anything: the review step does.
  */
-import { addDays, canExtendTo, defaultPayMode, dollars, longDay, type DayPart, type Item, type ItemKind, type ItemStatus, type PayMode, type Trip } from "./model";
+import { addDays, canExtendTo, defaultPayMode, dollars, longDay, nightsBetween, PARTS, partOfEndTime, type DayPart, type Item, type ItemKind, type ItemStatus, type PayMode, type Trip } from "./model";
 import type { UsdRate } from "./rates";
 
 /** A proposed plan, as the Edge Function returns it (supabase/functions/import-bookings/rules.ts). */
@@ -162,6 +162,8 @@ const partFromTime = (time: string | null): DayPart | null => {
   return h < 12 ? "morning" : h < 17 ? "day" : h < 21 ? "evening" : "night";
 };
 
+const travels = (kind: Item["kind"]) => kind === "flight" || kind === "transport";
+
 /** Turns a proposal into a review draft for this trip. */
 export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">, items: Item[]): Draft {
   const warnings: string[] = [];
@@ -192,6 +194,10 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
   if (p.kind === "flight" && !p.depart_time && !p.arrive_time) warnings.push("No times found. Add times in the notes once you have them.");
   if (p.times_from === "lookup") warnings.push("Times were looked up, not in what you pasted. Check them against your booking.");
   const dup = possibleDuplicate(p, items);
+  const part: DayPart = p.part ?? partFromTime(p.depart_time) ?? "day";
+  // A same-day flight or transfer shows the parts it covers on the card: 11:00 to 14:15 is Morning and Day.
+  const lastPart = travels(p.kind) && p.arrive_time && (!p.end_day || p.end_day === p.day) ? partOfEndTime(p.arrive_time) : null;
+  const sameDayEnd = lastPart && PARTS.indexOf(lastPart) > PARTS.indexOf(part) ? lastPart : null;
   const ready = Boolean(day) && (p.kind !== "stay" || warnings.every((w) => !w.includes("check-out") && !w.includes("Check-out")));
   return {
     // A match is merged into the plan already on the trip (C25), so it starts ticked too.
@@ -199,8 +205,8 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     kind: p.kind,
     title: p.title,
     day,
-    part: p.part ?? partFromTime(p.depart_time) ?? "day",
-    end_part: null,
+    part,
+    end_part: sameDayEnd,
     end_day,
     cost: p.cost_cents != null && usd ? String(p.cost_cents / 100) : "",
     perPerson: p.cost_is_per_person,
@@ -220,6 +226,47 @@ export function toDraft(p: Proposal, trip: Pick<Trip, "start_date" | "end_date">
     extendTo,
     source: p,
   };
+}
+
+/** Where a reviewed plan goes on the timeline, and its times: what the save step writes. */
+export interface DraftPlacement {
+  day: string;
+  part: DayPart;
+  end_day: string | null;
+  end_part: DayPart | null;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+/**
+ * T1 (Mike's 11/23 ski trip test): the times on the confirmation are the plan's times, whatever
+ * the review card does to the day. Moving the departure day moves the arrival day by as many days
+ * and keeps both clock times; an overnight flight's arrival part comes from its arrival time on the
+ * arrival day, not from the parts picked on the card (those are the departure day's). Before this,
+ * a 7:25 AM landing saved as "Lands in the: Night", and a flight whose day changed lost its times.
+ */
+export function draftPlacement(d: Draft, trip: Pick<Trip, "start_date" | "end_date">): DraftPlacement {
+  if (d.kind === "stay") return { day: d.day, part: "night", end_day: d.end_day || null, end_part: null, start_time: null, end_time: null };
+  const p = d.source;
+  const travel = travels(d.kind);
+  const shift = p.day && d.day ? nightsBetween(p.day, d.day) : 0;
+  // The booking's last day (a flight's arrival, an activity's last day), moved with the departure.
+  let end_day: string | null = p.end_day && p.day && p.end_day > p.day ? addDays(p.end_day, shift) : null;
+  // A rental car's return day isn't an arrival: only a transfer with an arrival time runs on.
+  if (d.kind === "transport" && !p.arrive_time) end_day = null;
+  const limit = travel ? addDays(trip.end_date, 1) : trip.end_date;
+  const overnightBooking = end_day != null;
+  if (end_day && end_day > limit) end_day = null;
+  const start_time = travel ? p.depart_time : null;
+  // An overnight arrival that no longer fits the trip keeps no landing time: it would read as the same day.
+  const end_time = travel && !(overnightBooking && !end_day) ? p.arrive_time : null;
+  let end_part: DayPart | null;
+  if (travel && end_day) end_part = end_time ? partOfEndTime(end_time) : null;
+  else if (travel) end_part = d.end_part ?? (end_time ? partOfEndTime(end_time) : null);
+  else end_part = d.end_part;
+  // On one day, an end part at or before the start part is no span at all.
+  if (end_part && !end_day && PARTS.indexOf(end_part) <= PARTS.indexOf(d.part)) end_part = null;
+  return { day: d.day, part: d.part, end_day, end_part, start_time, end_time };
 }
 
 /** The cost a draft carries, in cents, or null when it has none (or it isn't a number). */

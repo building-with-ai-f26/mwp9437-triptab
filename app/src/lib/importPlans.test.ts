@@ -3,6 +3,7 @@ import {
   atEstimate,
   costToCome,
   draftCents,
+  draftPlacement,
   draftProblems,
   isGeneralName,
   mergedTitle,
@@ -13,6 +14,7 @@ import {
   possibleDuplicate,
   sharedFareLegs,
   toDraft,
+  type Draft,
   usdCost,
   type Proposal,
 } from "./importPlans";
@@ -270,5 +272,70 @@ describe("a foreign price's estimate (C28)", () => {
     expect(atEstimate({ ...d, cost: "7702.18" })).toBe(false);
     expect(atEstimate({ ...d, converted: null })).toBe(false);
     expect(atEstimate({ ...d, foreign: null })).toBe(false);
+  });
+});
+
+describe("flight times from the confirmation (T1, 11/23 ski trip test)", () => {
+  // Made-up flights; the trip runs Fri Feb 5 to Tue Feb 16, 2027.
+  const sameDay = proposal({ title: "LX 1814 Geneva to Zurich", day: "2027-02-10", part: null, depart_time: "11:00", arrive_time: "14:15" });
+  const overnight = proposal({ title: "UA 57 Newark to Geneva", day: "2027-02-05", part: null, end_day: "2027-02-06", depart_time: "17:35", arrive_time: "07:25" });
+  /** The review card's part-of-the-day chips: taps the part, as a reviewer would. */
+  const tapPart = (d: Draft, k: number): Draft => {
+    const parts = ["morning", "day", "evening", "night"] as const;
+    const from = parts.indexOf(d.part);
+    const to = d.end_part ? parts.indexOf(d.end_part) : from;
+    const lo = Math.min(from, k);
+    const hi = Math.max(to, k);
+    return { ...d, part: parts[lo], end_part: hi > lo ? parts[hi] : null };
+  };
+
+  it("(a) 11:00 to 14:15 on one day runs Morning to Day, times kept", () => {
+    const d = toDraft(sameDay, trip, []);
+    expect([d.part, d.end_part]).toEqual(["morning", "day"]);
+    expect(draftPlacement(d, trip)).toEqual({ day: "2027-02-10", part: "morning", end_day: null, end_part: "day", start_time: "11:00", end_time: "14:15" });
+  });
+
+  it("(b) 17:35 on day N to 07:25 on N+1 starts Evening, ends Morning, both times kept", () => {
+    const d = toDraft(overnight, trip, []);
+    expect(draftPlacement(d, trip)).toEqual({ day: "2027-02-05", part: "evening", end_day: "2027-02-06", end_part: "morning", start_time: "17:35", end_time: "07:25" });
+  });
+
+  it("(b) tapping Night on the card doesn't make the landing Night (the 11/23 bug)", () => {
+    const d = tapPart(toDraft(overnight, trip, []), 3);
+    expect(d.end_part).toBe("night");
+    expect(draftPlacement(d, trip)).toMatchObject({ end_day: "2027-02-06", end_part: "morning", start_time: "17:35", end_time: "07:25" });
+  });
+
+  it("(c) leaving the day before the trip: Add that day to the trip, then the same as (b)", () => {
+    const early = { ...overnight, day: "2027-02-04", end_day: "2027-02-05" };
+    const before = toDraft(early, trip, []);
+    expect(before.day).toBe("");
+    expect(before.extendTo).toBe("2027-02-04");
+    // The review's Add Thu, Feb 4 to the trip re-reads the proposal against the longer trip.
+    const longer = { ...trip, start_date: "2027-02-04" };
+    const d = tapPart(toDraft(early, longer, []), 3);
+    expect(draftPlacement(d, longer)).toEqual({ day: "2027-02-04", part: "evening", end_day: "2027-02-05", end_part: "morning", start_time: "17:35", end_time: "07:25" });
+  });
+
+  it("(d) moving the departure a day later moves the arrival a day too, times kept", () => {
+    const d = { ...toDraft(overnight, trip, []), day: "2027-02-06" };
+    expect(draftPlacement(d, trip)).toEqual({ day: "2027-02-06", part: "evening", end_day: "2027-02-07", end_part: "morning", start_time: "17:35", end_time: "07:25" });
+  });
+
+  it("a same-day flight moved to another day keeps its times", () => {
+    const d = { ...toDraft(sameDay, trip, []), day: "2027-02-12" };
+    expect(draftPlacement(d, trip)).toMatchObject({ day: "2027-02-12", start_time: "11:00", end_time: "14:15", end_day: null });
+  });
+
+  it("a landing past the day after the trip keeps no arrival, rather than reading as the same day", () => {
+    const late = proposal({ day: "2027-02-16", end_day: "2027-02-18", depart_time: "22:00", arrive_time: "06:00" });
+    expect(draftPlacement(toDraft(late, trip, []), trip)).toMatchObject({ end_day: null, end_time: null, start_time: "22:00" });
+  });
+
+  it("a rental car's return day isn't an arrival, and stays keep their check-out", () => {
+    const car = proposal({ kind: "transport", title: "Rental car", day: "2027-02-06", end_day: "2027-02-10", depart_time: "09:00" });
+    expect(draftPlacement(toDraft(car, trip, []), trip)).toMatchObject({ end_day: null, start_time: "09:00" });
+    const stay = proposal({ kind: "stay", title: "Chalet", day: "2027-02-06", end_day: "2027-02-10" });
+    expect(draftPlacement(toDraft(stay, trip, []), trip)).toEqual({ day: "2027-02-06", part: "night", end_day: "2027-02-10", end_part: null, start_time: null, end_time: null });
   });
 });

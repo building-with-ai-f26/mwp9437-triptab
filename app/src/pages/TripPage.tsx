@@ -31,7 +31,7 @@ import { AiChoiceDialog } from "../components/trip/AiChoice";
 import { ImportDialog } from "../components/trip/Import";
 import { ForwardAddress, InboxBanner } from "../components/trip/Inbox";
 import type { InboxItem } from "../lib/inbox";
-import { atEstimate, costToCome, draftCents, mergePatch, type Draft } from "../lib/importPlans";
+import { atEstimate, costToCome, draftCents, draftPlacement, mergePatch, type Draft } from "../lib/importPlans";
 import { foreignLabel } from "../lib/rates";
 import type { DescribeResult, ItemInput } from "../lib/api";
 import type { PaidNow } from "../components/trip/ItemDialog";
@@ -84,7 +84,6 @@ import {
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
-  addDays,
   canEdit,
   clock,
   dateRange,
@@ -93,7 +92,6 @@ import {
   longDay,
   nightsBetween,
   PART_LABEL,
-  partOfTime,
   plansOutside,
   ROLE_LABEL,
   suggestedBy,
@@ -332,18 +330,12 @@ export default function TripPage() {
             ? `Priced ${foreignLabel(d.foreign.currency, d.foreign.cents)}.`
             : "",
       ].filter(Boolean);
+      // T1: the confirmation's times and the arrival day's part, whatever the review did to the day.
+      const at = draftPlacement(d, trip);
       const input: ItemInput = {
         kind: d.kind,
         title: d.title.trim(),
-        day: d.day,
-        part: stay ? "night" : d.part,
-        end_day: stay ? d.end_day : spanEnd(d),
-        // The parts picked on the review card (11/19), else a same-day trip's arrival part.
-        end_part: stay
-          ? null
-          : d.end_part ?? (travelKind(d.kind) && d.source.arrive_time && d.day === d.source.day ? partOfTime(d.source.arrive_time) : null),
-        start_time: travelKind(d.kind) && d.day === d.source.day ? d.source.depart_time : null,
-        end_time: travelKind(d.kind) && d.day === d.source.day ? d.source.arrive_time : null,
+        ...at,
         location: d.location.trim() || null,
         // The booking's or listing's page (C32); one that isn't a web address is left off.
         link: cleanLink(d.link).value,
@@ -553,17 +545,6 @@ export default function TripPage() {
       await addAction(trip.id, todoTitle("Add what you paid for ", item.title, ""), meId, null);
       track("cost to come", { kind: item.kind, via: "form" });
     }
-  };
-
-  const travelKind = (kind: Item["kind"]) => kind === "flight" || kind === "transport";
-  /** An imported plan's last day (a flight's arrival day, an activity's last day), when it fits the trip and the day wasn't changed in review. */
-  const spanEnd = (d: Draft): string | null => {
-    const end = d.source.end_day;
-    if (!end || d.day !== d.source.day || end <= d.day) return null;
-    // A rental car's return day isn't an arrival: only a transfer with an arrival time runs on.
-    if (d.kind === "transport" && !d.source.arrive_time) return null;
-    const limit = travelKind(d.kind) ? addDays(trip.end_date, 1) : trip.end_date;
-    return end <= limit ? end : null;
   };
 
   const openPlan = (item: Item) => setDialog({ item, day: item.day, part: item.part, kind: item.kind });
