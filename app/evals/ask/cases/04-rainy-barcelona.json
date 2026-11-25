@@ -1,0 +1,14 @@
+{
+ "id": "04-rainy-barcelona",
+ "group": "normal",
+ "what": "A rainy-day museum in Barcelona.",
+ "request": "A museum in Barcelona in case it rains",
+ "expect": {
+  "count": 3,
+  "city": "Barcelona",
+  "kinds": [
+   "activity"
+  ],
+  "reservation": false
+ }
+}

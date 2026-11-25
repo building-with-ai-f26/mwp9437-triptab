@@ -211,3 +211,14 @@ The 11/23 ski trip spec changed import's prompt and schema three ways: a booking
 - Run `import-t7-t8-t11-20261124-1641` on TripTab dev: **16 of 16** cases pass all five rules. No drop on the eleven earlier cases.
 - Cost, from the run's replies: **$0.0285** at list price, 16 calls, one web search (case 05). Covered by the Max plan's API credit.
 - What it doesn't show: three chat screenshots is a small set, and they are clean renders, not real phone screenshots with crops, reactions or replies.
+
+## Ask AI: three options and Refine your request (T10, 11/24)
+
+Ask AI answers one person's ask with three options (or as many as asked for), each with why it fits, a $ to $$$$ range, the best time, whether to book ahead and its source; Refine sends the ask again with what's been shown. `npm run eval:ask` runs 10 made-up cases through the deployed `ask-ai` function on a throwaway Chamonix and Barcelona trip and scores five rules in code (`src/lib/askEval.ts`): options asked for, each sourced, priced and described; right city and kind; no repeats of a plan or a shown option; refinements moving the asked way (cheaper, another cuisine, higher end); and the reservation flag on the obvious cases.
+
+| Run | Cases passed | Cost | Per turn | Note |
+| --- | --- | --- | --- | --- |
+| `ask-t10-first-20261124-1711` | 3 of 10 | $0.1700 | $0.0170 | Seven cases had an option with no price range: the prompt let the model leave it blank when its source gave no price |
+| `ask-t10-ranges-20261124-1717` | **10 of 10** | $0.2020 | $0.0202 | The range is always given, from the source or the kind of place (a range, never a price) |
+
+What it doesn't show: three refinement cases is a small set; a "cheaper" that moves from $$$$ to $$ passes the same as one that moves to $. The live click-through (`node e2e/ask-flow.cjs --live`) made two more real calls; both came back with three options.

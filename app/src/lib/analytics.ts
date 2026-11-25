@@ -147,6 +147,7 @@ export type EventName =
   | "payment marked"
   | "add opened"
   | "add picked"
+  | "ask option added"
   | "group link copied"
   | "group link texted"
   | "group link shared"

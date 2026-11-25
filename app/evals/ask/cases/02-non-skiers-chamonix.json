@@ -1,0 +1,13 @@
+{
+ "id": "02-non-skiers-chamonix",
+ "group": "normal",
+ "what": "Something for the non-skiers in Chamonix by day.",
+ "request": "Something for the non-skiers to do in Chamonix during the day, not skiing",
+ "expect": {
+  "count": 3,
+  "city": "Chamonix",
+  "kinds": [
+   "activity"
+  ]
+ }
+}

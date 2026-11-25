@@ -1,0 +1,13 @@
+{
+ "id": "03-tapas-barcelona",
+ "group": "normal",
+ "what": "Tapas in Barcelona.",
+ "request": "Tapas bars in Barcelona for our first night there",
+ "expect": {
+  "count": 3,
+  "city": "Barcelona",
+  "kinds": [
+   "meal"
+  ]
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "id": "07-refine-cuisine",
+ "group": "refine",
+ "what": "A refinement: another cuisine than the fondue places shown.",
+ "request": "A dinner for the group in Chamonix",
+ "refinements": [
+  "Italian instead, no fondue"
+ ],
+ "shown": [
+  "La Bergerie ($$)",
+  "Le Monchu ($$)",
+  "Le Panier des 4 Saisons ($$$)"
+ ],
+ "expect": {
+  "count": 3,
+  "city": "Chamonix",
+  "kinds": [
+   "meal"
+  ],
+  "not_words": [
+   "fondue",
+   "raclette"
+  ]
+ }
+}

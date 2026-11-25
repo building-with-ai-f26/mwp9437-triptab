@@ -1,0 +1,22 @@
+{
+ "id": "08-refine-higher",
+ "group": "refine",
+ "what": "A refinement: higher end than the cheap lunches shown.",
+ "request": "Lunch in Barcelona",
+ "refinements": [
+  "higher end, somewhere special"
+ ],
+ "shown": [
+  "Bar Pinotxo ($)",
+  "La Cova Fumada ($)",
+  "Bo de B ($)"
+ ],
+ "expect": {
+  "count": 3,
+  "city": "Barcelona",
+  "kinds": [
+   "meal"
+  ],
+  "direction": "higher"
+ }
+}

@@ -1003,3 +1003,73 @@ export async function removeForwardAddress(id: string): Promise<void> {
   const { data, error } = await supabase.from("forward_addresses").delete().eq("id", id).select("id");
   if (!must(data, error)?.length) throw new Error("Couldn't remove that address. Try again.");
 }
+
+// ---------- Ask AI (T10) ----------
+
+export interface AskOption {
+  kind: "activity" | "meal";
+  title: string;
+  description: string;
+  why: string;
+  price_level: "$" | "$$" | "$$$" | "$$$$" | null;
+  best_part: DayPart;
+  best_time: string | null;
+  needs_reservation: boolean;
+  location: string | null;
+  source_url: string;
+}
+export interface AskResult {
+  options: AskOption[];
+  note: string | null;
+  dropped: number;
+  tastes_used: boolean;
+  taste_answers: number;
+  usage: { cost_usd: number; searches: number; latency_ms: number };
+}
+export interface AskTurn {
+  id: string;
+  thread_id: string;
+  request: string;
+  options: AskOption[];
+  created_at: string;
+}
+
+/** One turn of Ask AI: the ask, its refinements so far, and what's been shown ("Name ($$)"). */
+export async function askAi(tripId: string, request: string, refinements: string[], shown: string[], count: number, useTastes: boolean): Promise<AskResult> {
+  let testRun = false;
+  try {
+    testRun = localStorage.getItem("triptab.test_run") === "1";
+  } catch {
+    // storage can be unavailable
+  }
+  const { data, error } = await supabase.functions.invoke("ask-ai", {
+    body: { trip_id: tripId, request, refinements, shown, count, use_tastes: useTastes, test_run: testRun },
+  });
+  if (error) {
+    let message = "Can't reach Ask AI right now. Check your connection and try again.";
+    const response = (error as { context?: unknown }).context;
+    if (response instanceof Response) {
+      try {
+        const body = (await response.json()) as { error?: string };
+        if (body?.error) message = body.error;
+      } catch {
+        // not JSON; keep the general message
+      }
+    }
+    throw new Error(message);
+  }
+  return data as AskResult;
+}
+
+/** Your own Ask AI turns on a trip (C60: nobody else can read them). Null on a database without them. */
+export async function myAskTurns(tripId: string): Promise<AskTurn[] | null> {
+  const { data, error } = await supabase.from("ask_turns").select("id, thread_id, request, options, created_at").eq("trip_id", tripId).order("created_at");
+  return error ? null : (data as AskTurn[]);
+}
+export async function saveAskTurn(tripId: string, threadId: string, request: string, options: AskOption[]): Promise<void> {
+  await supabase.from("ask_turns").insert({ trip_id: tripId, thread_id: threadId, request: request.slice(0, 600), options });
+}
+export async function clearAskTurns(tripId: string): Promise<void> {
+  const { error } = await supabase.from("ask_turns").delete().eq("trip_id", tripId);
+  if (error) throw new Error(friendly(error));
+}

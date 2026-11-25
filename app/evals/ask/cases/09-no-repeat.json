@@ -1,0 +1,13 @@
+{
+ "id": "09-no-repeat",
+ "group": "normal",
+ "what": "An ask that the trip's own plan would answer: never repeat La Caleche.",
+ "request": "Fondue in Chamonix, somewhere like La Caleche",
+ "expect": {
+  "count": 3,
+  "city": "Chamonix",
+  "kinds": [
+   "meal"
+  ]
+ }
+}
