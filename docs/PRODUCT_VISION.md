@@ -321,6 +321,12 @@ You see a real gap in the market and would keep TripTab running after the course
 - Group preferences already reach the AI once 3 people answer (C53); make it a Consider group preferences toggle. Decided 11/24 (C64): it starts on, showing how many have answered (T10).
 - Idea cards should show Google's star ratings. They have to come from Google's Places API, not the AI, which costs money past a free tier. Decided 11/24 (C65): yes, on idea cards only, capped at 33 lookups a day inside the free tier with a $1 budget alert, set up from your laptop first (T13).
 
+**Raised 11/25, phone test** (you imported an easyJet booking priced in Swiss francs on your phone; in the build checklist as Wave 5, T14 and T15)
+
+- The import review card and Edit plan should look and work the same. Today the review card shows a flight's times only as a note, and Edit plan shows them as fields (T14).
+- A flight or other travel takes a date and a time for departing and for arriving. Lands on and Lands in the go, and the parts of the day are worked out from the times. If a time isn't known, you pick the part instead (T14).
+- Every cost gets a currency picker, and import keeps the booking's currency (CHF stays CHF) with the dollar estimate underneath. Totals and Settle up stay in dollars (T15).
+
 **Raised 11/17** (setting up the pod test trip; scheduled for Build 3 in the Features row on the Run book tab)
 
 - **Adding plans needs more flexibility.** An Add a plan button at the top of the trip, not only tapping a slot. A plan can run across several days with a start and end time (skiing 9 AM to 4 PM every day in Chamonix) instead of picking Morning and Day on each day. The four parts of the day stay as how the itinerary is laid out, and empty slots still show, so a gap like Thursday night stands out.
